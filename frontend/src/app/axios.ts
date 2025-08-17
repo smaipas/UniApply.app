@@ -6,6 +6,11 @@ const api = axios.create({
   timeout: 15000,
 })
 
+type RetryableRequestConfig = AxiosRequestConfig & { _retried?: boolean }
+
+// Ensure only one refresh is in-flight; others await the same promise
+let refreshInFlight: Promise<void> | null = null
+
 // Attach JWT
 api.interceptors.request.use((config) => {
   const { tokens } = useAuthStore()
@@ -22,12 +27,17 @@ api.interceptors.response.use(
   (res) => res,
   async (error: AxiosError) => {
     const auth = useAuthStore()
-    const original = error.config as AxiosRequestConfig
+    const original = (error.config || {}) as RetryableRequestConfig
     const is401 = error.response?.status === 401
     if (is401 && !original?._retried) {
       original._retried = true
       try {
-        await auth.tryRefresh()
+        if (!refreshInFlight) {
+          refreshInFlight = auth.tryRefresh().finally(() => {
+            refreshInFlight = null
+          })
+        }
+        await refreshInFlight
         // header will be set by request interceptor from the new store token
         return api(original)
       } catch {

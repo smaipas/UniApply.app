@@ -7,27 +7,27 @@
           label="Email"
           type="email"
           v-model="state.email"
-          :error="v$.email.$errors[0]?.$message"
+          :error="errorMessageHandler(v$.email)"
           @blur="v$.email.$touch"
         />
         <UiInput
           label="Verification code"
           v-model="state.code"
-          :error="v$.code.$errors[0]?.$message"
+          :error="errorMessageHandler(v$.code)"
           @blur="v$.code.$touch"
         />
         <UiInput
           label="New password"
           type="password"
           v-model="state.password"
-          :error="v$.password.$errors[0]?.$message"
+          :error="errorMessageHandler(v$.password)"
           @blur="v$.password.$touch"
         />
         <UiInput
           label="Confirm new password"
           type="password"
           v-model="state.confirm"
-          :error="v$.confirm.$errors[0]?.$message"
+          :error="errorMessageHandler(v$.confirm)"
           @blur="v$.confirm.$touch"
         />
       </div>
@@ -35,9 +35,9 @@
         <router-link class="text-sm text-blue-700 hover:underline" to="/login"
           >Back to sign in</router-link
         >
-        <UiButton :disabled="loading || v$.$invalid"
-          >{{ loading ? 'Updating…' : 'Update password' }}</UiButton
-        >
+        <UiButton :disabled="loading" @click="submit">{{
+          loading ? 'Updating…' : 'Update password'
+        }}</UiButton>
       </div>
     </form>
     <p v-if="success" class="mt-4 text-sm text-green-700">{{ success }}</p>
@@ -47,12 +47,19 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { useVuelidate } from '@vuelidate/core'
-import { required, email as emailValidator, minLength, sameAs, helpers } from '@vuelidate/validators'
+import {
+  required,
+  email as emailValidator,
+  minLength,
+  sameAs,
+  helpers,
+} from '@vuelidate/validators'
 
 import AuthCard from '../components/AuthCard.vue'
 import UiInput from '@/common/components/UiInput.vue'
 import UiButton from '@/common/components/UiButton.vue'
 import { confirmForgotPassword } from '@/auth/services/cognito'
+import { errorMessageHandler } from '@/common/utils/validation'
 
 const state = reactive({
   email: '',

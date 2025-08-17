@@ -6,16 +6,16 @@
         label="Email"
         type="email"
         v-model="state.email"
-        :error="v$.email.$errors[0]?.$message"
+        :error="errorMessageHandler(v$.email)"
         @blur="v$.email.$touch"
       />
       <div class="mt-6 flex items-center justify-between">
-        <router-link class="text-sm text-blue-700 hover:underline" to="/login"
-          >Back to sign in</router-link
-        >
-        <UiButton :disabled="loading || v$.$invalid"
-          >{{ loading ? 'Sending…' : 'Send reset code' }}</UiButton
-        >
+        <router-link class="text-sm text-blue-700 hover:underline" to="/login">
+          Back to sign in
+        </router-link>
+        <UiButton :disabled="loading" @click="submit">
+          {{ loading ? 'Sending…' : 'Send reset code' }}
+        </UiButton>
       </div>
     </form>
     <p v-if="success" class="mt-4 text-sm text-green-700">{{ success }}</p>
@@ -31,6 +31,7 @@ import AuthCard from '@/auth/components/AuthCard.vue'
 import UiInput from '@/common/components/UiInput.vue'
 import UiButton from '@/common/components/UiButton.vue'
 import { forgotPassword } from '@/auth/services/cognito'
+import { errorMessageHandler } from '@/common/utils/validation'
 
 const state = reactive({
   email: '',

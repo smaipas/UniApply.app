@@ -7,14 +7,14 @@
           label="Email"
           type="email"
           v-model="state.email"
-          :error="v$.email.$errors[0]?.$message"
+          :error="errorMessageHandler(v$.email)"
           @blur="v$.email.$touch"
         />
         <UiInput
           label="Password"
           type="password"
           v-model="state.password"
-          :error="v$.password.$errors[0]?.$message"
+          :error="errorMessageHandler(v$.password)"
           @blur="v$.password.$touch"
         />
       </div>
@@ -44,6 +44,7 @@ import AuthCard from '@/auth/components/AuthCard.vue'
 import UiInput from '@/common/components/UiInput.vue'
 import UiButton from '@/common/components/UiButton.vue'
 import { useAuthStore } from '@/auth/store'
+import { errorMessageHandler } from '@/common/utils/validation'
 
 const router = useRouter()
 const auth = useAuthStore()
