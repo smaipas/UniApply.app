@@ -1,0 +1,523 @@
+service: uniapply-app
+frameworkVersion: "4"
+useDotenv: true
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: us-east-1
+  stage: ${opt:stage, 'dev'}
+
+  httpApi:
+    cors:
+      allowedOrigins:
+        - ${param:appBaseUrl}
+      allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
+      allowedHeaders: [Authorization, Content-Type]
+      maxAge: 86400
+    authorizers:
+      cognitoJwt:
+        identitySource: $request.header.Authorization
+        issuerUrl:
+          Fn::Join:
+            - ""
+            - - "https://cognito-idp."
+              - ${self:provider.region}
+              - ".amazonaws.com/"
+              - { Ref: CognitoUserPool }
+        audience:
+          - { Ref: CognitoUserPoolClient }
+
+  # Hardened logging & tracing
+  logRetentionInDays: 30
+  tracing:
+    lambda: true
+  tags:
+    Service: ${self:service}
+    Stage: ${sls:stage}
+
+  environment:
+    REGION: ${self:provider.region}
+    STAGE: ${sls:stage}
+    # DynamoDB tables
+    USERS_TABLE: ${self:service}-users-${sls:stage}
+    FORMS_TABLE: ${self:service}-forms-${sls:stage}
+    APPLICATIONS_TABLE: ${self:service}-applications-${sls:stage}
+    ROLES_TABLE: ${self:service}-roles-${sls:stage}
+    AUDIT_TABLE: ${self:service}-audit-${sls:stage}
+    # Buckets (resolved by Ref)
+    WEB_BUCKET: { Ref: WebBucket }
+    UPLOADS_BUCKET: { Ref: UploadsBucket }
+    # Cognito + SES
+    USER_POOL_ID: { Ref: CognitoUserPool }
+    USER_POOL_CLIENT_ID: { Ref: CognitoUserPoolClient }
+    # Prefer env override locally, else SSM per stage
+    SES_SENDER_EMAIL: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.com'}
+
+  iam:
+    role:
+      statements:
+        # DynamoDB (tables + GSIs)
+        - Effect: Allow
+          Action:
+            - dynamodb:PutItem
+            - dynamodb:GetItem
+            - dynamodb:UpdateItem
+            - dynamodb:DeleteItem
+            - dynamodb:Query
+            - dynamodb:Scan
+            - dynamodb:BatchWriteItem
+            - dynamodb:BatchGetItem
+          Resource:
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.FORMS_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.ROLES_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.AUDIT_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}/index/*
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}/index/*
+        # S3 (only our two buckets)
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+            - s3:ListBucket
+          Resource:
+            - { "Fn::GetAtt": [WebBucket, Arn] }
+            - { "Fn::Join": ["", [{ "Fn::GetAtt": [WebBucket, Arn] }, "/*"]] }
+            - { "Fn::GetAtt": [UploadsBucket, Arn] }
+            - {
+                "Fn::Join":
+                  ["", [{ "Fn::GetAtt": [UploadsBucket, Arn] }, "/*"]],
+              }
+        # SES (send only)
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: "*"
+        # Cognito (read-only)
+        - Effect: Allow
+          Action:
+            - cognito-idp:AdminGetUser
+            - cognito-idp:ListUsers
+            - cognito-idp:DescribeUserPool
+          Resource:
+            - { "Fn::GetAtt": [CognitoUserPool, Arn] }
+        # SSM (read stage params from /uniapply/{stage}/*)
+        - Effect: Allow
+          Action:
+            - ssm:GetParameter
+            - ssm:GetParameters
+          Resource:
+            - arn:aws:ssm:${self:provider.region}:${aws:accountId}:parameter/uniapply/${sls:stage}/*
+
+# Stage-specific, externalized via SSM/env (safe defaults)
+params:
+  default:
+    appBaseUrl: ${ssm:/uniapply/${sls:stage}/appBaseUrl, 'http://localhost:5173'}
+    localDevUrl: ${env:LOCAL_DEV_URL, 'http://localhost:5173'}
+    # API custom domain; if empty, domain resources are skipped
+    apiDomainName: ${ssm:/uniapply/${sls:stage}/api/domainName, ''}
+    apiHostedZoneId: ${ssm:/uniapply/${sls:stage}/route53/hostedZoneId, ''}
+    apiCertificateArn: ${ssm:/uniapply/${sls:stage}/acm/certArn, ''}
+    # Optional WAF WebACL ARN for CloudFront association
+    wafArn: ${ssm:/uniapply/${sls:stage}/waf/arn, ''}
+
+package:
+  individually: true
+
+custom:
+
+build:
+  esbuild:
+    minify: true
+    sourcemap: true
+    target: node20
+    external:
+      - zod
+    exclude:
+      - aws-sdk
+
+functions:
+  api:
+    handler: src/handler.main
+    memorySize: 512
+    timeout: 15
+    architecture: arm64
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+          authorizer: cognitoJwt
+
+  presignUpload:
+    handler: src/handler.presignUpload
+    memorySize: 256
+    timeout: 10
+    architecture: arm64
+    events:
+      - httpApi:
+          path: /files/presign
+          method: POST
+          authorizer: cognitoJwt
+
+  notifyStatusChange:
+    handler: src/handler.notifyStatusChange
+    memorySize: 256
+    timeout: 10
+    architecture: arm64
+
+resources:
+  Conditions:
+    HasApiDomain:
+      Fn::Not:
+        - Fn::Equals:
+            - ""
+            - ${param:apiDomainName, ""}
+    HasWaf:
+      Fn::Not:
+        - Fn::Equals:
+            - ""
+            - ${param:wafArn, ""}
+
+  Resources:
+    # DynamoDB (SSE + PITR)
+    UsersTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.USERS_TABLE}
+        AttributeDefinitions:
+          - { AttributeName: id, AttributeType: S }
+          - { AttributeName: email, AttributeType: S }
+        KeySchema:
+          - { AttributeName: id, KeyType: HASH }
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+        GlobalSecondaryIndexes:
+          - IndexName: email-index
+            KeySchema: [{ AttributeName: email, KeyType: HASH }]
+            Projection: { ProjectionType: ALL }
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    FormsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.FORMS_TABLE}
+        AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]
+        KeySchema: [{ AttributeName: id, KeyType: HASH }]
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    ApplicationsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.APPLICATIONS_TABLE}
+        AttributeDefinitions:
+          - { AttributeName: id, AttributeType: S }
+          - { AttributeName: userId, AttributeType: S }
+          - { AttributeName: status, AttributeType: S }
+        KeySchema: [{ AttributeName: id, KeyType: HASH }]
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+        GlobalSecondaryIndexes:
+          - IndexName: userId-index
+            KeySchema: [{ AttributeName: userId, KeyType: HASH }]
+            Projection: { ProjectionType: ALL }
+          - IndexName: status-index
+            KeySchema: [{ AttributeName: status, KeyType: HASH }]
+            Projection: { ProjectionType: ALL }
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    RolesTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ROLES_TABLE}
+        AttributeDefinitions: [{ AttributeName: roleName, AttributeType: S }]
+        KeySchema: [{ AttributeName: roleName, KeyType: HASH }]
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    AuditLogsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.AUDIT_TABLE}
+        AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]
+        KeySchema: [{ AttributeName: id, KeyType: HASH }]
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    # S3 Buckets + CloudFront (OAC)
+    WebBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        OwnershipControls:
+          Rules: [{ ObjectOwnership: BucketOwnerPreferred }]
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+        VersioningConfiguration: { Status: Enabled }
+        LifecycleConfiguration:
+          Rules:
+            - Id: ExpireOldVersions
+              Status: Enabled
+              NoncurrentVersionExpiration:
+                NoncurrentDays: 30
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - ${param:appBaseUrl}
+              AllowedMethods: [GET, HEAD]
+              AllowedHeaders: ["*"]
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    UploadsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        OwnershipControls:
+          Rules: [{ ObjectOwnership: BucketOwnerPreferred }]
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        BucketEncryption:
+          ServerSideEncryptionConfiguration:
+            - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }
+        VersioningConfiguration: { Status: Enabled }
+        CorsConfiguration:
+          CorsRules:
+            - AllowedOrigins:
+                - ${param:appBaseUrl}
+              AllowedMethods: [GET, PUT]
+              AllowedHeaders: ["*"]
+              ExposedHeaders: ["ETag"]
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    # Deny non-TLS on uploads bucket
+    UploadsBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: { Ref: UploadsBucket }
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: EnforceTLS
+              Effect: Deny
+              Principal: "*"
+              Action: "s3:*"
+              Resource:
+                - { "Fn::GetAtt": [UploadsBucket, Arn] }
+                - {
+                    "Fn::Join":
+                      ["", [{ "Fn::GetAtt": [UploadsBucket, Arn] }, "/*"]],
+                  }
+              Condition:
+                Bool: { aws:SecureTransport: "false" }
+
+    CloudFrontOAC:
+      Type: AWS::CloudFront::OriginAccessControl
+      Properties:
+        OriginAccessControlConfig:
+          Name: ${self:service}-${sls:stage}-oac
+          OriginAccessControlOriginType: s3
+          SigningBehavior: always
+          SigningProtocol: sigv4
+
+    # Custom Security Headers policy with CSP & HSTS
+    SecurityHeadersPolicy:
+      Type: AWS::CloudFront::ResponseHeadersPolicy
+      Properties:
+        ResponseHeadersPolicyConfig:
+          Name: ${self:service}-${sls:stage}-security-headers
+          SecurityHeadersConfig:
+            ContentSecurityPolicy:
+              ContentSecurityPolicy: >-
+                default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; frame-ancestors 'none';
+              Override: true
+            StrictTransportSecurity:
+              AccessControlMaxAgeSec: 63072000
+              IncludeSubdomains: true
+              Preload: true
+              Override: true
+            ContentTypeOptions: { Override: true }
+            FrameOptions: { FrameOption: DENY, Override: true }
+            ReferrerPolicy: { ReferrerPolicy: "no-referrer", Override: true }
+
+    WebDistribution:
+      Type: AWS::CloudFront::Distribution
+      Properties:
+        DistributionConfig:
+          Enabled: true
+          DefaultRootObject: index.html
+          Origins:
+            - Id: WebBucketOrigin
+              DomainName: { "Fn::GetAtt": [WebBucket, RegionalDomainName] }
+              S3OriginConfig: {}
+              OriginAccessControlId: { Ref: CloudFrontOAC }
+          DefaultCacheBehavior:
+            TargetOriginId: WebBucketOrigin
+            ViewerProtocolPolicy: redirect-to-https
+            AllowedMethods: [GET, HEAD, OPTIONS]
+            CachedMethods: [GET, HEAD]
+            Compress: true
+            CachePolicyId: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+            ResponseHeadersPolicyId: { Ref: SecurityHeadersPolicy }
+          PriceClass: PriceClass_100
+          ViewerCertificate:
+            CloudFrontDefaultCertificate: true
+          CustomErrorResponses:
+            - {
+                ErrorCode: 403,
+                ResponsePagePath: /index.html,
+                ResponseCode: 200,
+                ErrorCachingMinTTL: 0,
+              }
+            - {
+                ErrorCode: 404,
+                ResponsePagePath: /index.html,
+                ResponseCode: 200,
+                ErrorCachingMinTTL: 0,
+              }
+
+    WebBucketPolicy:
+      Type: AWS::S3::BucketPolicy
+      Properties:
+        Bucket: { Ref: WebBucket }
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Sid: AllowCloudFrontRead
+              Effect: Allow
+              Principal: { Service: cloudfront.amazonaws.com }
+              Action: s3:GetObject
+              Resource:
+                { "Fn::Join": ["", [{ "Fn::GetAtt": [WebBucket, Arn] }, "/*"]] }
+              Condition:
+                StringEquals:
+                  AWS:SourceArn:
+                    {
+                      "Fn::Join":
+                        [
+                          "",
+                          [
+                            "arn:aws:cloudfront::",
+                            { Ref: "AWS::AccountId" },
+                            ":distribution/",
+                            { Ref: WebDistribution },
+                          ],
+                        ],
+                    }
+
+    # Native HTTP API custom domain (optional)
+    ApiDomainName:
+      Type: AWS::ApiGatewayV2::DomainName
+      Condition: HasApiDomain
+      Properties:
+        DomainName: ${param:apiDomainName}
+        DomainNameConfigurations:
+          - CertificateArn: ${param:apiCertificateArn}
+            EndpointType: REGIONAL
+            SecurityPolicy: TLS_1_2
+
+    ApiBasePathMapping:
+      Type: AWS::ApiGatewayV2::ApiMapping
+      Condition: HasApiDomain
+      Properties:
+        DomainName: ${param:apiDomainName}
+        ApiId: { Ref: HttpApi }
+        Stage: "$default"
+
+    ApiDnsRecord:
+      Type: AWS::Route53::RecordSet
+      Condition: HasApiDomain
+      Properties:
+        HostedZoneId: ${param:apiHostedZoneId}
+        Name: ${param:apiDomainName}
+        Type: A
+        AliasTarget:
+          DNSName: { "Fn::GetAtt": [ApiDomainName, RegionalDomainName] }
+          HostedZoneId: { "Fn::GetAtt": [ApiDomainName, RegionalHostedZoneId] }
+
+    # WAF association for CloudFront
+    # CfWafAssociation:
+    #   Type: AWS::WAFv2::WebACLAssociation
+    #   Condition: HasWaf
+    #   Properties:
+    #     ResourceArn:
+    #       { "Fn::Join": ["", ["arn:aws:cloudfront::", { Ref: "AWS::AccountId" }, ":distribution/", { Ref: WebDistribution }]] }
+    #     WebACLArn: ${param:wafArn}
+
+    # Cognito (callbacks use params)
+    CognitoUserPool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: ${self:service}-${sls:stage}-userpool
+        AutoVerifiedAttributes: [email]
+        UsernameAttributes: [email]
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 8
+            RequireLowercase: true
+            RequireNumbers: true
+            RequireSymbols: false
+            RequireUppercase: true
+
+    CognitoUserPoolClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ${self:service}-${sls:stage}-client
+        UserPoolId: { Ref: CognitoUserPool }
+        GenerateSecret: false
+        ExplicitAuthFlows:
+          - ALLOW_USER_PASSWORD_AUTH
+          - ALLOW_REFRESH_TOKEN_AUTH
+          - ALLOW_USER_SRP_AUTH
+        PreventUserExistenceErrors: ENABLED
+        SupportedIdentityProviders: [COGNITO]
+        AllowedOAuthFlowsUserPoolClient: true
+        AllowedOAuthFlows: [code]
+        AllowedOAuthScopes: [email, openid, profile]
+        CallbackURLs:
+          - ${param:appBaseUrl}
+          - ${param:localDevUrl}
+        LogoutURLs:
+          - ${param:appBaseUrl}
+          - ${param:localDevUrl}
+
+    SesEmailIdentity:
+      Type: AWS::SES::EmailIdentity
+      Properties:
+        EmailIdentity: ${env:SES_SENDER_EMAIL}
+
+  Outputs:
+    WebBucketName:
+      Value: { Ref: WebBucket }
+    WebDistributionId:
+      Value: { Ref: WebDistribution }
+    WebDistributionDomain:
+      Value: { "Fn::GetAtt": [WebDistribution, DomainName] }
+    ApiCustomDomain:
+      Condition: HasApiDomain
+      Value: ${param:apiDomainName}

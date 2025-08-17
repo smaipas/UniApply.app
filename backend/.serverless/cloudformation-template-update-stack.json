@@ -1,0 +1,1401 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "The AWS CloudFormation template for this Serverless application",
+  "Resources": {
+    "ApiLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/uniapply-app-dev-api",
+        "RetentionInDays": 30
+      }
+    },
+    "PresignUploadLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/uniapply-app-dev-presignUpload",
+        "RetentionInDays": 30
+      }
+    },
+    "NotifyStatusChangeLogGroup": {
+      "Type": "AWS::Logs::LogGroup",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/uniapply-app-dev-notifyStatusChange",
+        "RetentionInDays": 30
+      }
+    },
+    "IamRoleLambdaExecution": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "lambda.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": {
+              "Fn::Join": [
+                "-",
+                [
+                  "uniapply-app",
+                  "dev",
+                  "lambda"
+                ]
+              ]
+            },
+            "PolicyDocument": {
+              "Version": "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogStream",
+                    "logs:CreateLogGroup",
+                    "logs:TagResource"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/uniapply-app-dev*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::Sub": "arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/uniapply-app-dev*:*:*"
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:PutItem",
+                    "dynamodb:GetItem",
+                    "dynamodb:UpdateItem",
+                    "dynamodb:DeleteItem",
+                    "dynamodb:Query",
+                    "dynamodb:Scan",
+                    "dynamodb:BatchWriteItem",
+                    "dynamodb:BatchGetItem"
+                  ],
+                  "Resource": [
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev",
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-forms-dev",
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev",
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-roles-dev",
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-audit-dev",
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev/index/*",
+                    "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev/index/*"
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:GetObject",
+                    "s3:PutObject",
+                    "s3:DeleteObject",
+                    "s3:ListBucket"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "WebBucket",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::GetAtt": [
+                              "WebBucket",
+                              "Arn"
+                            ]
+                          },
+                          "/*"
+                        ]
+                      ]
+                    },
+                    {
+                      "Fn::GetAtt": [
+                        "UploadsBucket",
+                        "Arn"
+                      ]
+                    },
+                    {
+                      "Fn::Join": [
+                        "",
+                        [
+                          {
+                            "Fn::GetAtt": [
+                              "UploadsBucket",
+                              "Arn"
+                            ]
+                          },
+                          "/*"
+                        ]
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ses:SendEmail",
+                    "ses:SendRawEmail"
+                  ],
+                  "Resource": "*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cognito-idp:AdminGetUser",
+                    "cognito-idp:ListUsers",
+                    "cognito-idp:DescribeUserPool"
+                  ],
+                  "Resource": [
+                    {
+                      "Fn::GetAtt": [
+                        "CognitoUserPool",
+                        "Arn"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ssm:GetParameter",
+                    "ssm:GetParameters"
+                  ],
+                  "Resource": "arn:aws:ssm:us-east-1:584326014609:parameter/uniapply/dev/*"
+                },
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "xray:PutTraceSegments",
+                    "xray:PutTelemetryRecords"
+                  ],
+                  "Resource": [
+                    "*"
+                  ]
+                }
+              ]
+            }
+          }
+        ],
+        "Path": "/",
+        "RoleName": {
+          "Fn::Join": [
+            "-",
+            [
+              "uniapply-app",
+              "dev",
+              {
+                "Ref": "AWS::Region"
+              },
+              "lambdaRole"
+            ]
+          ]
+        }
+      }
+    },
+    "ApiLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
+          "S3Key": "serverless/uniapply-app/dev/1755380905959-2025-08-16T21:48:25.959Z/uniapply-app-api.zip"
+        },
+        "Handler": "src/handler.main",
+        "Runtime": "nodejs20.x",
+        "FunctionName": "uniapply-app-dev-api",
+        "MemorySize": 512,
+        "Timeout": 15,
+        "Architectures": [
+          "arm64"
+        ],
+        "Tags": [
+          {
+            "Key": "Service",
+            "Value": "uniapply-app"
+          },
+          {
+            "Key": "Stage",
+            "Value": "dev"
+          }
+        ],
+        "TracingConfig": {
+          "Mode": "Active"
+        },
+        "Environment": {
+          "Variables": {
+            "REGION": "us-east-1",
+            "STAGE": "dev",
+            "USERS_TABLE": "uniapply-app-users-dev",
+            "FORMS_TABLE": "uniapply-app-forms-dev",
+            "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
+            "ROLES_TABLE": "uniapply-app-roles-dev",
+            "AUDIT_TABLE": "uniapply-app-audit-dev",
+            "WEB_BUCKET": {
+              "Ref": "WebBucket"
+            },
+            "UPLOADS_BUCKET": {
+              "Ref": "UploadsBucket"
+            },
+            "USER_POOL_ID": {
+              "Ref": "CognitoUserPool"
+            },
+            "USER_POOL_CLIENT_ID": {
+              "Ref": "CognitoUserPoolClient"
+            },
+            "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "NODE_OPTIONS": "--enable-source-maps"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "ApiLogGroup"
+      ]
+    },
+    "PresignUploadLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
+          "S3Key": "serverless/uniapply-app/dev/1755380905959-2025-08-16T21:48:25.959Z/uniapply-app-presignUpload.zip"
+        },
+        "Handler": "src/handler.presignUpload",
+        "Runtime": "nodejs20.x",
+        "FunctionName": "uniapply-app-dev-presignUpload",
+        "MemorySize": 256,
+        "Timeout": 10,
+        "Architectures": [
+          "arm64"
+        ],
+        "Tags": [
+          {
+            "Key": "Service",
+            "Value": "uniapply-app"
+          },
+          {
+            "Key": "Stage",
+            "Value": "dev"
+          }
+        ],
+        "TracingConfig": {
+          "Mode": "Active"
+        },
+        "Environment": {
+          "Variables": {
+            "REGION": "us-east-1",
+            "STAGE": "dev",
+            "USERS_TABLE": "uniapply-app-users-dev",
+            "FORMS_TABLE": "uniapply-app-forms-dev",
+            "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
+            "ROLES_TABLE": "uniapply-app-roles-dev",
+            "AUDIT_TABLE": "uniapply-app-audit-dev",
+            "WEB_BUCKET": {
+              "Ref": "WebBucket"
+            },
+            "UPLOADS_BUCKET": {
+              "Ref": "UploadsBucket"
+            },
+            "USER_POOL_ID": {
+              "Ref": "CognitoUserPool"
+            },
+            "USER_POOL_CLIENT_ID": {
+              "Ref": "CognitoUserPoolClient"
+            },
+            "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "NODE_OPTIONS": "--enable-source-maps"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "PresignUploadLogGroup"
+      ]
+    },
+    "NotifyStatusChangeLambdaFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
+          "S3Key": "serverless/uniapply-app/dev/1755380905959-2025-08-16T21:48:25.959Z/uniapply-app-notifyStatusChange.zip"
+        },
+        "Handler": "src/handler.notifyStatusChange",
+        "Runtime": "nodejs20.x",
+        "FunctionName": "uniapply-app-dev-notifyStatusChange",
+        "MemorySize": 256,
+        "Timeout": 10,
+        "Architectures": [
+          "arm64"
+        ],
+        "Tags": [
+          {
+            "Key": "Service",
+            "Value": "uniapply-app"
+          },
+          {
+            "Key": "Stage",
+            "Value": "dev"
+          }
+        ],
+        "TracingConfig": {
+          "Mode": "Active"
+        },
+        "Environment": {
+          "Variables": {
+            "REGION": "us-east-1",
+            "STAGE": "dev",
+            "USERS_TABLE": "uniapply-app-users-dev",
+            "FORMS_TABLE": "uniapply-app-forms-dev",
+            "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
+            "ROLES_TABLE": "uniapply-app-roles-dev",
+            "AUDIT_TABLE": "uniapply-app-audit-dev",
+            "WEB_BUCKET": {
+              "Ref": "WebBucket"
+            },
+            "UPLOADS_BUCKET": {
+              "Ref": "UploadsBucket"
+            },
+            "USER_POOL_ID": {
+              "Ref": "CognitoUserPool"
+            },
+            "USER_POOL_CLIENT_ID": {
+              "Ref": "CognitoUserPoolClient"
+            },
+            "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "NODE_OPTIONS": "--enable-source-maps"
+          }
+        },
+        "Role": {
+          "Fn::GetAtt": [
+            "IamRoleLambdaExecution",
+            "Arn"
+          ]
+        }
+      },
+      "DependsOn": [
+        "NotifyStatusChangeLogGroup"
+      ]
+    },
+    "NotifyStatusChangeLambdaVersionC8uI8BWd9cC1EFWmyU4VrvVv46Eh32l0sh2Ag4d2z2s": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "NotifyStatusChangeLambdaFunction"
+        },
+        "CodeSha256": "m4TqxI0voDkSKXbWeV+L1bSqtKmhzVAkTm7utuk+kL0="
+      }
+    },
+    "PresignUploadLambdaVersionaygBVlPhXNZyRxxv29mgsuupzVzrynBsnkit43VLus": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "PresignUploadLambdaFunction"
+        },
+        "CodeSha256": "eULpeX3jHv1IN3q0RwgqPz9I3HJPcQGNNMyj+2s973w="
+      }
+    },
+    "ApiLambdaVersiondxO2CIjAvap0nyTxDtNijuNu2uh5eUQr1x7a1rJCf8": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "ApiLambdaFunction"
+        },
+        "CodeSha256": "7Tk+K3u0TVB/oOpeaCrjU/Oqn355zoVwBDvs0mSb458="
+      }
+    },
+    "HttpApi": {
+      "Type": "AWS::ApiGatewayV2::Api",
+      "Properties": {
+        "Name": "dev-uniapply-app",
+        "ProtocolType": "HTTP",
+        "Tags": {
+          "Service": "uniapply-app",
+          "Stage": "dev"
+        },
+        "CorsConfiguration": {
+          "AllowHeaders": [
+            "Authorization",
+            "Content-Type"
+          ],
+          "AllowMethods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "OPTIONS"
+          ],
+          "AllowOrigins": [
+            "http://localhost:5173"
+          ],
+          "MaxAge": 86400
+        }
+      }
+    },
+    "HttpApiStage": {
+      "Type": "AWS::ApiGatewayV2::Stage",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "StageName": "$default",
+        "AutoDeploy": true,
+        "DefaultRouteSettings": {
+          "DetailedMetricsEnabled": false
+        },
+        "Tags": {
+          "Service": "uniapply-app",
+          "Stage": "dev"
+        }
+      }
+    },
+    "HttpApiAuthorizerCognitoJwt": {
+      "Type": "AWS::ApiGatewayV2::Authorizer",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "Name": "cognitoJwt",
+        "IdentitySource": [
+          "$request.header.Authorization"
+        ],
+        "AuthorizerType": "JWT",
+        "JwtConfiguration": {
+          "Audience": [
+            {
+              "Ref": "CognitoUserPoolClient"
+            }
+          ],
+          "Issuer": {
+            "Fn::Join": [
+              "",
+              [
+                "https://cognito-idp.",
+                "us-east-1",
+                ".amazonaws.com/",
+                {
+                  "Ref": "CognitoUserPool"
+                }
+              ]
+            ]
+          }
+        }
+      }
+    },
+    "ApiLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "ApiLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationApi": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "ApiLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRouteAnyProxyVar": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "ANY /{proxy+}",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationApi"
+              }
+            ]
+          ]
+        },
+        "AuthorizationType": "JWT",
+        "AuthorizerId": {
+          "Ref": "HttpApiAuthorizerCognitoJwt"
+        }
+      },
+      "DependsOn": "HttpApiIntegrationApi"
+    },
+    "PresignUploadLambdaPermissionHttpApi": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "PresignUploadLambdaFunction",
+            "Arn"
+          ]
+        },
+        "Action": "lambda:InvokeFunction",
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition"
+              },
+              ":execute-api:",
+              {
+                "Ref": "AWS::Region"
+              },
+              ":",
+              {
+                "Ref": "AWS::AccountId"
+              },
+              ":",
+              {
+                "Ref": "HttpApi"
+              },
+              "/*"
+            ]
+          ]
+        }
+      }
+    },
+    "HttpApiIntegrationPresignUpload": {
+      "Type": "AWS::ApiGatewayV2::Integration",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "IntegrationType": "AWS_PROXY",
+        "IntegrationUri": {
+          "Fn::GetAtt": [
+            "PresignUploadLambdaFunction",
+            "Arn"
+          ]
+        },
+        "PayloadFormatVersion": "2.0",
+        "TimeoutInMillis": 30000
+      }
+    },
+    "HttpApiRoutePostFilesPresign": {
+      "Type": "AWS::ApiGatewayV2::Route",
+      "Properties": {
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "RouteKey": "POST /files/presign",
+        "Target": {
+          "Fn::Join": [
+            "/",
+            [
+              "integrations",
+              {
+                "Ref": "HttpApiIntegrationPresignUpload"
+              }
+            ]
+          ]
+        },
+        "AuthorizationType": "JWT",
+        "AuthorizerId": {
+          "Ref": "HttpApiAuthorizerCognitoJwt"
+        }
+      },
+      "DependsOn": "HttpApiIntegrationPresignUpload"
+    },
+    "UsersTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "uniapply-app-users-dev",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "email",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        },
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "email-index",
+            "KeySchema": [
+              {
+                "AttributeName": "email",
+                "KeyType": "HASH"
+              }
+            ],
+            "Projection": {
+              "ProjectionType": "ALL"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "FormsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "uniapply-app-forms-dev",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "ApplicationsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "uniapply-app-applications-dev",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "userId",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "status",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        },
+        "GlobalSecondaryIndexes": [
+          {
+            "IndexName": "userId-index",
+            "KeySchema": [
+              {
+                "AttributeName": "userId",
+                "KeyType": "HASH"
+              }
+            ],
+            "Projection": {
+              "ProjectionType": "ALL"
+            }
+          },
+          {
+            "IndexName": "status-index",
+            "KeySchema": [
+              {
+                "AttributeName": "status",
+                "KeyType": "HASH"
+              }
+            ],
+            "Projection": {
+              "ProjectionType": "ALL"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "RolesTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "uniapply-app-roles-dev",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "roleName",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "roleName",
+            "KeyType": "HASH"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "AuditLogsTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "TableName": "uniapply-app-audit-dev",
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "id",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "id",
+            "KeyType": "HASH"
+          }
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "SSESpecification": {
+          "SSEEnabled": true
+        },
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "WebBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerPreferred"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "LifecycleConfiguration": {
+          "Rules": [
+            {
+              "Id": "ExpireOldVersions",
+              "Status": "Enabled",
+              "NoncurrentVersionExpiration": {
+                "NoncurrentDays": 30
+              }
+            }
+          ]
+        },
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "AllowedOrigins": [
+                "http://localhost:5173"
+              ],
+              "AllowedMethods": [
+                "GET",
+                "HEAD"
+              ],
+              "AllowedHeaders": [
+                "*"
+              ]
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "UploadsBucket": {
+      "Type": "AWS::S3::Bucket",
+      "Properties": {
+        "OwnershipControls": {
+          "Rules": [
+            {
+              "ObjectOwnership": "BucketOwnerPreferred"
+            }
+          ]
+        },
+        "PublicAccessBlockConfiguration": {
+          "BlockPublicAcls": true,
+          "BlockPublicPolicy": true,
+          "IgnorePublicAcls": true,
+          "RestrictPublicBuckets": true
+        },
+        "BucketEncryption": {
+          "ServerSideEncryptionConfiguration": [
+            {
+              "ServerSideEncryptionByDefault": {
+                "SSEAlgorithm": "AES256"
+              }
+            }
+          ]
+        },
+        "VersioningConfiguration": {
+          "Status": "Enabled"
+        },
+        "CorsConfiguration": {
+          "CorsRules": [
+            {
+              "AllowedOrigins": [
+                "http://localhost:5173"
+              ],
+              "AllowedMethods": [
+                "GET",
+                "PUT"
+              ],
+              "AllowedHeaders": [
+                "*"
+              ],
+              "ExposedHeaders": [
+                "ETag"
+              ]
+            }
+          ]
+        }
+      },
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain"
+    },
+    "UploadsBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "UploadsBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "EnforceTLS",
+              "Effect": "Deny",
+              "Principal": "*",
+              "Action": "s3:*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "UploadsBucket",
+                    "Arn"
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "UploadsBucket",
+                          "Arn"
+                        ]
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
+              ],
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false"
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "CloudFrontOAC": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": {
+        "OriginAccessControlConfig": {
+          "Name": "uniapply-app-dev-oac",
+          "OriginAccessControlOriginType": "s3",
+          "SigningBehavior": "always",
+          "SigningProtocol": "sigv4"
+        }
+      }
+    },
+    "SecurityHeadersPolicy": {
+      "Type": "AWS::CloudFront::ResponseHeadersPolicy",
+      "Properties": {
+        "ResponseHeadersPolicyConfig": {
+          "Name": "uniapply-app-dev-security-headers",
+          "SecurityHeadersConfig": {
+            "ContentSecurityPolicy": {
+              "ContentSecurityPolicy": "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; frame-ancestors 'none';",
+              "Override": true
+            },
+            "StrictTransportSecurity": {
+              "AccessControlMaxAgeSec": 63072000,
+              "IncludeSubdomains": true,
+              "Preload": true,
+              "Override": true
+            },
+            "ContentTypeOptions": {
+              "Override": true
+            },
+            "FrameOptions": {
+              "FrameOption": "DENY",
+              "Override": true
+            },
+            "ReferrerPolicy": {
+              "ReferrerPolicy": "no-referrer",
+              "Override": true
+            }
+          }
+        }
+      }
+    },
+    "WebDistribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": {
+        "DistributionConfig": {
+          "Enabled": true,
+          "DefaultRootObject": "index.html",
+          "Origins": [
+            {
+              "Id": "WebBucketOrigin",
+              "DomainName": {
+                "Fn::GetAtt": [
+                  "WebBucket",
+                  "RegionalDomainName"
+                ]
+              },
+              "S3OriginConfig": {},
+              "OriginAccessControlId": {
+                "Ref": "CloudFrontOAC"
+              }
+            }
+          ],
+          "DefaultCacheBehavior": {
+            "TargetOriginId": "WebBucketOrigin",
+            "ViewerProtocolPolicy": "redirect-to-https",
+            "AllowedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS"
+            ],
+            "CachedMethods": [
+              "GET",
+              "HEAD"
+            ],
+            "Compress": true,
+            "CachePolicyId": "658327ea-f89d-4fab-a63d-7e88639e58f6",
+            "ResponseHeadersPolicyId": {
+              "Ref": "SecurityHeadersPolicy"
+            }
+          },
+          "PriceClass": "PriceClass_100",
+          "ViewerCertificate": {
+            "CloudFrontDefaultCertificate": true
+          },
+          "CustomErrorResponses": [
+            {
+              "ErrorCode": 403,
+              "ResponsePagePath": "/index.html",
+              "ResponseCode": 200,
+              "ErrorCachingMinTTL": 0
+            },
+            {
+              "ErrorCode": 404,
+              "ResponsePagePath": "/index.html",
+              "ResponseCode": 200,
+              "ErrorCachingMinTTL": 0
+            }
+          ]
+        }
+      }
+    },
+    "WebBucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": {
+        "Bucket": {
+          "Ref": "WebBucket"
+        },
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCloudFrontRead",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+              },
+              "Action": "s3:GetObject",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    {
+                      "Fn::GetAtt": [
+                        "WebBucket",
+                        "Arn"
+                      ]
+                    },
+                    "/*"
+                  ]
+                ]
+              },
+              "Condition": {
+                "StringEquals": {
+                  "AWS:SourceArn": {
+                    "Fn::Join": [
+                      "",
+                      [
+                        "arn:aws:cloudfront::",
+                        {
+                          "Ref": "AWS::AccountId"
+                        },
+                        ":distribution/",
+                        {
+                          "Ref": "WebDistribution"
+                        }
+                      ]
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    },
+    "ApiDomainName": {
+      "Type": "AWS::ApiGatewayV2::DomainName",
+      "Condition": "HasApiDomain",
+      "Properties": {
+        "DomainName": "",
+        "DomainNameConfigurations": [
+          {
+            "CertificateArn": "",
+            "EndpointType": "REGIONAL",
+            "SecurityPolicy": "TLS_1_2"
+          }
+        ]
+      }
+    },
+    "ApiBasePathMapping": {
+      "Type": "AWS::ApiGatewayV2::ApiMapping",
+      "Condition": "HasApiDomain",
+      "Properties": {
+        "DomainName": "",
+        "ApiId": {
+          "Ref": "HttpApi"
+        },
+        "Stage": "$default"
+      }
+    },
+    "ApiDnsRecord": {
+      "Type": "AWS::Route53::RecordSet",
+      "Condition": "HasApiDomain",
+      "Properties": {
+        "HostedZoneId": "",
+        "Name": "",
+        "Type": "A",
+        "AliasTarget": {
+          "DNSName": {
+            "Fn::GetAtt": [
+              "ApiDomainName",
+              "RegionalDomainName"
+            ]
+          },
+          "HostedZoneId": {
+            "Fn::GetAtt": [
+              "ApiDomainName",
+              "RegionalHostedZoneId"
+            ]
+          }
+        }
+      }
+    },
+    "CognitoUserPool": {
+      "Type": "AWS::Cognito::UserPool",
+      "Properties": {
+        "UserPoolName": "uniapply-app-dev-userpool",
+        "AutoVerifiedAttributes": [
+          "email"
+        ],
+        "UsernameAttributes": [
+          "email"
+        ],
+        "Policies": {
+          "PasswordPolicy": {
+            "MinimumLength": 8,
+            "RequireLowercase": true,
+            "RequireNumbers": true,
+            "RequireSymbols": false,
+            "RequireUppercase": true
+          }
+        }
+      }
+    },
+    "CognitoUserPoolClient": {
+      "Type": "AWS::Cognito::UserPoolClient",
+      "Properties": {
+        "ClientName": "uniapply-app-dev-client",
+        "UserPoolId": {
+          "Ref": "CognitoUserPool"
+        },
+        "GenerateSecret": false,
+        "ExplicitAuthFlows": [
+          "ALLOW_USER_PASSWORD_AUTH",
+          "ALLOW_REFRESH_TOKEN_AUTH",
+          "ALLOW_USER_SRP_AUTH"
+        ],
+        "PreventUserExistenceErrors": "ENABLED",
+        "SupportedIdentityProviders": [
+          "COGNITO"
+        ],
+        "AllowedOAuthFlowsUserPoolClient": true,
+        "AllowedOAuthFlows": [
+          "code"
+        ],
+        "AllowedOAuthScopes": [
+          "email",
+          "openid",
+          "profile"
+        ],
+        "CallbackURLs": [
+          "http://localhost:5173",
+          "http://localhost:5173"
+        ],
+        "LogoutURLs": [
+          "http://localhost:5173",
+          "http://localhost:5173"
+        ]
+      }
+    },
+    "SesEmailIdentity": {
+      "Type": "AWS::SES::EmailIdentity",
+      "Properties": {
+        "EmailIdentity": "no-reply@uniapply.app"
+      }
+    }
+  },
+  "Outputs": {
+    "ServerlessDeploymentBucketName": {
+      "Value": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
+      "Export": {
+        "Name": "sls-uniapply-app-dev-ServerlessDeploymentBucketName"
+      }
+    },
+    "NotifyStatusChangeLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "NotifyStatusChangeLambdaVersionC8uI8BWd9cC1EFWmyU4VrvVv46Eh32l0sh2Ag4d2z2s"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
+      }
+    },
+    "PresignUploadLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "PresignUploadLambdaVersionaygBVlPhXNZyRxxv29mgsuupzVzrynBsnkit43VLus"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
+      }
+    },
+    "ApiLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ApiLambdaVersiondxO2CIjAvap0nyTxDtNijuNu2uh5eUQr1x7a1rJCf8"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
+      }
+    },
+    "HttpApiId": {
+      "Description": "Id of the HTTP API",
+      "Value": {
+        "Ref": "HttpApi"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-HttpApiId"
+      }
+    },
+    "HttpApiUrl": {
+      "Description": "URL of the HTTP API",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "HttpApi"
+            },
+            ".execute-api.",
+            {
+              "Ref": "AWS::Region"
+            },
+            ".",
+            {
+              "Ref": "AWS::URLSuffix"
+            }
+          ]
+        ]
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-HttpApiUrl"
+      }
+    },
+    "WebBucketName": {
+      "Value": {
+        "Ref": "WebBucket"
+      }
+    },
+    "WebDistributionId": {
+      "Value": {
+        "Ref": "WebDistribution"
+      }
+    },
+    "WebDistributionDomain": {
+      "Value": {
+        "Fn::GetAtt": [
+          "WebDistribution",
+          "DomainName"
+        ]
+      }
+    },
+    "ApiCustomDomain": {
+      "Condition": "HasApiDomain",
+      "Value": ""
+    }
+  },
+  "Conditions": {
+    "HasApiDomain": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            "",
+            ""
+          ]
+        }
+      ]
+    },
+    "HasWaf": {
+      "Fn::Not": [
+        {
+          "Fn::Equals": [
+            "",
+            ""
+          ]
+        }
+      ]
+    }
+  }
+}

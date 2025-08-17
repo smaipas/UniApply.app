@@ -1,0 +1,12 @@
+{
+  "name": "uniapply-app",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "sls offline",
+    "deploy": "serverless deploy"
+  },
+  "dependencies": {
+    "zod": "^4.0.17"
+  }
+}

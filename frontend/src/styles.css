@@ -1,0 +1,26 @@
+@import 'tailwindcss';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@theme {
+  --color-primary: rgb(61 98 148);
+  --color-secondary: rgb(86 138 200);
+  --color-accent: rgb(86 185 146);
+}
+
+.dark {
+  --color-primary: rgb(96 133 181);
+  --color-secondary: rgb(133 173 224);
+  --color-accent: rgb(96 204 162);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+body {
+  @apply bg-gray-50 text-gray-900;
+}

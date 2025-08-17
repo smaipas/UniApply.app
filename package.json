@@ -1,0 +1,5 @@
+{
+  "name": "uniapply",
+  "private": true,
+  "workspaces": ["packages/*", "backend", "frontend"]
+}
