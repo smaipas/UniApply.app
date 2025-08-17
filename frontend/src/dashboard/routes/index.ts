@@ -5,7 +5,7 @@ const DashboardPage = () => import('@/dashboard/pages/DashboardPage.vue')
 const dashboardRoutes: RouteRecordRaw[] = [
   {
     path: '/dashboard',
-    name: 'dashboard',
+    name: 'Dashboard',
     component: DashboardPage,
     meta: { requiresAuth: true },
   },

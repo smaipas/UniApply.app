@@ -9,6 +9,8 @@ import {
   confirmForgotPassword,
   refreshTokens,
 } from '@/auth/services/cognito'
+import api from '@/app/axios'
+import type { User as UserModel } from '@uniapply/shared'
 
 type AuthTokens = {
   accessToken: string
@@ -22,6 +24,8 @@ type JwtClaims = {
   exp?: number // epoch seconds
   'cognito:groups'?: string[]
   'custom:roles'?: string[]
+  given_name?: string
+  family_name?: string
 }
 
 type User = { sub: string; email: string; roles: string[] }
@@ -48,6 +52,7 @@ function decodeUser(idToken: string): User {
 export const useAuthStore = defineStore('auth', () => {
   const tokens = ref<AuthTokens | null>(restore())
   const user = ref<User | null>(tokens.value ? decodeUser(tokens.value.idToken) : null)
+  const profile = ref<UserModel | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const redirectAfterLogin = ref<string | null>(null)
@@ -94,6 +99,18 @@ export const useAuthStore = defineStore('auth', () => {
     redirectAfterLogin.value = path
   }
 
+  async function loadProfile() {
+    try {
+      const sub =
+        user.value?.sub || (tokens.value ? jwtDecode<JwtClaims>(tokens.value.idToken).sub : null)
+      if (!sub) return
+      const res = await api.get(`/users/${sub}`)
+      profile.value = res.data as UserModel
+    } catch {
+      // ignore load errors for now
+    }
+  }
+
   async function login(email: string, password: string) {
     loading.value = true
     error.value = null
@@ -106,6 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
         accessToken: r.AccessToken,
         refreshToken: r.RefreshToken ?? tokens.value?.refreshToken ?? null,
       })
+      await loadProfile()
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err: any = e
@@ -189,6 +207,7 @@ export const useAuthStore = defineStore('auth', () => {
         // refresh token usually unchanged for REFRESH_TOKEN_AUTH
         refreshToken: tokens.value.refreshToken,
       })
+      await loadProfile()
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err: any = e
@@ -201,6 +220,7 @@ export const useAuthStore = defineStore('auth', () => {
   function logout() {
     user.value = null
     tokens.value = null
+    profile.value = null
     clearRefreshTimer()
     persist(null)
   }
@@ -208,6 +228,7 @@ export const useAuthStore = defineStore('auth', () => {
   // When app loads with saved tokens, schedule a refresh immediately.
   if (tokens.value?.idToken) {
     scheduleRefreshFrom(tokens.value.idToken, tokens.value.refreshToken)
+    void loadProfile()
   }
 
   // Refresh when tab becomes visible and token is near/after expiry.
@@ -234,6 +255,7 @@ export const useAuthStore = defineStore('auth', () => {
     // state
     tokens,
     user,
+    profile,
     loading,
     error,
     redirectAfterLogin,
@@ -242,6 +264,7 @@ export const useAuthStore = defineStore('auth', () => {
     roles,
     // actions
     rememberRedirect,
+    loadProfile,
     login,
     register,
     confirmRegistration,

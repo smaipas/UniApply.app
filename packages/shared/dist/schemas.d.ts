@@ -41,6 +41,8 @@ export declare const RoleAccessSchema: z.ZodObject<{
     canModifyUserData: z.ZodBoolean;
     canViewApplications: z.ZodBoolean;
     canViewAllApplications: z.ZodBoolean;
+    canViewAllFormTemplates: z.ZodBoolean;
+    canViewAllUsers: z.ZodBoolean;
 }, z.core.$strict>;
 export declare const RoleSchema: z.ZodObject<{
     roleName: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
@@ -52,6 +54,8 @@ export declare const RoleSchema: z.ZodObject<{
         canModifyUserData: z.ZodBoolean;
         canViewApplications: z.ZodBoolean;
         canViewAllApplications: z.ZodBoolean;
+        canViewAllFormTemplates: z.ZodBoolean;
+        canViewAllUsers: z.ZodBoolean;
     }, z.core.$strict>;
 }, z.core.$strict>;
 export declare const RoleModelSchema: z.ZodObject<{
@@ -64,6 +68,8 @@ export declare const RoleModelSchema: z.ZodObject<{
         canModifyUserData: z.ZodBoolean;
         canViewApplications: z.ZodBoolean;
         canViewAllApplications: z.ZodBoolean;
+        canViewAllFormTemplates: z.ZodBoolean;
+        canViewAllUsers: z.ZodBoolean;
     }, z.core.$strict>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
@@ -81,7 +87,7 @@ export declare const UserBase: z.ZodObject<{
         OTHER: "OTHER";
     }>;
     tel: z.ZodString;
-    email: z.ZodString;
+    email: z.ZodEmail;
     address: z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
         number: z.ZodOptional<z.ZodString>;
@@ -109,7 +115,7 @@ export declare const UserCreateSchema: z.ZodObject<{
         OTHER: "OTHER";
     }>;
     tel: z.ZodString;
-    email: z.ZodString;
+    email: z.ZodEmail;
     address: z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
         number: z.ZodOptional<z.ZodString>;
@@ -137,7 +143,7 @@ export declare const UserUpdateSchema: z.ZodObject<{
         OTHER: "OTHER";
     }>>;
     tel: z.ZodOptional<z.ZodString>;
-    email: z.ZodOptional<z.ZodString>;
+    email: z.ZodOptional<z.ZodEmail>;
     address: z.ZodOptional<z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
         number: z.ZodOptional<z.ZodString>;
@@ -152,6 +158,11 @@ export declare const UserUpdateSchema: z.ZodObject<{
         dark: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     }, z.core.$strip>>>;
 }, z.core.$strict>;
+export declare const UserCreateMinimalSchema: z.ZodObject<{
+    firstName: z.ZodString;
+    lastName: z.ZodString;
+    email: z.ZodEmail;
+}, z.core.$strict>;
 export declare const UserModelSchema: z.ZodObject<{
     role: z.ZodString;
     firstName: z.ZodString;
@@ -165,7 +176,7 @@ export declare const UserModelSchema: z.ZodObject<{
         OTHER: "OTHER";
     }>;
     tel: z.ZodString;
-    email: z.ZodString;
+    email: z.ZodEmail;
     address: z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
         number: z.ZodOptional<z.ZodString>;
@@ -330,6 +341,7 @@ export declare const ApplicationStepSchema: z.ZodObject<{
     }>;
     statusText: z.ZodOptional<z.ZodString>;
     updatedAt: z.ZodOptional<z.ZodString>;
+    updatedByEmail: z.ZodOptional<z.ZodEmail>;
 }, z.core.$strict>;
 export declare const ApplicationCreateSchema: z.ZodObject<{
     userId: z.ZodString;
@@ -344,6 +356,7 @@ export declare const ApplicationCreateSchema: z.ZodObject<{
         }>;
         statusText: z.ZodOptional<z.ZodString>;
         updatedAt: z.ZodOptional<z.ZodString>;
+        updatedByEmail: z.ZodOptional<z.ZodEmail>;
     }, z.core.$strict>>;
     status: z.ZodDefault<z.ZodEnum<{
         DRAFT: "DRAFT";
@@ -363,6 +376,7 @@ export declare const ApplicationUpdateSchema: z.ZodObject<{
         }>;
         statusText: z.ZodOptional<z.ZodString>;
         updatedAt: z.ZodOptional<z.ZodString>;
+        updatedByEmail: z.ZodOptional<z.ZodEmail>;
     }, z.core.$strict>>>;
     status: z.ZodOptional<z.ZodEnum<{
         DRAFT: "DRAFT";
@@ -385,6 +399,7 @@ export declare const ApplicationModelSchema: z.ZodObject<{
         }>;
         statusText: z.ZodOptional<z.ZodString>;
         updatedAt: z.ZodOptional<z.ZodString>;
+        updatedByEmail: z.ZodOptional<z.ZodEmail>;
     }, z.core.$strict>>;
     status: z.ZodEnum<{
         DRAFT: "DRAFT";
@@ -423,6 +438,7 @@ export type RoleModel = z.infer<typeof RoleModelSchema>;
 export type User = z.infer<typeof UserModelSchema>;
 export type UserCreate = z.infer<typeof UserCreateSchema>;
 export type UserUpdate = z.infer<typeof UserUpdateSchema>;
+export type UserCreateMinimal = z.infer<typeof UserCreateMinimalSchema>;
 export type FormTemplate = z.infer<typeof FormTemplateModelSchema>;
 export type FormTemplateCreate = z.infer<typeof FormTemplateCreateSchema>;
 export type FormTemplateUpdate = z.infer<typeof FormTemplateUpdateSchema>;

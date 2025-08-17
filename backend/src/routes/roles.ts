@@ -28,6 +28,7 @@ router.post("/", async (req, res) => {
     canModifyUserData: false,
     canViewApplications: true,
     canViewAllApplications: false,
+    canViewAllFormTemplates: false,
   };
   const item: RoleModel = {
     roleName: d.roleName!,

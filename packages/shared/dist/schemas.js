@@ -23,12 +23,11 @@ export const FieldInputType = z.enum([
     "CHECKBOX",
 ]);
 // ========= Helpers =========
-const e164Phone = z
-    .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone (use E.164, e.g. +357...)");
+const e164Phone = z.string().regex(/^\+?[1-9]\d{1,14}$/, {
+    message: "Invalid phone (use E.164, e.g. +357...)",
+});
 const id = z.string().min(1).max(64);
-// If you later store ISO timestamps, keep optional
-const isoDate = z.string().datetime({ offset: true }).optional();
+const isoDate = z.iso.datetime().optional();
 const stringMax = (n) => z.string().min(1).max(n);
 // ========= Address =========
 export const AddressSchema = z
@@ -51,6 +50,8 @@ export const RoleAccessSchema = z
     canModifyUserData: z.boolean(),
     canViewApplications: z.boolean(),
     canViewAllApplications: z.boolean(),
+    canViewAllFormTemplates: z.boolean(),
+    canViewAllUsers: z.boolean(),
 })
     .strict();
 export const RoleSchema = z
@@ -59,7 +60,7 @@ export const RoleSchema = z
         .string()
         .min(2)
         .max(64)
-        .transform((s) => s.toUpperCase()),
+        .transform((s) => s.toUpperCase().replace(/\s+/g, "")),
     access: RoleAccessSchema,
 })
     .strict();
@@ -78,7 +79,7 @@ export const UserBase = z
     userOfficialId: z.string().min(2).max(32),
     userOfficialType: OfficialIdType,
     tel: e164Phone,
-    email: z.string().email(),
+    email: z.email(),
     address: AddressSchema.optional(),
     active: z.boolean().default(true),
     verified: z.boolean().default(false),
@@ -88,8 +89,15 @@ export const UserBase = z
         .optional(),
 })
     .strict();
-export const UserCreateSchema = UserBase; // no unknowns
+export const UserCreateSchema = UserBase;
 export const UserUpdateSchema = UserBase.partial().strict();
+export const UserCreateMinimalSchema = z
+    .object({
+    firstName: z.string().min(2).max(64),
+    lastName: z.string().min(2).max(64),
+    email: z.email(),
+})
+    .strict();
 // DB model for Users (includes id and timestamps)
 export const UserModelSchema = UserBase.extend({
     id: z.string().min(1).max(64),
@@ -162,6 +170,7 @@ export const ApplicationStepSchema = z
     status: z.enum(["APPROVED", "REJECTED", "PENDING_APPROVAL"]),
     statusText: z.string().max(1024).optional(),
     updatedAt: z.string().optional(), // <-- added
+    updatedByEmail: z.email().optional(),
 })
     .strict();
 // Create / Update DTOs stay the same (they’ll accept steps with/without updatedAt)

@@ -42,6 +42,10 @@ export function response(statusCode: number, payload: unknown) {
   return {
     statusCode,
     body: JSON.stringify(payload),
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // TODO: this must be restricted to the origin of the request
+      "Access-Control-Allow-Origin": "*",
+    },
   };
 }

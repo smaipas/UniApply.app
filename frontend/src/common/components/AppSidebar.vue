@@ -1,44 +1,62 @@
 <template>
-  <nav class="flex h-full flex-col border-r bg-white">
-    <div class="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-500">Menu</div>
-    <ul class="flex-1 space-y-1 px-2">
-      <li v-for="item in items" :key="item.label">
-        <button
-          @click="go(item.to)"
-          class="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition"
-          :class="
-            route.name === item.to.name
-              ? 'bg-primary/10 text-primary'
-              : 'text-gray-700 hover:bg-gray-100'
-          "
-        >
-          <UiIcon :path="item.icon" class="shrink-0" />
-          <span class="truncate">{{ item.label }}</span>
-        </button>
-      </li>
-    </ul>
-    <div class="border-t px-4 py-3 text-xs text-gray-500">
+  <nav class="flex h-full flex-col bg-slate-900 text-white">
+    <!-- Top: Logo / Title -->
+    <div class="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+      <UiLogo :size="40" />
+      <span class="truncate text-sm font-semibold text-white/90">{{ pageTitle }}</span>
+    </div>
+
+    <!-- Scrollable nav -->
+    <div class="flex-1 overflow-y-auto">
+      <div class="px-5 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-white/60">
+        Menu
+      </div>
+
+      <ul class="space-y-1 px-3 pb-4">
+        <li v-for="item in items" :key="item.label">
+          <button
+            @click="go(item.to)"
+            class="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition"
+            :class="
+              route.name === item.to.name
+                ? 'bg-white/15 text-white shadow-inner'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
+            "
+          >
+            <UiIcon :path="item.icon" class="shrink-0 opacity-90 group-hover:opacity-100" />
+            <span class="truncate">{{ item.label }}</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-5 py-4 text-[11px] text-white/60 border-t border-white/10">
       © {{ new Date().getFullYear() }} UniApply
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import UiIcon from '@/common/components/UiIcon.vue'
+import UiLogo from '@/common/components/UiLogo.vue'
 import { mdiViewDashboard, mdiFileDocumentEdit, mdiFileDocument, mdiAccountGroup } from '@mdi/js'
 
 const route = useRoute()
 const router = useRouter()
 
 const items = [
-  { to: { name: 'dashboard.home' }, label: 'Dashboard', icon: mdiViewDashboard },
-  { to: { name: 'applications.list' }, label: 'Applications', icon: mdiFileDocument },
-  { to: { name: 'forms.list' }, label: 'Form Templates', icon: mdiFileDocumentEdit },
-  { to: { name: 'users.list' }, label: 'Users', icon: mdiAccountGroup },
+  { to: { name: 'Dashboard' }, label: 'Dashboard', icon: mdiViewDashboard },
+  { to: { name: 'ApplicationsPage' }, label: 'Applications', icon: mdiFileDocument },
+  { to: { name: 'FormTemplatesPage' }, label: 'Form Templates', icon: mdiFileDocumentEdit },
+  { to: { name: 'UsersPage' }, label: 'Users', icon: mdiAccountGroup },
 ]
 
 const emit = defineEmits<{ (e: 'navigate'): void }>()
+
+const pageTitle = computed(() => (route.meta?.title as string) || 'UniApply')
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function go(to: any) {

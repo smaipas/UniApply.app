@@ -6,8 +6,9 @@ import authRoutes from '@/auth/routes'
 
 // Feature module routes
 import dashboardRoutes from '@/dashboard/routes'
-// import applicationsRoutes from '@/applications/routes';
-// import templatesRoutes from '@/form-templates/routes';
+import applicationsRoutes from '@/applications/routes'
+import templatesRoutes from '@/form-templates/routes'
+import usersRoutes from '@/users/routes'
 // import approvalsRoutes from '@/approvals/routes';
 // import settingsRoutes from '@/settings/routes';
 // import auditRoutes from '@/audit/routes';
@@ -16,8 +17,9 @@ import AppLayout from '@/layouts/AppLayout.vue'
 
 const protectedChildren: RouteRecordRaw[] = [
   ...dashboardRoutes,
-  // ...applicationsRoutes,
-  // ...templatesRoutes,
+  ...applicationsRoutes,
+  ...templatesRoutes,
+  ...usersRoutes,
   // ...approvalsRoutes,
   // ...settingsRoutes,
   // ...auditRoutes,

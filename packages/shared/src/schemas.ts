@@ -25,14 +25,13 @@ export const FieldInputType = z.enum([
 ]);
 
 // ========= Helpers =========
-const e164Phone = z
-  .string()
-  .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone (use E.164, e.g. +357...)");
+const e164Phone = z.string().regex(/^\+?[1-9]\d{1,14}$/, {
+  message: "Invalid phone (use E.164, e.g. +357...)",
+});
 
 const id = z.string().min(1).max(64);
 
-// If you later store ISO timestamps, keep optional
-const isoDate = z.string().datetime({ offset: true }).optional();
+const isoDate = z.iso.datetime().optional();
 
 const stringMax = (n: number) => z.string().min(1).max(n);
 
@@ -58,6 +57,8 @@ export const RoleAccessSchema = z
     canModifyUserData: z.boolean(),
     canViewApplications: z.boolean(),
     canViewAllApplications: z.boolean(),
+    canViewAllFormTemplates: z.boolean(),
+    canViewAllUsers: z.boolean(),
   })
   .strict();
 
@@ -67,7 +68,7 @@ export const RoleSchema = z
       .string()
       .min(2)
       .max(64)
-      .transform((s) => s.toUpperCase()),
+      .transform((s) => s.toUpperCase().replace(/\s+/g, "")),
     access: RoleAccessSchema,
   })
   .strict();
@@ -88,7 +89,7 @@ export const UserBase = z
     userOfficialId: z.string().min(2).max(32),
     userOfficialType: OfficialIdType,
     tel: e164Phone,
-    email: z.string().email(),
+    email: z.email(),
     address: AddressSchema.optional(),
     active: z.boolean().default(true),
     verified: z.boolean().default(false),
@@ -99,8 +100,16 @@ export const UserBase = z
   })
   .strict();
 
-export const UserCreateSchema = UserBase; // no unknowns
+export const UserCreateSchema = UserBase;
 export const UserUpdateSchema = UserBase.partial().strict();
+
+export const UserCreateMinimalSchema = z
+  .object({
+    firstName: z.string().min(2).max(64),
+    lastName: z.string().min(2).max(64),
+    email: z.email(),
+  })
+  .strict();
 
 // DB model for Users (includes id and timestamps)
 export const UserModelSchema = UserBase.extend({
@@ -183,6 +192,7 @@ export const ApplicationStepSchema = z
     status: z.enum(["APPROVED", "REJECTED", "PENDING_APPROVAL"]),
     statusText: z.string().max(1024).optional(),
     updatedAt: z.string().optional(), // <-- added
+    updatedByEmail: z.email().optional(),
   })
   .strict();
 
@@ -255,6 +265,7 @@ export type RoleModel = z.infer<typeof RoleModelSchema>;
 export type User = z.infer<typeof UserModelSchema>;
 export type UserCreate = z.infer<typeof UserCreateSchema>;
 export type UserUpdate = z.infer<typeof UserUpdateSchema>;
+export type UserCreateMinimal = z.infer<typeof UserCreateMinimalSchema>;
 export type FormTemplate = z.infer<typeof FormTemplateModelSchema>;
 export type FormTemplateCreate = z.infer<typeof FormTemplateCreateSchema>;
 export type FormTemplateUpdate = z.infer<typeof FormTemplateUpdateSchema>;

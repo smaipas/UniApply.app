@@ -1,50 +1,40 @@
 <template>
-  <AppTopbar :title="pageTitle" :showMenuButton="true" @toggle-sidebar="toggleSidebar">
-    <template #logo>
-      <div class="flex items-center gap-2">
-        <UiLogo :size="24" />
-      </div>
-    </template>
-
-    <template #actions>
-      <UiButton variant="accent" size="sm" class="hidden sm:inline-flex">New</UiButton>
-    </template>
-
-    <template #user>
-      <UiIcon :path="mdiAccount" class="text-gray-700" title="Account" />
-    </template>
-  </AppTopbar>
-
-  <div class="mx-auto flex max-w-screen-2xl">
-    <aside class="sticky top-14 hidden h-[calc(100vh-56px)] w-64 max-w-[16rem] shrink-0 md:block">
-      <AppSidebar />
+  <div class="flex h-screen overflow-hidden">
+    <aside
+      :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="absolute left-0 top-0 z-50 flex h-screen w-72 flex-col overflow-y-hidden bg-slate-900 duration-300 ease-linear lg:static lg:translate-x-0"
+    >
+      <AppSidebar @navigate="sidebarOpen = false" />
     </aside>
-
-    <main class="flex-1 min-h-[calc(100vh-56px)] p-4 md:p-6">
-      <router-view />
-    </main>
+    <div class="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <AppTopbar @toggle-sidebar="sidebarOpen = !sidebarOpen">
+        <template #actions>
+          <UiButton variant="accent" size="sm" class="hidden sm:inline-flex">New</UiButton>
+        </template>
+        <template #user>
+          <UiIcon :path="mdiAccount" class="text-gray-700" title="Account" />
+        </template>
+      </AppTopbar>
+      <main>
+        <div class="mx-auto max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+          <router-view />
+        </div>
+      </main>
+    </div>
   </div>
-
-  <!-- Drawer for mobile only -->
-  <UiDrawer v-model="open" side="left" width-class="w-72" class="md:hidden">
-    <AppSidebar @navigate="open = false" />
-  </UiDrawer>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref } from 'vue'
 
 import AppTopbar from '@/common/components/AppTopbar.vue'
-import UiDrawer from '@/common/components/UiDrawer.vue'
 import AppSidebar from '@/common/components/AppSidebar.vue'
 import UiButton from '@/common/components/UiButton.vue'
 import UiIcon from '@/common/components/UiIcon.vue'
-import UiLogo from '@/common/components/UiLogo.vue'
 import { mdiAccount } from '@mdi/js'
 
-const open = ref(false)
-const route = useRoute()
-const pageTitle = computed(() => (route.meta?.title as string) || 'UniApply')
-const toggleSidebar = () => (open.value = !open.value)
+const sidebarOpen = ref(false)
+
+// The old toggleSidebar function is now inlined in the template: @toggle-sidebar="sidebarOpen = !sidebarOpen"
+// The UiDrawer component is no longer needed.
 </script>

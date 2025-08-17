@@ -54,7 +54,7 @@
       <p class="text-sm text-gray-600">
         We've sent a 6-digit code to {{ state.email }}. Enter it below to verify.
       </p>
-      <div class="flex gap-3">
+      <div class="flex gap-3 items-end">
         <UiInput label="Code" v-model="code" />
         <UiButton @click="confirmCode" :disabled="loading">Confirm</UiButton>
       </div>

@@ -14,10 +14,10 @@
         aria-modal="true"
       >
         <div class="flex h-full flex-col">
-          <div class="border-b p-4 text-sm font-semibold text-gray-700">
+          <!-- <div class="border-b p-4 text-sm font-semibold text-gray-700">
             <slot name="title">Menu</slot>
-          </div>
-          <div class="flex-1 overflow-auto p-4">
+          </div> -->
+          <div class="flex-1 overflow-auto">
             <slot />
           </div>
         </div>
