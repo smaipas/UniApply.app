@@ -43,6 +43,7 @@ export declare const RoleAccessSchema: z.ZodObject<{
     canViewAllApplications: z.ZodBoolean;
     canViewAllFormTemplates: z.ZodBoolean;
     canViewAllUsers: z.ZodBoolean;
+    canModifyUserRoleAccess: z.ZodBoolean;
 }, z.core.$strict>;
 export declare const RoleSchema: z.ZodObject<{
     roleName: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
@@ -56,6 +57,7 @@ export declare const RoleSchema: z.ZodObject<{
         canViewAllApplications: z.ZodBoolean;
         canViewAllFormTemplates: z.ZodBoolean;
         canViewAllUsers: z.ZodBoolean;
+        canModifyUserRoleAccess: z.ZodBoolean;
     }, z.core.$strict>;
 }, z.core.$strict>;
 export declare const RoleModelSchema: z.ZodObject<{
@@ -70,6 +72,7 @@ export declare const RoleModelSchema: z.ZodObject<{
         canViewAllApplications: z.ZodBoolean;
         canViewAllFormTemplates: z.ZodBoolean;
         canViewAllUsers: z.ZodBoolean;
+        canModifyUserRoleAccess: z.ZodBoolean;
     }, z.core.$strict>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;

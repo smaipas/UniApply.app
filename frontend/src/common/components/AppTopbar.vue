@@ -18,7 +18,7 @@
       <div class="flex items-center gap-2">
         <slot name="actions" />
         <slot name="user" />
-        <UiButton :icon="mdiLogout" variant="ghost" @click="onLogout" />
+        <UiButton :icon="mdiLogout" flat @click="onLogout" />
       </div>
     </div>
   </header>

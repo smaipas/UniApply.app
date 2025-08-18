@@ -60,6 +60,7 @@ provider:
             - dynamodb:DeleteItem
             - dynamodb:Query
             - dynamodb:Scan
+            - dynamodb:DescribeTable
             - dynamodb:BatchWriteItem
             - dynamodb:BatchGetItem
           Resource:

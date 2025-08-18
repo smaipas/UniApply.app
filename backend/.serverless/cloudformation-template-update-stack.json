@@ -97,6 +97,7 @@
                     "dynamodb:DeleteItem",
                     "dynamodb:Query",
                     "dynamodb:Scan",
+                    "dynamodb:DescribeTable",
                     "dynamodb:BatchWriteItem",
                     "dynamodb:BatchGetItem"
                   ],
@@ -228,7 +229,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755461080072-2025-08-17T20:04:40.072Z/uniapply-app-api.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755555094191-2025-08-18T22:11:34.191Z/uniapply-app-api.zip"
         },
         "Handler": "src/handler.main",
         "Runtime": "nodejs20.x",
@@ -292,7 +293,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755461080072-2025-08-17T20:04:40.072Z/uniapply-app-presignUpload.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755555094191-2025-08-18T22:11:34.191Z/uniapply-app-presignUpload.zip"
         },
         "Handler": "src/handler.presignUpload",
         "Runtime": "nodejs20.x",
@@ -356,7 +357,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755461080072-2025-08-17T20:04:40.072Z/uniapply-app-notifyStatusChange.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755555094191-2025-08-18T22:11:34.191Z/uniapply-app-notifyStatusChange.zip"
         },
         "Handler": "src/handler.notifyStatusChange",
         "Runtime": "nodejs20.x",
@@ -417,7 +418,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755461080072-2025-08-17T20:04:40.072Z/uniapply-app-postConfirmation.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755555094191-2025-08-18T22:11:34.191Z/uniapply-app-postConfirmation.zip"
         },
         "Handler": "src/handler.postConfirmation",
         "Runtime": "nodejs20.x",
@@ -476,44 +477,44 @@
         "PostConfirmationLogGroup"
       ]
     },
-    "NotifyStatusChangeLambdaVersionCxnSOz7v6oF75kxSQDJoUkEOqd6lKz8M9oLIGuPkoo": {
-      "Type": "AWS::Lambda::Version",
-      "DeletionPolicy": "Retain",
-      "Properties": {
-        "FunctionName": {
-          "Ref": "NotifyStatusChangeLambdaFunction"
-        },
-        "CodeSha256": "gTm+didWqGPddcPPS243dJlAxBHw+a6XOG8ipiAc66A="
-      }
-    },
-    "PresignUploadLambdaVersion1sZKee5WzKgRTn1vy6LNvrbzEAwgBH3nViiOdMBvLg": {
-      "Type": "AWS::Lambda::Version",
-      "DeletionPolicy": "Retain",
-      "Properties": {
-        "FunctionName": {
-          "Ref": "PresignUploadLambdaFunction"
-        },
-        "CodeSha256": "ZGzYAux0TE8OfN/WsWu0sibMs0O6cA0ezHpuRgB3Xq4="
-      }
-    },
-    "PostConfirmationLambdaVersion8lzNrP57dy5pMHj6O3rOE56KFJ15FF5YIWGeFh4": {
-      "Type": "AWS::Lambda::Version",
-      "DeletionPolicy": "Retain",
-      "Properties": {
-        "FunctionName": {
-          "Ref": "PostConfirmationLambdaFunction"
-        },
-        "CodeSha256": "knlIKEQGFzf75KhonB8etQfmQ/Rrdd6wJSzFd+z2/Nw="
-      }
-    },
-    "ApiLambdaVersion3b0fdW4I3liuJueLTISQKQvdIbp9BOG0GU1OMdZuk": {
+    "ApiLambdaVersion3krTy4G7o0qLJokIh40OhqYoCAu67K5NOc1GIRlFt8": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "MViuIvk50DVYMxtYK56ZZqWq9TF9ZWpbm7QYCMeORPM="
+        "CodeSha256": "q8CIhZcWHlBoqjGsHNurfqndDyQ+G612H7GZMVQMrBo="
+      }
+    },
+    "PostConfirmationLambdaVersionNAaFpyDwqFK1JJHEFG0Qc4VSZLFqbhWgmmMQiNhbcY": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "PostConfirmationLambdaFunction"
+        },
+        "CodeSha256": "5yB1T8yOU4XN7j9Im2oNKN5ucnGavQVwbJG8/J7Makw="
+      }
+    },
+    "NotifyStatusChangeLambdaVersionCkU0wfQzNHHOdffDP9nJcYHBbM8GehxrlcRbpCxVkVs": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "NotifyStatusChangeLambdaFunction"
+        },
+        "CodeSha256": "YQrVkYzH8GsGYnMQ35QIIHvET0w12iXZp0kX7hIs7x8="
+      }
+    },
+    "PresignUploadLambdaVersionsBcTJNEoZkD6y2KfSbPj074aomvCrjt1CVTXHoNmc4": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "PresignUploadLambdaFunction"
+        },
+        "CodeSha256": "YQrVkYzH8GsGYnMQ35QIIHvET0w12iXZp0kX7hIs7x8="
       }
     },
     "PostConfirmationCustomCognitoUserPool1": {
@@ -636,7 +637,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755461080072-2025-08-17T20:04:40.072Z/custom-resources.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755555094191-2025-08-18T22:11:34.191Z/custom-resources.zip"
         },
         "FunctionName": "uniapply-app-dev-custom-resource-existing-cup",
         "Handler": "cognito-user-pool/handler.handler",
@@ -1590,10 +1591,28 @@
         "Name": "sls-uniapply-app-dev-ServerlessDeploymentBucketName"
       }
     },
+    "ApiLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "ApiLambdaVersion3krTy4G7o0qLJokIh40OhqYoCAu67K5NOc1GIRlFt8"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
+      }
+    },
+    "PostConfirmationLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "PostConfirmationLambdaVersionNAaFpyDwqFK1JJHEFG0Qc4VSZLFqbhWgmmMQiNhbcY"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
+      }
+    },
     "NotifyStatusChangeLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "NotifyStatusChangeLambdaVersionCxnSOz7v6oF75kxSQDJoUkEOqd6lKz8M9oLIGuPkoo"
+        "Ref": "NotifyStatusChangeLambdaVersionCkU0wfQzNHHOdffDP9nJcYHBbM8GehxrlcRbpCxVkVs"
       },
       "Export": {
         "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
@@ -1602,28 +1621,10 @@
     "PresignUploadLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "PresignUploadLambdaVersion1sZKee5WzKgRTn1vy6LNvrbzEAwgBH3nViiOdMBvLg"
+        "Ref": "PresignUploadLambdaVersionsBcTJNEoZkD6y2KfSbPj074aomvCrjt1CVTXHoNmc4"
       },
       "Export": {
         "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
-      }
-    },
-    "PostConfirmationLambdaFunctionQualifiedArn": {
-      "Description": "Current Lambda function version",
-      "Value": {
-        "Ref": "PostConfirmationLambdaVersion8lzNrP57dy5pMHj6O3rOE56KFJ15FF5YIWGeFh4"
-      },
-      "Export": {
-        "Name": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
-      }
-    },
-    "ApiLambdaFunctionQualifiedArn": {
-      "Description": "Current Lambda function version",
-      "Value": {
-        "Ref": "ApiLambdaVersion3b0fdW4I3liuJueLTISQKQvdIbp9BOG0GU1OMdZuk"
-      },
-      "Export": {
-        "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
       }
     },
     "HttpApiId": {

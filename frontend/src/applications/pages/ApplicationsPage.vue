@@ -2,7 +2,7 @@
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Applications</h1>
-      <UiButton @click="goNew">New Application</UiButton>
+      <UiButton @click="goNew" :icon="mdiPlus">New Application</UiButton>
     </div>
     <UiTable :columns="columns" :items="rows">
       <template #cell-status="{ value }">
@@ -26,6 +26,7 @@ import { useRouter } from 'vue-router'
 import UiTable from '@/common/components/UiTable.vue'
 import UiButton from '@/common/components/UiButton.vue'
 import api from '@/app/axios'
+import { mdiPlus } from '@mdi/js'
 
 type AppRow = {
   id: string

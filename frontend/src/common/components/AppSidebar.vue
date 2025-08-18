@@ -16,7 +16,7 @@
         <li v-for="item in items" :key="item.label">
           <button
             @click="go(item.to)"
-            class="group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition"
+            class="group flex w-full items-center cursor-pointer gap-3 rounded-lg px-3 py-2 text-sm transition"
             :class="
               route.name === item.to.name
                 ? 'bg-white/15 text-white shadow-inner'

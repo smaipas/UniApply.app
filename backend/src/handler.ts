@@ -68,6 +68,28 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+// ------------- Application field validation helpers -------------
+function toNumber(value: unknown): number | null {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+function toString(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  return null;
+}
+function getFileExt(name: string): string {
+  const m = name.toLowerCase().match(/\.([a-z0-9]+)(?:\?|#|$)/);
+  return m ? m[1] : "";
+}
+type FieldRule = { rule: string; value?: unknown };
+function findRule(
+  rules: FieldRule[] | undefined,
+  name: string
+): FieldRule | undefined {
+  return (Array.isArray(rules) ? rules : []).find((r) => r?.rule === name);
+}
+
 // Build DynamoDB UpdateExpression safely from a partial DTO
 function buildUpdateExpr(obj: Record<string, unknown>) {
   const names: Record<string, string> = {};
@@ -157,6 +179,7 @@ async function seedDefaultRoles() {
         canViewAllApplications: false,
         canViewAllFormTemplates: false,
         canViewAllUsers: false,
+        canModifyUserRoleAccess: false,
       },
     },
     {
@@ -171,6 +194,7 @@ async function seedDefaultRoles() {
         canViewAllApplications: true,
         canViewAllFormTemplates: true,
         canViewAllUsers: true,
+        canModifyUserRoleAccess: true,
       },
     },
   ];
@@ -311,12 +335,53 @@ async function updateUser(event: APIGatewayProxyEventV2, id: string) {
   return response(200, { ok: true });
 }
 
-async function getUser(_event: APIGatewayProxyEventV2, id: string) {
+async function getUser(event: APIGatewayProxyEventV2, id: string) {
   const res = await ddb.send(
     new GetItemCommand({ TableName: USERS_TABLE, Key: marshall({ id }) })
   );
   if (!res.Item) return response(404, { message: "User not found" });
-  return response(200, unmarshall(res.Item));
+  const user = unmarshall(res.Item) as any;
+
+  // Attach access permissions derived from the user's role
+  const roleName = user?.role as string | undefined;
+  let access: Record<string, boolean> | undefined = undefined;
+  if (roleName) {
+    const roleRes = await ddb.send(
+      new GetItemCommand({
+        TableName: process.env.ROLES_TABLE!,
+        Key: marshall({ roleName }),
+      })
+    );
+    const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+    access = role?.access as Record<string, boolean> | undefined;
+  }
+
+  // Only the subject or an admin may see full profile fields; others get limited fields
+  const viewerSub = requesterSub(event);
+  if (viewerSub !== id) {
+    // Check if viewer is admin (has canViewAllUsers)
+    if (!viewerSub) return response(403, { message: "Forbidden" });
+    const vRes = await ddb.send(
+      new GetItemCommand({
+        TableName: USERS_TABLE,
+        Key: marshall({ id: viewerSub }),
+      })
+    );
+    const viewer = vRes.Item ? (unmarshall(vRes.Item) as any) : null;
+    const viewerRole = viewer?.role as string | undefined;
+    if (!viewerRole) return response(403, { message: "Forbidden" });
+    const vRoleRes = await ddb.send(
+      new GetItemCommand({
+        TableName: process.env.ROLES_TABLE!,
+        Key: marshall({ roleName: viewerRole }),
+      })
+    );
+    const vRole = vRoleRes.Item ? (unmarshall(vRoleRes.Item) as any) : null;
+    const canViewAllUsers = !!vRole?.access?.canViewAllUsers;
+    if (!canViewAllUsers) return response(403, { message: "Forbidden" });
+  }
+
+  return response(200, { ...user, access });
 }
 
 async function listUsers(event: APIGatewayProxyEventV2) {
@@ -511,6 +576,112 @@ async function createApplication(event: APIGatewayProxyEventV2) {
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
   if (!role?.access?.canCreateApplications)
     return response(403, { message: "Forbidden" });
+
+  // Load form template to validate fields against rules
+  const formRes = await ddb.send(
+    new GetItemCommand({
+      TableName: FORMS_TABLE,
+      Key: marshall({ id: dto.formId }),
+    })
+  );
+  const form = formRes.Item ? (unmarshall(formRes.Item) as any) : null;
+  if (!form) return response(400, { message: "Invalid formId" });
+
+  const errors: Array<{ field: string; message: string }> = [];
+  const fieldDefs: Array<any> = Array.isArray(form.fields) ? form.fields : [];
+  const data: Record<string, unknown> = (dto.fields || {}) as any;
+  for (const def of fieldDefs) {
+    const name = String(def?.name || "");
+    if (!name) continue;
+    const rules = (def?.validationRules as FieldRule[]) || [];
+    const required = !!findRule(rules, "required");
+    const minRule = findRule(rules, "min");
+    const maxRule = findRule(rules, "max");
+    const enumRule = findRule(rules, "enum");
+    const v = data[name];
+
+    // Required
+    if (required && (typeof v === "undefined" || v === null || v === "")) {
+      errors.push({ field: name, message: "is required" });
+      continue;
+    }
+    if (typeof v === "undefined" || v === null || v === "") continue; // nothing else to validate
+
+    const t = String(def?.inputType || "TEXT");
+    if (t === "TEXT" || t === "LONG_TEXT") {
+      const s = toString(v);
+      if (s === null) {
+        errors.push({ field: name, message: "must be a string" });
+        continue;
+      }
+      const min =
+        typeof minRule?.value === "number"
+          ? (minRule!.value as number)
+          : toNumber(minRule?.value);
+      const max =
+        typeof maxRule?.value === "number"
+          ? (maxRule!.value as number)
+          : toNumber(maxRule?.value);
+      if (typeof min === "number" && s.length < min)
+        errors.push({ field: name, message: `min ${min} chars` });
+      if (typeof max === "number" && s.length > max)
+        errors.push({ field: name, message: `max ${max} chars` });
+    } else if (t === "NUMBER") {
+      const n = toNumber(v);
+      if (n === null) {
+        errors.push({ field: name, message: "must be a number" });
+        continue;
+      }
+      const min =
+        typeof minRule?.value === "number"
+          ? (minRule!.value as number)
+          : toNumber(minRule?.value);
+      const max =
+        typeof maxRule?.value === "number"
+          ? (maxRule!.value as number)
+          : toNumber(maxRule?.value);
+      if (typeof min === "number" && n < min)
+        errors.push({ field: name, message: `min ${min}` });
+      if (typeof max === "number" && n > max)
+        errors.push({ field: name, message: `max ${max}` });
+    } else if (t === "FILE") {
+      const allowed = Array.isArray(enumRule?.value)
+        ? (enumRule!.value as unknown[]).map((x) => String(x))
+        : [];
+      const s = toString(v);
+      if (!s) {
+        errors.push({ field: name, message: "must be a file key or name" });
+      } else if (allowed.length) {
+        const ext = getFileExt(s);
+        if (!allowed.includes(ext))
+          errors.push({
+            field: name,
+            message: `unsupported file type .${ext}`,
+          });
+      }
+    } else if (t === "DATE") {
+      const s = toString(v);
+      if (!s) {
+        errors.push({ field: name, message: "must be a date (YYYY-MM-DD)" });
+      } else {
+        const min =
+          typeof minRule?.value === "string"
+            ? (minRule!.value as string)
+            : null;
+        const max =
+          typeof maxRule?.value === "string"
+            ? (maxRule!.value as string)
+            : null;
+        if (min && s < min)
+          errors.push({ field: name, message: `date must be >= ${min}` });
+        if (max && s > max)
+          errors.push({ field: name, message: `date must be <= ${max}` });
+      }
+    }
+  }
+
+  if (errors.length)
+    return response(400, { message: "Validation failed", errors });
 
   const id = randomUUID();
   const item = {
@@ -854,6 +1025,91 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
         },
         body: "",
       };
+    }
+
+    // Roles
+    if (method === "GET" && path === "/roles") {
+      let out = await ddb.send(
+        new ScanCommand({ TableName: process.env.ROLES_TABLE! })
+      );
+      let items = (out.Items || []).map((it: any) => unmarshall(it));
+      if (!items.length) {
+        await seedDefaultRoles();
+        out = await ddb.send(
+          new ScanCommand({ TableName: process.env.ROLES_TABLE! })
+        );
+        items = (out.Items || []).map((it: any) => unmarshall(it));
+      }
+      // Hide access unless viewer has canModifyUserRoleAccess
+      const viewerSub = requesterSub(event);
+      let canModifyRoleAccess = false;
+      if (viewerSub) {
+        const vRes = await ddb.send(
+          new GetItemCommand({
+            TableName: USERS_TABLE,
+            Key: marshall({ id: viewerSub }),
+          })
+        );
+        const viewer = vRes.Item ? (unmarshall(vRes.Item) as any) : null;
+        const viewerRole = viewer?.role as string | undefined;
+        if (viewerRole) {
+          const vRoleRes = await ddb.send(
+            new GetItemCommand({
+              TableName: process.env.ROLES_TABLE!,
+              Key: marshall({ roleName: viewerRole }),
+            })
+          );
+          const vRole = vRoleRes.Item
+            ? (unmarshall(vRoleRes.Item) as any)
+            : null;
+          canModifyRoleAccess = !!vRole?.access?.canModifyUserRoleAccess;
+        }
+      }
+      const sanitized = canModifyRoleAccess
+        ? items
+        : items.map((r: any) => ({ roleName: r.roleName }));
+      return response(200, sanitized);
+    }
+    {
+      const roleName = getPathParam(path, "/roles/");
+      if (roleName && method === "GET") {
+        const res = await ddb.send(
+          new GetItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Key: marshall({ roleName }),
+          })
+        );
+        if (!res.Item) return response(404, { message: "Role not found" });
+        const role = unmarshall(res.Item) as any;
+        // Hide access unless viewer has canModifyUserRoleAccess
+        const viewerSub = requesterSub(event);
+        if (viewerSub) {
+          const vRes = await ddb.send(
+            new GetItemCommand({
+              TableName: USERS_TABLE,
+              Key: marshall({ id: viewerSub }),
+            })
+          );
+          const viewer = vRes.Item ? (unmarshall(vRes.Item) as any) : null;
+          const viewerRole = viewer?.role as string | undefined;
+          if (viewerRole) {
+            const vRoleRes = await ddb.send(
+              new GetItemCommand({
+                TableName: process.env.ROLES_TABLE!,
+                Key: marshall({ roleName: viewerRole }),
+              })
+            );
+            const vRole = vRoleRes.Item
+              ? (unmarshall(vRoleRes.Item) as any)
+              : null;
+            const canModifyRoleAccess =
+              !!vRole?.access?.canModifyUserRoleAccess;
+            if (!canModifyRoleAccess)
+              return response(200, { roleName: role.roleName });
+          }
+        }
+        return response(200, role);
+      }
     }
 
     // Users

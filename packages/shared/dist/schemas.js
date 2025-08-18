@@ -52,6 +52,7 @@ export const RoleAccessSchema = z
     canViewAllApplications: z.boolean(),
     canViewAllFormTemplates: z.boolean(),
     canViewAllUsers: z.boolean(),
+    canModifyUserRoleAccess: z.boolean(),
 })
     .strict();
 export const RoleSchema = z

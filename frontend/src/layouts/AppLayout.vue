@@ -9,7 +9,7 @@
     <div class="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
       <AppTopbar @toggle-sidebar="sidebarOpen = !sidebarOpen">
         <template #actions>
-          <UiButton variant="accent" size="sm" class="hidden sm:inline-flex">New</UiButton>
+          <UiButton color="accent" size="sm" class="hidden sm:inline-flex">New</UiButton>
         </template>
         <template #user>
           <UiIcon :path="mdiAccount" class="text-gray-700" title="Account" />
@@ -25,16 +25,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import AppTopbar from '@/common/components/AppTopbar.vue'
 import AppSidebar from '@/common/components/AppSidebar.vue'
 import UiButton from '@/common/components/UiButton.vue'
 import UiIcon from '@/common/components/UiIcon.vue'
 import { mdiAccount } from '@mdi/js'
+import { useRolesStore } from '@/common/store/roles'
 
 const sidebarOpen = ref(false)
 
 // The old toggleSidebar function is now inlined in the template: @toggle-sidebar="sidebarOpen = !sidebarOpen"
 // The UiDrawer component is no longer needed.
+
+const rolesStore = useRolesStore()
+onMounted(() => {
+  rolesStore.ensureLoaded()
+})
 </script>

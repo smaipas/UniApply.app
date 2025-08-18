@@ -1,49 +1,44 @@
 <template>
   <button :type="props.type" :disabled="props.disabled" :class="buttonClasses">
-    <UiIcon v-if="props.icon" :path="props.icon" class="mr-2" />
+    <UiIcon v-if="props.icon" :path="props.icon" :size="iconPx" :class="hasLabel ? 'mr-2' : ''" />
     <slot />
   </button>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 import UiIcon from './UiIcon.vue'
 
-type Variant = 'primary' | 'secondary' | 'accent' | 'outline' | 'ghost'
 type Size = 'sm' | 'md' | 'lg'
+type Color = 'primary' | 'secondary' | 'accent' | 'red' | 'green' | 'gray'
 
 const props = withDefaults(
   defineProps<{
-    variant?: Variant
     size?: Size
     block?: boolean
     disabled?: boolean
     type?: 'button' | 'submit' | 'reset'
     icon?: string
     flat?: boolean
+    outline?: boolean
+    color?: Color
+    extraClass?: string
   }>(),
   {
-    variant: 'primary',
     size: 'md',
     block: false,
     disabled: false,
     type: 'button',
     icon: undefined,
     flat: false,
+    outline: false,
+    color: 'primary',
+    extraClass: '',
   },
 )
 
-// The base and variant definitions remain the same
 const base =
   'inline-flex items-center justify-center rounded-xs font-medium transition-colors focus:outline-none disabled:opacity-60 disabled:pointer-events-none'
-
-const variants: Record<Variant, string> = {
-  primary: 'bg-primary text-white hover:opacity-95',
-  secondary: 'bg-secondary text-white hover:opacity-95',
-  accent: 'bg-accent text-white hover:opacity-95',
-  outline: 'border border-primary text-primary bg-transparent hover:bg-primary/5',
-  ghost: 'text-primary hover:bg-primary/10',
-}
 
 const sizes: Record<Size, string> = {
   sm: 'text-sm px-3 py-1.5',
@@ -51,13 +46,85 @@ const sizes: Record<Size, string> = {
   lg: 'text-base px-5 py-2.5',
 }
 
-// Create a computed property for the class list
+// Icon sizes mapped to button size
+const iconSizes: Record<Size, number> = { sm: 16, md: 20, lg: 24 }
+const iconPx = computed(() => iconSizes[props.size])
+
+function colorToClasses(color: Color) {
+  // Static mappings to keep Tailwind classes discoverable
+  switch (color) {
+    case 'primary':
+      return {
+        text: 'text-primary',
+        border: 'border-primary',
+        hover: 'hover:bg-primary/10',
+        bg: 'bg-primary',
+      }
+    case 'secondary':
+      return {
+        text: 'text-secondary',
+        border: 'border-secondary',
+        hover: 'hover:bg-secondary/10',
+        bg: 'bg-secondary',
+      }
+    case 'accent':
+      return {
+        text: 'text-accent',
+        border: 'border-accent',
+        hover: 'hover:bg-accent/10',
+        bg: 'bg-accent',
+      }
+    case 'red':
+      return {
+        text: 'text-red-700',
+        border: 'border-red-700',
+        hover: 'hover:bg-red-700/10',
+        bg: 'bg-red-700',
+      }
+    case 'green':
+      return {
+        text: 'text-green-600',
+        border: 'border-green-600',
+        hover: 'hover:bg-green-600/10',
+        bg: 'bg-green-600',
+      }
+    case 'gray':
+      return {
+        text: 'text-gray-700',
+        border: 'border-gray-700',
+        hover: 'hover:bg-gray-700/10',
+        bg: 'bg-gray-700',
+      }
+  }
+  return {
+    text: 'text-primary',
+    border: 'border-primary',
+    hover: 'hover:bg-primary/10',
+    bg: 'bg-primary',
+  }
+}
+
+const styleClasses = computed(() => {
+  const c = colorToClasses(props.color)
+  if (props.flat) {
+    return [c.text, c.hover, 'bg-transparent', 'border-transparent']
+  }
+  if (props.outline) {
+    return ['border', c.border, c.text, 'bg-transparent', c.hover]
+  }
+  // solid
+  return [c.bg, 'text-white', 'hover:opacity-95']
+})
+
 const buttonClasses = computed(() => [
   base,
-  variants[props.variant],
+  styleClasses.value,
   sizes[props.size],
   props.block ? 'w-full' : '',
   props.disabled ? 'cursor-not-allowed' : 'cursor-pointer',
-  props.flat ? '!bg-transparent !border-transparent' : '',
+  props.extraClass,
 ])
+
+const slots = useSlots()
+const hasLabel = computed(() => !!slots.default?.().length)
 </script>
