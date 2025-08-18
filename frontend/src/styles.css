@@ -3,8 +3,12 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+@import '@fontsource/open-sans/400.css';
+@import '@fontsource/open-sans/600.css';
+@import '@fontsource/open-sans/700.css';
 
 @theme {
+  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
   --color-primary: rgb(61 98 148);
   --color-secondary: rgb(86 138 200);
   --color-accent: rgb(86 185 146);
@@ -22,5 +26,5 @@ body,
   height: 100%;
 }
 body {
-  @apply bg-gray-50 text-gray-900;
+  @apply font-sans bg-gray-50 text-gray-900;
 }
