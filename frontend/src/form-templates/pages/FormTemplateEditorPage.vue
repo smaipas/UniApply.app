@@ -2,12 +2,20 @@
   <div class="p-6 space-y-6">
     <UiLoadingOverlay :show="loading" message="Loading form template..." />
     <div class="flex items-center justify-between">
-      <h1 class="text-xl font-semibold">{{ isEdit ? 'Edit' : 'Create' }} Form Template</h1>
+      <div>
+        <h1 class="text-xl font-semibold">{{ isEdit ? 'Edit' : 'Create' }} Form Template</h1>
+        <p v-if="isEdit && formVersion" class="text-sm text-gray-600 mt-1">
+          Version {{ formVersion }}
+        </p>
+      </div>
       <div class="flex gap-2">
         <UiButton flat :icon="mdiArrowLeft" @click="goBack">Back</UiButton>
-        <UiButton :disabled="!canSave || saving" :icon="mdiFloppy" @click="save">{{
-          saving ? 'Saving…' : 'Save'
-        }}</UiButton>
+        <UiButton
+          :disabled="!canSave || saving || !canModifyFormTemplates"
+          :icon="mdiFloppy"
+          @click="save"
+          >{{ saving ? 'Saving…' : 'Save' }}</UiButton
+        >
       </div>
     </div>
 
@@ -262,8 +270,17 @@ import { mdiArrowLeft, mdiFloppy, mdiClose, mdiCheck, mdiPlus } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
 import { useRolesStore } from '@/common/store/roles'
 import { useToastStore } from '@/common/store/toast'
+import { useAuthStore } from '@/auth/store'
 import UiSelect from '@/common/components/UiSelect.vue'
 import UiCheckbox from '@/common/components/UiCheckbox.vue'
+
+// Extended user type with access permissions
+type UserWithAccess = {
+  access?: {
+    canModifyFormTemplates?: boolean
+    [key: string]: boolean | undefined
+  }
+}
 
 const NAME_RX = /^[a-z0-9-]+$/
 
@@ -290,6 +307,7 @@ const id = computed(() => route.params.id as string | undefined)
 const isEdit = computed(() => !!id.value)
 const saving = ref(false)
 const loading = ref(false)
+const formVersion = ref<number | undefined>()
 const form = ref<TemplateForm>({
   title: '',
   description: '',
@@ -301,7 +319,13 @@ const form = ref<TemplateForm>({
 
 const rolesStore = useRolesStore()
 const toastStore = useToastStore()
+const authStore = useAuthStore()
 const roleOptions = computed(() => rolesStore.roleNames)
+
+// Permission check
+const canModifyFormTemplates = computed(() => {
+  return (authStore.profile as UserWithAccess)?.access?.canModifyFormTemplates || false
+})
 
 // Field name sanitization and errors
 function sanitizeFieldName(v: string): string {
@@ -501,6 +525,7 @@ async function load() {
       visibleToRoles: t.visibleToRoles || [],
       active: !!t.active,
     }
+    formVersion.value = t.version
   } catch (error) {
     console.error('Failed to load form template:', error)
     toastStore.error('Failed to load form template')

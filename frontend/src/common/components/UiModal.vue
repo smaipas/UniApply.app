@@ -16,13 +16,13 @@
           role="dialog"
           aria-modal="true"
         >
-          <div class="border-b px-5 py-3 text-sm font-semibold text-gray-800">
+          <div class="border-b border-gray-200 px-5 py-4 text-base font-semibold text-gray-800">
             <slot name="title">{{ title }}</slot>
           </div>
           <div class="p-5">
             <slot />
           </div>
-          <div class="flex items-center justify-end gap-2 border-t px-5 py-3">
+          <div class="flex items-center justify-end gap-2 border-t border-gray-200 px-5 py-3">
             <slot name="footer">
               <button
                 class="rounded-md px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

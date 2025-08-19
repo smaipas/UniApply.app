@@ -14,38 +14,98 @@
         <template #cell-updatedAt="{ value }">
           {{ formatDate(value) }}
         </template>
+        <template #cell-actions="{ row }">
+          <UiButton
+            v-if="canModifyFormTemplates"
+            flat
+            color="red"
+            :icon="mdiClose"
+            size="sm"
+            @click.stop="handleDeleteClick(row)"
+            title="Delete template"
+          />
+        </template>
       </UiTable>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <UiModal v-model="showDeleteModal" title="Delete Form Template" size="sm">
+      <div class="space-y-4">
+        <p class="text-gray-700">
+          Are you sure you want to delete the form template
+          <strong>"{{ deletingTemplate?.title }}"</strong>?
+        </p>
+        <p class="text-sm text-gray-600">
+          This action cannot be undone. If this template has any applications, they must be deleted
+          first.
+        </p>
+      </div>
+
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <UiButton flat @click="cancelDelete" :disabled="deleting"> Cancel </UiButton>
+          <UiButton color="red" @click="confirmDelete" :disabled="deleting" :loading="deleting">
+            {{ deleting ? 'Deleting...' : 'Delete' }}
+          </UiButton>
+        </div>
+      </template>
+    </UiModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { format } from 'date-fns'
 import UiButton from '@/common/components/UiButton.vue'
 import UiTable from '@/common/components/UiTable.vue'
 import UiChip from '@/common/components/UiChip.vue'
+import UiModal from '@/common/components/UiModal.vue'
 import api from '@/app/axios'
-import { mdiPlus } from '@mdi/js'
+import { mdiPlus, mdiClose } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
+import { useToastStore } from '@/common/store/toast'
+import { useAuthStore } from '@/auth/store'
+
+// Extended user type with access permissions
+type UserWithAccess = {
+  access?: {
+    canModifyFormTemplates?: boolean
+    [key: string]: boolean | undefined
+  }
+}
 
 type TemplateRow = {
   id: string
   title: string
   active: boolean
   updatedAt?: string
+  version?: number
 }
 
 const columns = [
   { key: 'title', label: 'Title' },
   { key: 'active', label: 'Active' },
   { key: 'updatedAt', label: 'Updated' },
+  { key: 'version', label: 'Version' },
+  { key: 'actions', label: '' },
 ]
 
 const rows = ref<TemplateRow[]>([])
 const loading = ref(false)
 const router = useRouter()
+const toastStore = useToastStore()
+const authStore = useAuthStore()
+
+// Delete confirmation modal state
+const showDeleteModal = ref(false)
+const deletingTemplate = ref<TemplateRow | null>(null)
+const deleting = ref(false)
+
+// Permission check
+const canModifyFormTemplates = computed(() => {
+  return (authStore.profile as UserWithAccess)?.access?.canModifyFormTemplates || false
+})
 
 function formatDate(dateString?: string): string {
   if (!dateString) return '-'
@@ -65,6 +125,7 @@ async function fetchTemplates() {
       title: t.title,
       active: !!t.active,
       updatedAt: t.updatedAt,
+      version: t.version,
     }))
   } finally {
     loading.value = false
@@ -77,6 +138,34 @@ function goCreate() {
 
 function handleRowClick(row: Record<string, unknown>) {
   router.push(`/form-templates/${(row as TemplateRow).id}`)
+}
+
+function handleDeleteClick(template: Record<string, unknown>) {
+  deletingTemplate.value = template as TemplateRow
+  showDeleteModal.value = true
+}
+
+async function confirmDelete() {
+  if (!deletingTemplate.value) return
+
+  deleting.value = true
+  try {
+    await api.delete(`/forms/${deletingTemplate.value.id}`)
+    toastStore.success('Form template deleted successfully')
+    await fetchTemplates() // Refresh the list
+  } catch (error) {
+    console.error('Failed to delete form template:', error)
+    toastStore.error('Failed to delete form template')
+  } finally {
+    deleting.value = false
+    showDeleteModal.value = false
+    deletingTemplate.value = null
+  }
+}
+
+function cancelDelete() {
+  showDeleteModal.value = false
+  deletingTemplate.value = null
 }
 
 onMounted(fetchTemplates)

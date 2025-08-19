@@ -10,6 +10,7 @@ import {
   PutItemCommand,
   GetItemCommand,
   UpdateItemCommand,
+  DeleteItemCommand,
   DescribeTableCommand,
   ScanCommand,
   QueryCommand,
@@ -440,7 +441,13 @@ async function createForm(event: APIGatewayProxyEventV2) {
     return response(403, { message: "Forbidden" });
 
   const id = randomUUID();
-  const item = { id, ...dto, createdAt: nowIso(), updatedAt: nowIso() };
+  const item = {
+    id,
+    ...dto,
+    version: 1,
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+  };
 
   await ddb.send(
     new PutItemCommand({
@@ -463,7 +470,7 @@ async function updateForm(event: APIGatewayProxyEventV2, id: string) {
   const body = jsonParse(event.body);
   const dto = validate(FormTemplateUpdateSchema, body);
 
-  // Authorization: require canCreateFormTemplates
+  // Authorization: require canModifyFormTemplates
   const viewerSub = requesterSub(event);
   if (!viewerSub) return response(403, { message: "Forbidden" });
   const viewerRes = await ddb.send(
@@ -482,7 +489,7 @@ async function updateForm(event: APIGatewayProxyEventV2, id: string) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canCreateFormTemplates)
+  if (!role?.access?.canModifyFormTemplates)
     return response(403, { message: "Forbidden" });
 
   const prevRes = await ddb.send(
@@ -491,7 +498,11 @@ async function updateForm(event: APIGatewayProxyEventV2, id: string) {
   const prev = prevRes.Item ? unmarshall(prevRes.Item) : null;
   if (!prev) return response(404, { message: "Form not found" });
 
-  const patch = { ...dto, updatedAt: nowIso() };
+  const patch = {
+    ...dto,
+    version: (prev.version || 1) + 1,
+    updatedAt: nowIso(),
+  };
   const expr = buildUpdateExpr(patch);
   if (!expr) return response(400, { message: "No valid fields to update" });
 
@@ -509,6 +520,70 @@ async function updateForm(event: APIGatewayProxyEventV2, id: string) {
     requesterSub(event) || "system",
     "UPDATE",
     diff(prev as Record<string, unknown>, { ...(prev as any), ...patch })
+  );
+  return response(200, { ok: true });
+}
+
+async function deleteForm(event: APIGatewayProxyEventV2, id: string) {
+  // Authorization: require canModifyFormTemplates
+  const viewerSub = requesterSub(event);
+  if (!viewerSub) return response(403, { message: "Forbidden" });
+  const viewerRes = await ddb.send(
+    new GetItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id: viewerSub }),
+    })
+  );
+  const viewer = viewerRes.Item ? (unmarshall(viewerRes.Item) as any) : null;
+  const roleName = viewer?.role as string | undefined;
+  if (!roleName) return response(403, { message: "Forbidden" });
+  const roleRes = await ddb.send(
+    new GetItemCommand({
+      TableName: process.env.ROLES_TABLE!,
+      Key: marshall({ roleName }),
+    })
+  );
+  const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+  if (!role?.access?.canModifyFormTemplates)
+    return response(403, { message: "Forbidden" });
+
+  // Check if form exists
+  const formRes = await ddb.send(
+    new GetItemCommand({ TableName: FORMS_TABLE, Key: marshall({ id }) })
+  );
+  const form = formRes.Item ? (unmarshall(formRes.Item) as any) : null;
+  if (!form) return response(404, { message: "Form not found" });
+
+  // Check if there are any applications using this form
+  const appsRes = await ddb.send(
+    new ScanCommand({
+      TableName: APPLICATIONS_TABLE,
+      FilterExpression: "formId = :formId",
+      ExpressionAttributeValues: marshall({ ":formId": id }),
+      Limit: 1,
+    })
+  );
+
+  if (appsRes.Items && appsRes.Items.length > 0) {
+    return response(400, {
+      message:
+        "Cannot delete form template that has applications. Please delete all applications first.",
+    });
+  }
+
+  await ddb.send(
+    new DeleteItemCommand({
+      TableName: FORMS_TABLE,
+      Key: marshall({ id }),
+    })
+  );
+
+  await writeAudit(
+    "FORM_TEMPLATE",
+    id,
+    requesterSub(event) || "system",
+    "DELETE",
+    form
   );
   return response(200, { ok: true });
 }
@@ -688,6 +763,7 @@ async function createApplication(event: APIGatewayProxyEventV2) {
     id,
     userId: dto.userId,
     formId: dto.formId,
+    formVersion: form.version || 1,
     fields: dto.fields,
     approvalSteps: dto.approvalSteps,
     status: AppStatus.enum.DRAFT, // enforce DRAFT at creation
@@ -1127,6 +1203,7 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       const id = getPathParam(path, "/forms/");
       if (id && method === "PUT") return await updateForm(event, id);
       if (id && method === "GET") return await getForm(event, id);
+      if (id && method === "DELETE") return await deleteForm(event, id);
     }
     if (method === "GET" && path === "/forms") {
       const viewerSub = requesterSub(event);

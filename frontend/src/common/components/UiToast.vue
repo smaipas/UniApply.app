@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { useToastStore, type ToastItem } from '../store/toast'
+import { mdiCheckCircle, mdiAlertCircle, mdiInformation, mdiClose } from '@mdi/js'
+import UiIcon from './UiIcon.vue'
 
 const toast = useToastStore()
 const { items } = storeToRefs(toast)
@@ -34,9 +36,19 @@ function toneClasses(t: ToastItem) {
       >
         <div class="flex items-start gap-3">
           <div class="mt-0.5">
-            <span v-if="t.tone === 'success'">✅</span>
-            <span v-else-if="t.tone === 'error'">⛔</span>
-            <span v-else>ℹ️</span>
+            <UiIcon
+              v-if="t.tone === 'success'"
+              :path="mdiCheckCircle"
+              class="text-green-600"
+              :size="20"
+            />
+            <UiIcon
+              v-else-if="t.tone === 'error'"
+              :path="mdiAlertCircle"
+              class="text-red-600"
+              :size="20"
+            />
+            <UiIcon v-else :path="mdiInformation" class="text-blue-600" :size="20" />
           </div>
           <div class="min-w-0 flex-1">
             <div v-if="t.title" class="truncate text-sm font-semibold">
@@ -47,12 +59,12 @@ function toneClasses(t: ToastItem) {
             </div>
           </div>
           <button
-            class="ml-2 text-sm text-gray-500 hover:text-gray-800"
+            class="ml-2 text-gray-500 hover:text-gray-800 transition-colors"
             @click="toast.dismiss(t.id)"
             aria-label="Dismiss"
             title="Dismiss"
           >
-            ✖
+            <UiIcon :path="mdiClose" :size="20" />
           </button>
         </div>
       </div>

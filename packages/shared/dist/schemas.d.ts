@@ -35,6 +35,7 @@ export declare const AddressSchema: z.ZodObject<{
 }, z.core.$strict>;
 export declare const RoleAccessSchema: z.ZodObject<{
     canCreateFormTemplates: z.ZodBoolean;
+    canModifyFormTemplates: z.ZodBoolean;
     canCreateApplications: z.ZodBoolean;
     canApproveForms: z.ZodBoolean;
     canModifyApplicationSettings: z.ZodBoolean;
@@ -49,6 +50,7 @@ export declare const RoleSchema: z.ZodObject<{
     roleName: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
     access: z.ZodObject<{
         canCreateFormTemplates: z.ZodBoolean;
+        canModifyFormTemplates: z.ZodBoolean;
         canCreateApplications: z.ZodBoolean;
         canApproveForms: z.ZodBoolean;
         canModifyApplicationSettings: z.ZodBoolean;
@@ -64,6 +66,7 @@ export declare const RoleModelSchema: z.ZodObject<{
     roleName: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
     access: z.ZodObject<{
         canCreateFormTemplates: z.ZodBoolean;
+        canModifyFormTemplates: z.ZodBoolean;
         canCreateApplications: z.ZodBoolean;
         canApproveForms: z.ZodBoolean;
         canModifyApplicationSettings: z.ZodBoolean;
@@ -335,6 +338,7 @@ export declare const FormTemplateModelSchema: z.ZodObject<{
     }, z.core.$strict>>;
     visibleToRoles: z.ZodArray<z.ZodString>;
     active: z.ZodBoolean;
+    version: z.ZodNumber;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
 }, z.core.$strict>;
@@ -395,6 +399,7 @@ export declare const ApplicationModelSchema: z.ZodObject<{
     id: z.ZodString;
     userId: z.ZodString;
     formId: z.ZodString;
+    formVersion: z.ZodNumber;
     fields: z.ZodRecord<z.ZodString, z.ZodAny>;
     approvalSteps: z.ZodArray<z.ZodObject<{
         role: z.ZodString;

@@ -16,11 +16,15 @@ function uid() {
 export const useToastStore = defineStore('toast', {
   state: () => ({
     items: [] as ToastItem[],
-    defaultDuration: 3500,
+    defaultDuration: 5000,
   }),
   actions: {
     show(partial: Omit<ToastItem, 'id'>) {
-      const item: ToastItem = { id: uid(), duration: this.defaultDuration, ...partial }
+      const item: ToastItem = {
+        ...partial,
+        id: uid(),
+        duration: partial.duration ?? this.defaultDuration,
+      }
       this.items.push(item)
       if (item.duration && item.duration > 0) {
         setTimeout(() => this.dismiss(item.id), item.duration)

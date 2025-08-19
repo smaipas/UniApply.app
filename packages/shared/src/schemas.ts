@@ -51,6 +51,7 @@ export const AddressSchema = z
 export const RoleAccessSchema = z
   .object({
     canCreateFormTemplates: z.boolean(),
+    canModifyFormTemplates: z.boolean(),
     canCreateApplications: z.boolean(),
     canApproveForms: z.boolean(),
     canModifyApplicationSettings: z.boolean(),
@@ -204,6 +205,7 @@ export const FormTemplateModelSchema = z
       .max(10),
     visibleToRoles: z.array(z.string()).min(1).max(50),
     active: z.boolean(),
+    version: z.number().int().min(1),
     createdAt: z.string(),
     updatedAt: z.string(),
   })
@@ -250,6 +252,7 @@ export const ApplicationModelSchema = z
     id: z.string().min(1).max(64),
     userId: z.string().min(1).max(64),
     formId: z.string().min(1).max(64),
+    formVersion: z.number().int().min(1),
     fields: z.record(z.string(), z.any()),
     approvalSteps: z.array(ApplicationStepSchema),
     status: z.enum(["DRAFT", "APPROVED", "REJECTED", "PENDING_APPROVAL"]),
