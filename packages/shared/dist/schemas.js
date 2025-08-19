@@ -120,10 +120,34 @@ export const FormFieldSchema = z
     description: z.string().max(512).optional(),
     inputType: FieldInputType,
     validationRules: z.array(ValidationRuleSchema).default([]),
-    // for SELECT fields
+    // Default prefilled value for applicable types
+    defaultValue: z.union([z.string(), z.number()]).optional(),
+    // for SELECT fields: allow either array of strings or array of {label,value}
     options: z
-        .array(z.object({ label: z.string(), value: z.string() }).strict())
+        .union([
+        z.array(z.string()),
+        z.array(z.object({ label: z.string(), value: z.string() }).strict()),
+    ])
         .optional(),
+})
+    .superRefine((field, ctx) => {
+    const t = field.inputType;
+    const dv = field.defaultValue;
+    const allowsDefault = t === "TEXT" || t === "LONG_TEXT" || t === "NUMBER";
+    if (typeof dv !== "undefined" && !allowsDefault) {
+        ctx.addIssue({
+            code: "custom",
+            message: "defaultValue is only allowed for TEXT, LONG_TEXT, or NUMBER",
+            path: ["defaultValue"],
+        });
+    }
+    if (t === "NUMBER" && typeof dv !== "undefined" && typeof dv !== "number") {
+        ctx.addIssue({
+            code: "custom",
+            message: "defaultValue must be a number for NUMBER fields",
+            path: ["defaultValue"],
+        });
+    }
 })
     .strict();
 export const FormTemplateCreateSchema = z

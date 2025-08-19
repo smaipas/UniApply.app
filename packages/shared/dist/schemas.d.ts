@@ -236,10 +236,11 @@ export declare const FormFieldSchema: z.ZodObject<{
         value: z.ZodOptional<z.ZodAny>;
         message: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>>;
-    options: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    defaultValue: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+    options: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodArray<z.ZodObject<{
         label: z.ZodString;
         value: z.ZodString;
-    }, z.core.$strict>>>;
+    }, z.core.$strict>>]>>;
 }, z.core.$strict>;
 export declare const FormTemplateCreateSchema: z.ZodObject<{
     title: z.ZodString;
@@ -270,10 +271,11 @@ export declare const FormTemplateCreateSchema: z.ZodObject<{
             value: z.ZodOptional<z.ZodAny>;
             message: z.ZodOptional<z.ZodString>;
         }, z.core.$strict>>>;
-        options: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        defaultValue: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        options: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodArray<z.ZodObject<{
             label: z.ZodString;
             value: z.ZodString;
-        }, z.core.$strict>>>;
+        }, z.core.$strict>>]>>;
     }, z.core.$strict>>;
     approvalSteps: z.ZodArray<z.ZodObject<{
         role: z.ZodString;
@@ -310,10 +312,11 @@ export declare const FormTemplateUpdateSchema: z.ZodObject<{
             value: z.ZodOptional<z.ZodAny>;
             message: z.ZodOptional<z.ZodString>;
         }, z.core.$strict>>>;
-        options: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        defaultValue: z.ZodOptional<z.ZodUnion<readonly [z.ZodString, z.ZodNumber]>>;
+        options: z.ZodOptional<z.ZodUnion<readonly [z.ZodArray<z.ZodString>, z.ZodArray<z.ZodObject<{
             label: z.ZodString;
             value: z.ZodString;
-        }, z.core.$strict>>>;
+        }, z.core.$strict>>]>>;
     }, z.core.$strict>>>;
     approvalSteps: z.ZodOptional<z.ZodArray<z.ZodObject<{
         role: z.ZodString;
