@@ -26,6 +26,7 @@
     "@vuelidate/validators": "^2.0.4",
     "@vueuse/core": "^13.6.0",
     "axios": "^1.11.0",
+    "date-fns": "^4.1.0",
     "jwt-decode": "^4.0.0",
     "pinia": "^3.0.3",
     "tailwindcss": "^4.1.12",

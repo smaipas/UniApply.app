@@ -1,5 +1,6 @@
 <template>
   <div class="p-6 space-y-6">
+    <UiLoadingOverlay :show="loading" message="Loading form template..." />
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">{{ isEdit ? 'Edit' : 'Create' }} Form Template</h1>
       <div class="flex gap-2">
@@ -255,10 +256,12 @@ import { useRoute, useRouter } from 'vue-router'
 import UiButton from '@/common/components/UiButton.vue'
 import UiInput from '@/common/components/UiInput.vue'
 import UiCard from '@/common/components/UiCard.vue'
+import UiLoadingOverlay from '@/common/components/UiLoadingOverlay.vue'
 import api from '@/app/axios'
 import { mdiArrowLeft, mdiFloppy, mdiClose, mdiCheck, mdiPlus } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
 import { useRolesStore } from '@/common/store/roles'
+import { useToastStore } from '@/common/store/toast'
 import UiSelect from '@/common/components/UiSelect.vue'
 import UiCheckbox from '@/common/components/UiCheckbox.vue'
 
@@ -286,6 +289,7 @@ const router = useRouter()
 const id = computed(() => route.params.id as string | undefined)
 const isEdit = computed(() => !!id.value)
 const saving = ref(false)
+const loading = ref(false)
 const form = ref<TemplateForm>({
   title: '',
   description: '',
@@ -296,6 +300,7 @@ const form = ref<TemplateForm>({
 })
 
 const rolesStore = useRolesStore()
+const toastStore = useToastStore()
 const roleOptions = computed(() => rolesStore.roleNames)
 
 // Field name sanitization and errors
@@ -451,48 +456,56 @@ function removeOption(fieldIndex: number, optionIndex: number) {
 
 async function load() {
   if (!isEdit.value) return
-  const res = await api.get(`/forms/${id.value}`)
-  const t = res.data as FormTemplate
-  const normalizedFields: TemplateField[] = (t.fields || []).map((raw: unknown) => {
-    const r = raw as {
-      name?: unknown
-      label?: unknown
-      inputType?: unknown
-      defaultValue?: unknown
-      validationRules?: unknown
-      options?: unknown
-    }
-    const nf: TemplateField = {
-      name: String(r?.name || ''),
-      label: String(r?.label || ''),
-      inputType: String(r?.inputType || 'TEXT'),
-      defaultValue: r?.defaultValue as string | number | undefined,
-      validationRules: Array.isArray(r?.validationRules) ? (r.validationRules as unknown[]) : [],
-    }
-    if (nf.inputType === 'SELECT') {
-      const opts = r?.options
-      if (Array.isArray(opts)) {
-        if (opts.length && typeof opts[0] === 'object') {
-          nf.options = (opts as Array<{ label?: string; value?: string }>)
-            .map((o) => o?.value ?? o?.label ?? '')
-            .map((s) => String(s))
-        } else {
-          nf.options = (opts as Array<unknown>).map((s) => String(s ?? ''))
-        }
-      } else {
-        nf.options = []
+  loading.value = true
+  try {
+    const res = await api.get(`/forms/${id.value}`)
+    const t = res.data as FormTemplate
+    const normalizedFields: TemplateField[] = (t.fields || []).map((raw: unknown) => {
+      const r = raw as {
+        name?: unknown
+        label?: unknown
+        inputType?: unknown
+        defaultValue?: unknown
+        validationRules?: unknown
+        options?: unknown
       }
+      const nf: TemplateField = {
+        name: String(r?.name || ''),
+        label: String(r?.label || ''),
+        inputType: String(r?.inputType || 'TEXT'),
+        defaultValue: r?.defaultValue as string | number | undefined,
+        validationRules: Array.isArray(r?.validationRules) ? (r.validationRules as unknown[]) : [],
+      }
+      if (nf.inputType === 'SELECT') {
+        const opts = r?.options
+        if (Array.isArray(opts)) {
+          if (opts.length && typeof opts[0] === 'object') {
+            nf.options = (opts as Array<{ label?: string; value?: string }>)
+              .map((o) => o?.value ?? o?.label ?? '')
+              .map((s) => String(s))
+          } else {
+            nf.options = (opts as Array<unknown>).map((s) => String(s ?? ''))
+          }
+        } else {
+          nf.options = []
+        }
+      }
+      nf.name = sanitizeFieldName(nf.name)
+      return nf
+    })
+    form.value = {
+      title: t.title,
+      description: t.description,
+      fields: normalizedFields,
+      approvalSteps: t.approvalSteps?.map((s: { role: string }) => ({ role: s.role })) || [],
+      visibleToRoles: t.visibleToRoles || [],
+      active: !!t.active,
     }
-    nf.name = sanitizeFieldName(nf.name)
-    return nf
-  })
-  form.value = {
-    title: t.title,
-    description: t.description,
-    fields: normalizedFields,
-    approvalSteps: t.approvalSteps?.map((s: { role: string }) => ({ role: s.role })) || [],
-    visibleToRoles: t.visibleToRoles || [],
-    active: !!t.active,
+  } catch (error) {
+    console.error('Failed to load form template:', error)
+    toastStore.error('Failed to load form template')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -522,11 +535,18 @@ async function save() {
     }
     if (isEdit.value) {
       await api.put(`/forms/${id.value}`, payload)
+      toastStore.success('Form template updated successfully')
     } else {
       const res = await api.post('/forms', payload)
       const newId = (res.data as FormTemplate)?.id
-      if (newId) router.replace(`/form-templates/${newId}`)
+      if (newId) {
+        router.replace(`/form-templates/${newId}`)
+        toastStore.success('Form template created successfully')
+      }
     }
+  } catch (error) {
+    console.error('Failed to save form template:', error)
+    toastStore.error('Failed to save form template')
   } finally {
     saving.value = false
   }
