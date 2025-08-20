@@ -14,6 +14,7 @@ import {
   DescribeTableCommand,
   ScanCommand,
   QueryCommand,
+  BatchWriteItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -355,7 +356,7 @@ async function updateUser(event: APIGatewayProxyEventV2, id: string) {
       })
     );
     const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-    const canModifyUsers = !!role?.access?.canModifyUserData;
+    const canModifyUsers = !!role?.access?.users?.update;
     if (!canModifyUsers) return response(403, { message: "Forbidden" });
   }
 
@@ -430,7 +431,7 @@ async function getUser(event: APIGatewayProxyEventV2, id: string) {
       })
     );
     const vRole = vRoleRes.Item ? (unmarshall(vRoleRes.Item) as any) : null;
-    const canViewAllUsers = !!vRole?.access?.canViewAllUsers;
+    const canViewAllUsers = !!vRole?.access?.users?.readAll;
     if (!canViewAllUsers) return response(403, { message: "Forbidden" });
   }
 
@@ -457,12 +458,159 @@ async function listUsers(event: APIGatewayProxyEventV2) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canViewAllUsers)
+  if (!role?.access?.users?.readAll)
     return response(403, { message: "Forbidden" });
 
   const out = await ddb.send(new ScanCommand({ TableName: USERS_TABLE }));
   const items = (out.Items || []).map((it: any) => unmarshall(it));
   return response(200, items);
+}
+
+async function deleteUser(event: APIGatewayProxyEventV2, id: string) {
+  // Authorization: require users.delete permission
+  const viewerSub = requesterSub(event);
+  if (!viewerSub) return response(403, { message: "Forbidden" });
+  const viewerRes = await ddb.send(
+    new GetItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id: viewerSub }),
+    })
+  );
+  const viewer = viewerRes.Item ? (unmarshall(viewerRes.Item) as any) : null;
+  const roleName = viewer?.role as string | undefined;
+  if (!roleName) return response(403, { message: "Forbidden" });
+  const roleRes = await ddb.send(
+    new GetItemCommand({
+      TableName: process.env.ROLES_TABLE!,
+      Key: marshall({ roleName }),
+    })
+  );
+  const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+  if (!role?.access?.users?.delete)
+    return response(403, { message: "Forbidden" });
+
+  // Check if user exists
+  const userRes = await ddb.send(
+    new GetItemCommand({ TableName: USERS_TABLE, Key: marshall({ id }) })
+  );
+  if (!userRes.Item) return response(404, { message: "User not found" });
+  const user = unmarshall(userRes.Item) as any;
+
+  // Prevent self-deletion
+  if (id === viewerSub) {
+    return response(400, { message: "Cannot delete your own account" });
+  }
+
+  // Delete all applications created by this user
+  const appsRes = await ddb.send(
+    new ScanCommand({
+      TableName: APPLICATIONS_TABLE,
+      FilterExpression: "userId = :userId",
+      ExpressionAttributeValues: marshall({ ":userId": id }),
+    })
+  );
+
+  if (appsRes.Items && appsRes.Items.length > 0) {
+    // Delete applications in batches
+    const batchSize = 25; // DynamoDB batch limit
+    for (let i = 0; i < appsRes.Items.length; i += batchSize) {
+      const batch = appsRes.Items.slice(i, i + batchSize);
+      const deleteRequests = batch.map((item: any) => ({
+        DeleteRequest: {
+          Key: { id: item.id },
+        },
+      }));
+
+      await ddb.send(
+        new BatchWriteItemCommand({
+          RequestItems: {
+            [APPLICATIONS_TABLE]: deleteRequests,
+          },
+        })
+      );
+    }
+  }
+
+  // Delete the user
+  await ddb.send(
+    new DeleteItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id }),
+    })
+  );
+
+  // Log audit
+  await writeAudit("USER", id, viewerSub, "DELETE", {
+    deletedUser: user.email,
+    deletedApplications: appsRes.Items?.length || 0,
+  });
+
+  return response(200, {
+    message: "User and all associated resources deleted successfully",
+  });
+}
+
+async function toggleUserStatus(event: APIGatewayProxyEventV2, id: string) {
+  // Authorization: require users.update permission
+  const viewerSub = requesterSub(event);
+  if (!viewerSub) return response(403, { message: "Forbidden" });
+  const viewerRes = await ddb.send(
+    new GetItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id: viewerSub }),
+    })
+  );
+  const viewer = viewerRes.Item ? (unmarshall(viewerRes.Item) as any) : null;
+  const roleName = viewer?.role as string | undefined;
+  if (!roleName) return response(403, { message: "Forbidden" });
+  const roleRes = await ddb.send(
+    new GetItemCommand({
+      TableName: process.env.ROLES_TABLE!,
+      Key: marshall({ roleName }),
+    })
+  );
+  const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+  if (!role?.access?.users?.update)
+    return response(403, { message: "Forbidden" });
+
+  // Check if user exists
+  const userRes = await ddb.send(
+    new GetItemCommand({ TableName: USERS_TABLE, Key: marshall({ id }) })
+  );
+  if (!userRes.Item) return response(404, { message: "User not found" });
+  const user = unmarshall(userRes.Item) as any;
+
+  // Prevent self-deactivation
+  if (id === viewerSub) {
+    return response(400, { message: "Cannot deactivate your own account" });
+  }
+
+  // Toggle the active status
+  const newStatus = !user.active;
+
+  await ddb.send(
+    new UpdateItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id }),
+      UpdateExpression: "SET active = :active, updatedAt = :updatedAt",
+      ExpressionAttributeValues: marshall({
+        ":active": newStatus,
+        ":updatedAt": nowIso(),
+      }),
+    })
+  );
+
+  // Log audit
+  await writeAudit("USER", id, viewerSub, "UPDATE_STATUS", {
+    previousStatus: user.active,
+    newStatus: newStatus,
+    userEmail: user.email,
+  });
+
+  return response(200, {
+    message: `User ${newStatus ? "activated" : "deactivated"} successfully`,
+    active: newStatus,
+  });
 }
 
 // ------------ Forms ------------
@@ -882,7 +1030,7 @@ async function updateApplication(event: APIGatewayProxyEventV2, id: string) {
       })
     );
     const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-    if (!role?.access?.canModifyApplicationSettings) {
+    if (!role?.access?.applications?.update) {
       return response(403, { message: "Forbidden" });
     }
   }
@@ -1462,6 +1610,14 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       const id = getPathParam(path, "/users/");
       if (id && method === "PUT") return await updateUser(event, id);
       if (id && method === "GET") return await getUser(event, id);
+      if (id && method === "DELETE") return await deleteUser(event, id);
+    }
+    // User status toggle
+    {
+      const id = getPathParam(path, "/users/");
+      if (id && path.endsWith("/toggle-status") && method === "PUT") {
+        return await toggleUserStatus(event, id);
+      }
     }
 
     // Forms

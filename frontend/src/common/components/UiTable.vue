@@ -12,7 +12,7 @@
         <!-- Skeleton loader -->
         <template v-if="loading">
           <tr v-for="i in skeletonRows" :key="`skeleton-${i}`" class="border-t border-gray-100">
-            <td v-for="c in columns" :key="c.key" class="px-4 py-3 align-top">
+            <td v-for="c in columns" :key="c.key" class="px-4 py-3 align-middle">
               <div class="animate-pulse">
                 <div
                   class="h-4 bg-gray-200 rounded"
@@ -38,7 +38,7 @@
           class="border-t border-gray-100 hover:bg-gray-100 cursor-pointer transition-colors"
           @click="$emit('rowClick', row)"
         >
-          <td v-for="c in columns" :key="c.key" class="px-4 py-3 align-top">
+          <td v-for="c in columns" :key="c.key" class="px-4 py-3 align-middle">
             <slot :name="`cell-${c.key}`" :row="row" :value="row[c.key]">
               <span
                 v-if="c.formatter && c.formatter(row[c.key], row).includes('<')"
