@@ -5,6 +5,12 @@ export declare const OfficialIdType: z.ZodEnum<{
     DRIVING_LICENCE: "DRIVING_LICENCE";
     OTHER: "OTHER";
 }>;
+export declare const Gender: z.ZodEnum<{
+    OTHER: "OTHER";
+    MALE: "MALE";
+    FEMALE: "FEMALE";
+    PREFER_NOT_TO_SAY: "PREFER_NOT_TO_SAY";
+}>;
 export declare const AppStatus: z.ZodEnum<{
     DRAFT: "DRAFT";
     APPROVED: "APPROVED";
@@ -158,15 +164,15 @@ export declare const UserBase: z.ZodObject<{
     role: z.ZodString;
     firstName: z.ZodString;
     lastName: z.ZodString;
-    studentId: z.ZodString;
-    userOfficialId: z.ZodString;
-    userOfficialType: z.ZodEnum<{
+    studentId: z.ZodOptional<z.ZodString>;
+    userOfficialId: z.ZodOptional<z.ZodString>;
+    userOfficialType: z.ZodOptional<z.ZodEnum<{
         ID: "ID";
         PASSPORT: "PASSPORT";
         DRIVING_LICENCE: "DRIVING_LICENCE";
         OTHER: "OTHER";
-    }>;
-    tel: z.ZodString;
+    }>>;
+    tel: z.ZodOptional<z.ZodString>;
     email: z.ZodEmail;
     address: z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
@@ -176,6 +182,14 @@ export declare const UserBase: z.ZodObject<{
         zipCode: z.ZodOptional<z.ZodString>;
         country: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
+    dateOfBirth: z.ZodOptional<z.ZodString>;
+    nationality: z.ZodOptional<z.ZodString>;
+    gender: z.ZodOptional<z.ZodEnum<{
+        OTHER: "OTHER";
+        MALE: "MALE";
+        FEMALE: "FEMALE";
+        PREFER_NOT_TO_SAY: "PREFER_NOT_TO_SAY";
+    }>>;
     active: z.ZodDefault<z.ZodBoolean>;
     verified: z.ZodDefault<z.ZodBoolean>;
     settings: z.ZodOptional<z.ZodObject<{
@@ -186,15 +200,15 @@ export declare const UserCreateSchema: z.ZodObject<{
     role: z.ZodString;
     firstName: z.ZodString;
     lastName: z.ZodString;
-    studentId: z.ZodString;
-    userOfficialId: z.ZodString;
-    userOfficialType: z.ZodEnum<{
+    studentId: z.ZodOptional<z.ZodString>;
+    userOfficialId: z.ZodOptional<z.ZodString>;
+    userOfficialType: z.ZodOptional<z.ZodEnum<{
         ID: "ID";
         PASSPORT: "PASSPORT";
         DRIVING_LICENCE: "DRIVING_LICENCE";
         OTHER: "OTHER";
-    }>;
-    tel: z.ZodString;
+    }>>;
+    tel: z.ZodOptional<z.ZodString>;
     email: z.ZodEmail;
     address: z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
@@ -204,6 +218,14 @@ export declare const UserCreateSchema: z.ZodObject<{
         zipCode: z.ZodOptional<z.ZodString>;
         country: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
+    dateOfBirth: z.ZodOptional<z.ZodString>;
+    nationality: z.ZodOptional<z.ZodString>;
+    gender: z.ZodOptional<z.ZodEnum<{
+        OTHER: "OTHER";
+        MALE: "MALE";
+        FEMALE: "FEMALE";
+        PREFER_NOT_TO_SAY: "PREFER_NOT_TO_SAY";
+    }>>;
     active: z.ZodDefault<z.ZodBoolean>;
     verified: z.ZodDefault<z.ZodBoolean>;
     settings: z.ZodOptional<z.ZodObject<{
@@ -214,15 +236,15 @@ export declare const UserUpdateSchema: z.ZodObject<{
     role: z.ZodOptional<z.ZodString>;
     firstName: z.ZodOptional<z.ZodString>;
     lastName: z.ZodOptional<z.ZodString>;
-    studentId: z.ZodOptional<z.ZodString>;
-    userOfficialId: z.ZodOptional<z.ZodString>;
-    userOfficialType: z.ZodOptional<z.ZodEnum<{
+    studentId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    userOfficialId: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    userOfficialType: z.ZodOptional<z.ZodOptional<z.ZodEnum<{
         ID: "ID";
         PASSPORT: "PASSPORT";
         DRIVING_LICENCE: "DRIVING_LICENCE";
         OTHER: "OTHER";
-    }>>;
-    tel: z.ZodOptional<z.ZodString>;
+    }>>>;
+    tel: z.ZodOptional<z.ZodOptional<z.ZodString>>;
     email: z.ZodOptional<z.ZodEmail>;
     address: z.ZodOptional<z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
@@ -232,6 +254,14 @@ export declare const UserUpdateSchema: z.ZodObject<{
         zipCode: z.ZodOptional<z.ZodString>;
         country: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>>;
+    dateOfBirth: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    nationality: z.ZodOptional<z.ZodOptional<z.ZodString>>;
+    gender: z.ZodOptional<z.ZodOptional<z.ZodEnum<{
+        OTHER: "OTHER";
+        MALE: "MALE";
+        FEMALE: "FEMALE";
+        PREFER_NOT_TO_SAY: "PREFER_NOT_TO_SAY";
+    }>>>;
     active: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     verified: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
     settings: z.ZodOptional<z.ZodOptional<z.ZodObject<{
@@ -247,15 +277,15 @@ export declare const UserModelSchema: z.ZodObject<{
     role: z.ZodString;
     firstName: z.ZodString;
     lastName: z.ZodString;
-    studentId: z.ZodString;
-    userOfficialId: z.ZodString;
-    userOfficialType: z.ZodEnum<{
+    studentId: z.ZodOptional<z.ZodString>;
+    userOfficialId: z.ZodOptional<z.ZodString>;
+    userOfficialType: z.ZodOptional<z.ZodEnum<{
         ID: "ID";
         PASSPORT: "PASSPORT";
         DRIVING_LICENCE: "DRIVING_LICENCE";
         OTHER: "OTHER";
-    }>;
-    tel: z.ZodString;
+    }>>;
+    tel: z.ZodOptional<z.ZodString>;
     email: z.ZodEmail;
     address: z.ZodOptional<z.ZodObject<{
         street: z.ZodOptional<z.ZodString>;
@@ -265,6 +295,14 @@ export declare const UserModelSchema: z.ZodObject<{
         zipCode: z.ZodOptional<z.ZodString>;
         country: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
+    dateOfBirth: z.ZodOptional<z.ZodString>;
+    nationality: z.ZodOptional<z.ZodString>;
+    gender: z.ZodOptional<z.ZodEnum<{
+        OTHER: "OTHER";
+        MALE: "MALE";
+        FEMALE: "FEMALE";
+        PREFER_NOT_TO_SAY: "PREFER_NOT_TO_SAY";
+    }>>;
     active: z.ZodDefault<z.ZodBoolean>;
     verified: z.ZodDefault<z.ZodBoolean>;
     settings: z.ZodOptional<z.ZodObject<{

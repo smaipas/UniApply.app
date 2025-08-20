@@ -7,6 +7,7 @@ export const OfficialIdType = z.enum([
   "DRIVING_LICENCE",
   "OTHER",
 ]);
+export const Gender = z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
 export const AppStatus = z.enum([
   "DRAFT",
   "APPROVED",
@@ -43,7 +44,7 @@ export const AddressSchema = z
     city: z.string().optional(),
     province: z.string().optional(),
     zipCode: z.string().optional(),
-    country: z.string().optional(), // switch to z.enum([...]) if you maintain a whitelist
+    country: z.string().optional(), // Will be validated against countries list in backend
   })
   .strict();
 
@@ -124,12 +125,15 @@ export const UserBase = z
     role: z.string().min(2).max(64),
     firstName: z.string().min(2).max(64),
     lastName: z.string().min(2).max(64),
-    studentId: z.string().min(1).max(10), // string to preserve leading zeros
-    userOfficialId: z.string().min(2).max(32),
-    userOfficialType: OfficialIdType,
-    tel: e164Phone,
+    studentId: z.string().min(1).max(10).optional(), // string to preserve leading zeros
+    userOfficialId: z.string().min(2).max(32).optional(),
+    userOfficialType: OfficialIdType.optional(),
+    tel: e164Phone.optional(),
     email: z.email(),
     address: AddressSchema.optional(),
+    dateOfBirth: z.string().optional(), // ISO date string
+    nationality: z.string().min(1).max(100).optional(),
+    gender: Gender.optional(),
     active: z.boolean().default(true),
     verified: z.boolean().default(false),
     settings: z

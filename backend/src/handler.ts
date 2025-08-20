@@ -613,6 +613,40 @@ async function toggleUserStatus(event: APIGatewayProxyEventV2, id: string) {
   });
 }
 
+async function getCurrentUser(event: APIGatewayProxyEventV2) {
+  const viewerSub = requesterSub(event);
+  if (!viewerSub) return response(403, { message: "Forbidden" });
+
+  const userRes = await ddb.send(
+    new GetItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id: viewerSub }),
+    })
+  );
+
+  if (!userRes.Item) {
+    return response(404, { message: "User not found" });
+  }
+
+  const user = unmarshall(userRes.Item) as any;
+
+  // Load user's role for access permissions
+  const roleName = user?.role as string | undefined;
+  let access: Record<string, boolean> | undefined = undefined;
+  if (roleName) {
+    const roleRes = await ddb.send(
+      new GetItemCommand({
+        TableName: process.env.ROLES_TABLE!,
+        Key: marshall({ roleName }),
+      })
+    );
+    const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+    access = role?.access as Record<string, boolean> | undefined;
+  }
+
+  return response(200, { ...user, access });
+}
+
 // ------------ Forms ------------
 async function createForm(event: APIGatewayProxyEventV2) {
   const body = jsonParse(event.body);
@@ -989,6 +1023,16 @@ async function createApplication(event: APIGatewayProxyEventV2) {
     "CREATE",
     item as Record<string, unknown>
   );
+
+  // Send notification to first approval group if application is submitted (not draft)
+  if (
+    dto.status === "PENDING_APPROVAL" &&
+    dto.approvalSteps &&
+    dto.approvalSteps.length > 0
+  ) {
+    await tryNotifyApprovers(id, dto.approvalSteps[0], form.title);
+  }
+
   return response(201, item);
 }
 
@@ -1107,7 +1151,7 @@ async function updateApplicationStatus(
   event: APIGatewayProxyEventV2,
   id: string
 ) {
-  const body = jsonParse<{ status?: string }>(event.body);
+  const body = jsonParse<{ status?: string; comment?: string }>(event.body);
   const requested = (body?.status || "").toUpperCase();
   if (requested !== "APPROVED" && requested !== "REJECTED") {
     return response(400, { message: "status must be APPROVED or REJECTED" });
@@ -1162,6 +1206,7 @@ async function updateApplicationStatus(
   steps[firstPendingIdx] = {
     ...pendingStep,
     status: requested,
+    statusText: body?.comment || undefined,
     updatedAt: nowIso(),
     updatedByEmail: viewer?.email || undefined,
   };
@@ -1243,6 +1288,60 @@ UniApply`;
     );
   } catch (e) {
     console.error("notify error", e);
+  }
+}
+
+// Notify approvers when application is submitted
+async function tryNotifyApprovers(
+  applicationId: string,
+  approvalStep: any,
+  formTitle: string
+) {
+  try {
+    const roleName = approvalStep?.role;
+    if (!roleName) return;
+
+    // Find all users with this role
+    const usersRes = await ddb.send(
+      new ScanCommand({
+        TableName: USERS_TABLE,
+        FilterExpression: "#role = :role",
+        ExpressionAttributeNames: { "#role": "role" },
+        ExpressionAttributeValues: marshall({ ":role": roleName }),
+      })
+    );
+
+    const users = (usersRes.Items || []).map((item: any) => unmarshall(item));
+    const emails = users
+      .filter((user: any) => user.email && user.active !== false)
+      .map((user: any) => user.email);
+
+    if (emails.length === 0) return;
+
+    const subject = `New application requires approval: ${formTitle}`;
+    const body = `Hello,
+
+A new application (${applicationId}) for "${formTitle}" requires your approval.
+
+Please log in to the system to review and approve/reject this application.
+
+Regards,
+UniApply`;
+
+    await ses.send(
+      new SendEmailCommand({
+        FromEmailAddress: SES_SENDER_EMAIL,
+        Destination: { ToAddresses: emails },
+        Content: {
+          Simple: {
+            Subject: { Data: subject },
+            Body: { Text: { Data: body } },
+          },
+        },
+      })
+    );
+  } catch (e) {
+    console.error("notify approvers error", e);
   }
 }
 
@@ -1606,6 +1705,8 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
     // Users
     if (method === "POST" && path === "/users") return await createUser(event);
     if (method === "GET" && path === "/users") return await listUsers(event);
+    if (method === "GET" && path === "/users/me")
+      return await getCurrentUser(event);
     {
       const id = getPathParam(path, "/users/");
       if (id && method === "PUT") return await updateUser(event, id);

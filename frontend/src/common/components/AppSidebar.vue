@@ -70,6 +70,7 @@ import {
   mdiAccountGroup,
   mdiAccountMultiple,
   mdiClipboardList,
+  mdiAccount,
 } from '@mdi/js'
 
 const route = useRoute()
@@ -79,6 +80,7 @@ const items = [
   { to: { name: 'Dashboard' }, label: 'Dashboard', icon: mdiViewDashboard },
   { to: { name: 'ApplicationsPage' }, label: 'Applications', icon: mdiFileDocument },
   { to: { name: 'FormTemplatesPage' }, label: 'Form Templates', icon: mdiFileDocumentEdit },
+  { to: { name: 'profile' }, label: 'My Profile', icon: mdiAccount },
   { to: { name: 'UsersPage' }, label: 'Users', icon: mdiAccountGroup },
 ]
 

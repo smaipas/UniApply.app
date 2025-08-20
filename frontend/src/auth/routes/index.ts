@@ -4,7 +4,6 @@ const LoginPage = () => import('@/auth/pages/LoginPage.vue')
 const SignUpPage = () => import('@/auth/pages/SignUpPage.vue')
 const ForgotPasswordPage = () => import('@/auth/pages/ForgotPasswordPage.vue')
 const ResetPasswordPage = () => import('@/auth/pages/ResetPasswordPage.vue')
-
 const authRoutes: RouteRecordRaw[] = [
   { path: '/login', name: 'login', component: LoginPage, meta: { requiresAuth: false } },
   { path: '/signup', name: 'signup', component: SignUpPage, meta: { requiresAuth: false } },

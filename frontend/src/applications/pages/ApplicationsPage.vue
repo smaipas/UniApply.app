@@ -2,29 +2,28 @@
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Applications</h1>
-      <UiButton @click="goNew" :icon="mdiPlus">New Application</UiButton>
+      <UiButton @click="showTemplateSelector = true" :icon="mdiPlus">New Application</UiButton>
     </div>
     <UiTable :columns="columns" :items="rows">
       <template #cell-status="{ value }">
-        <span
-          :class="{
-            'text-gray-700': value === 'DRAFT',
-            'text-blue-700': value === 'PENDING_APPROVAL',
-            'text-green-700': value === 'APPROVED',
-            'text-red-700': value === 'REJECTED',
-          }"
-          >{{ value }}</span
-        >
+        <UiChip :variant="getStatusVariant(value)" size="sm">
+          {{ value.replace('_', ' ').toLowerCase() }}
+        </UiChip>
+      </template>
+      <template #cell-updatedAt="{ value }">
+        {{ formatDateTime(value) }}
       </template>
     </UiTable>
+
+    <!-- Form Template Selector Modal -->
+    <FormTemplateSelector v-model="showTemplateSelector" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { UiTable } from '@/common/components'
-import { UiButton } from '@/common/components'
+import { UiTable, UiButton, UiChip, FormTemplateSelector } from '@/common/components'
+import { formatDateTime } from '@/common/utils/date'
 import api from '@/app/axios'
 import { mdiPlus } from '@mdi/js'
 
@@ -43,15 +42,26 @@ const columns = [
 ]
 
 const rows = ref<AppRow[]>([])
-const router = useRouter()
+const showTemplateSelector = ref(false)
 
 async function fetchApplications() {
   const res = await api.get('/applications')
   rows.value = res.data as AppRow[]
 }
 
-function goNew() {
-  router.push('/applications/new')
+function getStatusVariant(status: string) {
+  switch (status) {
+    case 'DRAFT':
+      return 'gray'
+    case 'PENDING_APPROVAL':
+      return 'warning'
+    case 'APPROVED':
+      return 'success'
+    case 'REJECTED':
+      return 'danger'
+    default:
+      return 'gray'
+  }
 }
 
 onMounted(fetchApplications)

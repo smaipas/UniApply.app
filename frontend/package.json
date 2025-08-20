@@ -27,6 +27,8 @@
     "@vueuse/core": "^13.6.0",
     "axios": "^1.11.0",
     "date-fns": "^4.1.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "jwt-decode": "^4.0.0",
     "pinia": "^3.0.3",
     "tailwindcss": "^4.1.12",

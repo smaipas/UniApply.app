@@ -2,7 +2,9 @@ import { Router } from "express";
 import { v4 as uuid } from "uuid";
 import { db } from "../utils/db";
 import { logAudit } from "../utils/audit";
-import type { User } from "@uniapply/shared";
+import { isValidCountryCode } from "../utils/countries";
+import { UserUpdateSchema, type User } from "@uniapply/shared";
+import { validate } from "../validation/http";
 
 const USERS_TABLE = process.env.USERS_TABLE!;
 const router = Router();
@@ -54,30 +56,60 @@ router.post("/", async (req, res) => {
   res.status(201).json(item);
 });
 router.put("/:id", async (req, res) => {
-  const before = await db.get<User>(USERS_TABLE, { id: req.params.id });
-  if (!before) return res.status(404).json({ error: "Not found" });
-  const updates = {
-    ...(req.body as Partial<User>),
-    updatedAt: new Date().toISOString(),
-  };
-  const after = await db.update<User>(
-    USERS_TABLE,
-    { id: req.params.id },
-    updates
-  );
-  const changed: any = {};
-  Object.keys(updates).forEach((k) => {
-    if ((updates as any)[k] !== (before as any)[k])
-      changed[k] = (updates as any)[k];
-  });
-  await logAudit({
-    entityType: "User",
-    entityId: req.params.id,
-    action: "UPDATE",
-    actorUserId: (req as any).user?.sub || "system",
-    details: changed,
-  });
-  res.json(after);
+  try {
+    const before = await db.get<User>(USERS_TABLE, { id: req.params.id });
+    if (!before) return res.status(404).json({ error: "Not found" });
+
+    // Validate using Zod schema
+    const updates = validate(UserUpdateSchema, req.body);
+
+    // Additional validation for country codes
+    if (
+      updates.address?.country &&
+      !isValidCountryCode(updates.address.country)
+    ) {
+      return res.status(400).json({ error: "Invalid country code" });
+    }
+
+    if (updates.nationality && !isValidCountryCode(updates.nationality)) {
+      return res
+        .status(400)
+        .json({ error: "Invalid nationality country code" });
+    }
+
+    const updateData = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    const after = await db.update<User>(
+      USERS_TABLE,
+      { id: req.params.id },
+      updateData
+    );
+    const changed: any = {};
+    Object.keys(updateData).forEach((k) => {
+      if ((updateData as any)[k] !== (before as any)[k])
+        changed[k] = (updateData as any)[k];
+    });
+    await logAudit({
+      entityType: "User",
+      entityId: req.params.id,
+      action: "UPDATE",
+      actorUserId: (req as any).user?.sub || "system",
+      details: changed,
+    });
+    res.json(after);
+  } catch (error: any) {
+    console.error("Failed to update user:", error);
+    if (error.details) {
+      return res.status(400).json({
+        message: "Validation failed",
+        details: error.details,
+      });
+    }
+    res.status(500).json({ error: "Internal server error" });
+  }
 });
 router.delete("/:id", async (req, res) => {
   await db.delete(USERS_TABLE, { id: req.params.id });

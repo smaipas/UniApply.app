@@ -10,6 +10,7 @@ import applicationsRoutes from '@/applications/routes'
 import templatesRoutes from '@/form-templates/routes'
 import usersRoutes from '@/users/routes'
 import settingsRoutes from '@/settings/routes'
+import profileRoutes from '@/profile/routes'
 // import approvalsRoutes from '@/approvals/routes';
 // import auditRoutes from '@/audit/routes';
 
@@ -21,6 +22,7 @@ const protectedChildren: RouteRecordRaw[] = [
   ...templatesRoutes,
   ...usersRoutes,
   ...settingsRoutes,
+  ...profileRoutes,
   // ...approvalsRoutes,
   // ...auditRoutes,
 ]
