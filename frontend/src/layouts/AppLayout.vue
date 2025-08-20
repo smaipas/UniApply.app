@@ -27,10 +27,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 
-import AppTopbar from '@/common/components/AppTopbar.vue'
-import AppSidebar from '@/common/components/AppSidebar.vue'
-import UiButton from '@/common/components/UiButton.vue'
-import UiIcon from '@/common/components/UiIcon.vue'
+import { AppTopbar, AppSidebar } from '@/common/components'
+import { UiButton } from '@/common/components'
+import { UiIcon } from '@/common/components'
 import { mdiAccount } from '@mdi/js'
 import { useRolesStore } from '@/common/store/roles'
 

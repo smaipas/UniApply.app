@@ -28,6 +28,28 @@
           </button>
         </li>
       </ul>
+
+      <!-- System Section -->
+      <div class="px-5 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-white/60">
+        System
+      </div>
+
+      <ul class="space-y-1 px-3 pb-4">
+        <li v-for="item in systemItems" :key="item.label">
+          <button
+            @click="go(item.to)"
+            class="group flex w-full items-center cursor-pointer gap-3 rounded-lg px-3 py-2 text-sm transition"
+            :class="
+              route.name === item.to.name
+                ? 'bg-white/15 text-white shadow-inner'
+                : 'text-white/80 hover:bg-white/10 hover:text-white'
+            "
+          >
+            <UiIcon :path="item.icon" class="shrink-0 opacity-90 group-hover:opacity-100" />
+            <span class="truncate">{{ item.label }}</span>
+          </button>
+        </li>
+      </ul>
     </div>
 
     <!-- Footer -->
@@ -40,9 +62,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import UiIcon from '@/common/components/UiIcon.vue'
-import UiLogo from '@/common/components/UiLogo.vue'
-import { mdiViewDashboard, mdiFileDocumentEdit, mdiFileDocument, mdiAccountGroup } from '@mdi/js'
+import { UiIcon, UiLogo } from '@/common/components'
+import {
+  mdiViewDashboard,
+  mdiFileDocumentEdit,
+  mdiFileDocument,
+  mdiAccountGroup,
+  mdiAccountMultiple,
+  mdiClipboardList,
+} from '@mdi/js'
 
 const route = useRoute()
 const router = useRouter()
@@ -52,6 +80,11 @@ const items = [
   { to: { name: 'ApplicationsPage' }, label: 'Applications', icon: mdiFileDocument },
   { to: { name: 'FormTemplatesPage' }, label: 'Form Templates', icon: mdiFileDocumentEdit },
   { to: { name: 'UsersPage' }, label: 'Users', icon: mdiAccountGroup },
+]
+
+const systemItems = [
+  { to: { name: 'user-groups' }, label: 'User Groups', icon: mdiAccountMultiple },
+  { to: { name: 'logs' }, label: 'Logs', icon: mdiClipboardList },
 ]
 
 const emit = defineEmits<{ (e: 'navigate'): void }>()

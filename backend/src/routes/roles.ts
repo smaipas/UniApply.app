@@ -21,14 +21,42 @@ router.post("/", async (req, res) => {
   if (!d.roleName) return res.status(400).json({ error: "roleName required" });
   const now = new Date().toISOString();
   const defaults = {
-    canCreateFormTemplates: false,
-    canCreateApplications: true,
-    canApproveForms: false,
-    canModifyApplicationSettings: false,
-    canModifyUserData: false,
-    canViewApplications: true,
-    canViewAllApplications: false,
-    canViewAllFormTemplates: false,
+    roleLabel: d.roleName || "New Role",
+    applications: {
+      create: true,
+      update: false,
+      delete: false,
+      approve: false,
+      reject: false,
+      readAll: false,
+      readOwn: true,
+    },
+    formTemplates: {
+      create: false,
+      readAll: false,
+      readActive: true,
+      update: false,
+      delete: false,
+    },
+    users: {
+      create: false,
+      readAll: false,
+      update: false,
+      delete: false,
+    },
+    auditLogs: {
+      read: false,
+    },
+    systemSettings: {
+      read: false,
+      update: false,
+    },
+    roles: {
+      readAll: false,
+      create: false,
+      update: false,
+      delete: false,
+    },
   };
   const item: RoleModel = {
     roleName: d.roleName!,

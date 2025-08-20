@@ -15,7 +15,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import UiTable from '@/common/components/UiTable.vue'
+import { UiTable } from '@/common/components'
 import api from '@/app/axios'
 
 type UserRow = {

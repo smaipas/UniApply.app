@@ -34,48 +34,122 @@ export declare const AddressSchema: z.ZodObject<{
     country: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
 export declare const RoleAccessSchema: z.ZodObject<{
-    canCreateFormTemplates: z.ZodBoolean;
-    canModifyFormTemplates: z.ZodBoolean;
-    canCreateApplications: z.ZodBoolean;
-    canApproveForms: z.ZodBoolean;
-    canModifyApplicationSettings: z.ZodBoolean;
-    canModifyUserData: z.ZodBoolean;
-    canViewApplications: z.ZodBoolean;
-    canViewAllApplications: z.ZodBoolean;
-    canViewAllFormTemplates: z.ZodBoolean;
-    canViewAllUsers: z.ZodBoolean;
-    canModifyUserRoleAccess: z.ZodBoolean;
+    applications: z.ZodObject<{
+        create: z.ZodBoolean;
+        update: z.ZodBoolean;
+        delete: z.ZodBoolean;
+        approve: z.ZodBoolean;
+        reject: z.ZodBoolean;
+        readAll: z.ZodBoolean;
+        readOwn: z.ZodBoolean;
+    }, z.core.$strict>;
+    formTemplates: z.ZodObject<{
+        create: z.ZodBoolean;
+        readAll: z.ZodBoolean;
+        readActive: z.ZodBoolean;
+        update: z.ZodBoolean;
+        delete: z.ZodBoolean;
+    }, z.core.$strict>;
+    users: z.ZodObject<{
+        create: z.ZodBoolean;
+        readAll: z.ZodBoolean;
+        update: z.ZodBoolean;
+        delete: z.ZodBoolean;
+    }, z.core.$strict>;
+    auditLogs: z.ZodObject<{
+        read: z.ZodBoolean;
+    }, z.core.$strict>;
+    systemSettings: z.ZodObject<{
+        read: z.ZodBoolean;
+        update: z.ZodBoolean;
+    }, z.core.$strict>;
+    roles: z.ZodObject<{
+        readAll: z.ZodBoolean;
+        create: z.ZodBoolean;
+        update: z.ZodBoolean;
+        delete: z.ZodBoolean;
+    }, z.core.$strict>;
 }, z.core.$strict>;
 export declare const RoleSchema: z.ZodObject<{
     roleName: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
+    roleLabel: z.ZodString;
     access: z.ZodObject<{
-        canCreateFormTemplates: z.ZodBoolean;
-        canModifyFormTemplates: z.ZodBoolean;
-        canCreateApplications: z.ZodBoolean;
-        canApproveForms: z.ZodBoolean;
-        canModifyApplicationSettings: z.ZodBoolean;
-        canModifyUserData: z.ZodBoolean;
-        canViewApplications: z.ZodBoolean;
-        canViewAllApplications: z.ZodBoolean;
-        canViewAllFormTemplates: z.ZodBoolean;
-        canViewAllUsers: z.ZodBoolean;
-        canModifyUserRoleAccess: z.ZodBoolean;
+        applications: z.ZodObject<{
+            create: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+            approve: z.ZodBoolean;
+            reject: z.ZodBoolean;
+            readAll: z.ZodBoolean;
+            readOwn: z.ZodBoolean;
+        }, z.core.$strict>;
+        formTemplates: z.ZodObject<{
+            create: z.ZodBoolean;
+            readAll: z.ZodBoolean;
+            readActive: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, z.core.$strict>;
+        users: z.ZodObject<{
+            create: z.ZodBoolean;
+            readAll: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, z.core.$strict>;
+        auditLogs: z.ZodObject<{
+            read: z.ZodBoolean;
+        }, z.core.$strict>;
+        systemSettings: z.ZodObject<{
+            read: z.ZodBoolean;
+            update: z.ZodBoolean;
+        }, z.core.$strict>;
+        roles: z.ZodObject<{
+            readAll: z.ZodBoolean;
+            create: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, z.core.$strict>;
     }, z.core.$strict>;
 }, z.core.$strict>;
 export declare const RoleModelSchema: z.ZodObject<{
     roleName: z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>;
+    roleLabel: z.ZodString;
     access: z.ZodObject<{
-        canCreateFormTemplates: z.ZodBoolean;
-        canModifyFormTemplates: z.ZodBoolean;
-        canCreateApplications: z.ZodBoolean;
-        canApproveForms: z.ZodBoolean;
-        canModifyApplicationSettings: z.ZodBoolean;
-        canModifyUserData: z.ZodBoolean;
-        canViewApplications: z.ZodBoolean;
-        canViewAllApplications: z.ZodBoolean;
-        canViewAllFormTemplates: z.ZodBoolean;
-        canViewAllUsers: z.ZodBoolean;
-        canModifyUserRoleAccess: z.ZodBoolean;
+        applications: z.ZodObject<{
+            create: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+            approve: z.ZodBoolean;
+            reject: z.ZodBoolean;
+            readAll: z.ZodBoolean;
+            readOwn: z.ZodBoolean;
+        }, z.core.$strict>;
+        formTemplates: z.ZodObject<{
+            create: z.ZodBoolean;
+            readAll: z.ZodBoolean;
+            readActive: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, z.core.$strict>;
+        users: z.ZodObject<{
+            create: z.ZodBoolean;
+            readAll: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, z.core.$strict>;
+        auditLogs: z.ZodObject<{
+            read: z.ZodBoolean;
+        }, z.core.$strict>;
+        systemSettings: z.ZodObject<{
+            read: z.ZodBoolean;
+            update: z.ZodBoolean;
+        }, z.core.$strict>;
+        roles: z.ZodObject<{
+            readAll: z.ZodBoolean;
+            create: z.ZodBoolean;
+            update: z.ZodBoolean;
+            delete: z.ZodBoolean;
+        }, z.core.$strict>;
     }, z.core.$strict>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;

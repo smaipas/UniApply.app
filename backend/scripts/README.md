@@ -8,6 +8,49 @@ This directory contains utility scripts for managing the backend infrastructure 
 
 Updates role permissions in DynamoDB. Currently used to add the `canModifyFormTemplates` permission to the ADMIN role.
 
+### `migrate-role-access.js`
+
+Migrates existing roles from the old flat access structure to the new hierarchical structure. This script converts old permissions like `canCreateFormTemplates` to the new format like `formTemplates.create`.
+
+#### Migration Mapping
+
+- `canCreateApplications` → `applications.create`
+- `canModifyApplicationSettings` → `applications.update`
+- `canApproveForms` → `applications.approve`
+- `canViewAllApplications` → `applications.readAll`
+- `canViewApplications` → `applications.readOwn`
+- `canCreateFormTemplates` → `formTemplates.create`
+- `canModifyFormTemplates` → `formTemplates.update`
+- `canViewAllFormTemplates` → `formTemplates.readAll`
+- `canViewAllUsers` → `users.readAll`
+- `canModifyUserData` → `users.update`
+- `canModifyUserRoleAccess` → `roles.update`
+
+#### Usage
+
+```bash
+# Set environment variables
+export ROLES_TABLE=your-roles-table-name
+export REGION=your-aws-region
+
+# Run the script
+node scripts/migrate-role-access.js
+```
+
+#### What it does
+
+1. Scans all roles in the DynamoDB table
+2. Converts old flat permissions to new hierarchical structure
+3. Updates each role with the new access format
+4. Provides detailed logging and migration summary
+5. Handles errors gracefully and skips already migrated roles
+
+#### When to run
+
+- After updating the role access schema to use hierarchical structure
+- When setting up new environments with the new permission format
+- When migrating existing production data to the new structure
+
 #### Usage
 
 ```bash

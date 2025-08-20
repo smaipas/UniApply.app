@@ -170,32 +170,84 @@ async function seedDefaultRoles() {
   const roles = [
     {
       roleName: "USER",
+      roleLabel: "User",
       access: {
-        canCreateFormTemplates: false,
-        canCreateApplications: true,
-        canApproveForms: false,
-        canModifyApplicationSettings: false,
-        canModifyUserData: false,
-        canViewApplications: false,
-        canViewAllApplications: false,
-        canViewAllFormTemplates: false,
-        canViewAllUsers: false,
-        canModifyUserRoleAccess: false,
+        applications: {
+          create: true,
+          update: false,
+          delete: false,
+          approve: false,
+          reject: false,
+          readAll: false,
+          readOwn: true,
+        },
+        formTemplates: {
+          create: false,
+          readAll: false,
+          readActive: true,
+          update: false,
+          delete: false,
+        },
+        users: {
+          create: false,
+          readAll: false,
+          update: false,
+          delete: false,
+        },
+        auditLogs: {
+          read: false,
+        },
+        systemSettings: {
+          read: false,
+          update: false,
+        },
+        roles: {
+          readAll: false,
+          create: false,
+          update: false,
+          delete: false,
+        },
       },
     },
     {
       roleName: "ADMIN",
+      roleLabel: "Administrator",
       access: {
-        canCreateFormTemplates: true,
-        canCreateApplications: true,
-        canApproveForms: true,
-        canModifyApplicationSettings: true,
-        canModifyUserData: true,
-        canViewApplications: true,
-        canViewAllApplications: true,
-        canViewAllFormTemplates: true,
-        canViewAllUsers: true,
-        canModifyUserRoleAccess: true,
+        applications: {
+          create: true,
+          update: true,
+          delete: true,
+          approve: true,
+          reject: true,
+          readAll: true,
+          readOwn: true,
+        },
+        formTemplates: {
+          create: true,
+          readAll: true,
+          readActive: true,
+          update: true,
+          delete: true,
+        },
+        users: {
+          create: true,
+          readAll: true,
+          update: true,
+          delete: true,
+        },
+        auditLogs: {
+          read: true,
+        },
+        systemSettings: {
+          read: true,
+          update: true,
+        },
+        roles: {
+          readAll: true,
+          create: true,
+          update: true,
+          delete: true,
+        },
       },
     },
   ];
@@ -437,7 +489,7 @@ async function createForm(event: APIGatewayProxyEventV2) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canCreateFormTemplates)
+  if (!role?.access?.formTemplates?.create)
     return response(403, { message: "Forbidden" });
 
   const id = randomUUID();
@@ -489,7 +541,7 @@ async function updateForm(event: APIGatewayProxyEventV2, id: string) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canModifyFormTemplates)
+  if (!role?.access?.formTemplates?.update)
     return response(403, { message: "Forbidden" });
 
   const prevRes = await ddb.send(
@@ -544,7 +596,7 @@ async function deleteForm(event: APIGatewayProxyEventV2, id: string) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canModifyFormTemplates)
+  if (!role?.access?.formTemplates?.delete)
     return response(403, { message: "Forbidden" });
 
   // Check if form exists
@@ -616,9 +668,13 @@ async function getForm(_event: APIGatewayProxyEventV2, id: string) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  const canViewAll = !!role?.access?.canViewAllFormTemplates;
+  const canViewAll = !!role?.access?.formTemplates?.readAll;
+  const canViewActive = !!role?.access?.formTemplates?.readActive;
   const listed = Array.isArray(form.visibleToRoles) ? form.visibleToRoles : [];
-  if (!canViewAll && !(form.active && listed.includes(roleName))) {
+  if (
+    !canViewAll &&
+    !(canViewActive && form.active && listed.includes(roleName))
+  ) {
     return response(403, { message: "Forbidden" });
   }
   return response(200, form);
@@ -649,7 +705,7 @@ async function createApplication(event: APIGatewayProxyEventV2) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canCreateApplications)
+  if (!role?.access?.applications?.create)
     return response(403, { message: "Forbidden" });
 
   // Load form template to validate fields against rules
@@ -893,7 +949,7 @@ async function getApplication(event: APIGatewayProxyEventV2, id: string) {
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  const canViewAll = !!role?.access?.canViewAllApplications;
+  const canViewAll = !!role?.access?.applications?.readAll;
   if (!canViewAll) return response(403, { message: "Forbidden" });
   return response(200, application);
 }
@@ -946,7 +1002,7 @@ async function updateApplicationStatus(
     })
   );
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-  if (!role?.access?.canApproveForms)
+  if (!role?.access?.applications?.approve)
     return response(403, { message: "Forbidden" });
 
   const pendingStep = steps[firstPendingIdx];
@@ -1018,7 +1074,12 @@ async function tryNotifyApplicantDecision(
     if (!user?.email) return;
 
     const subject = `Your application ${applicationId} was ${status}`;
-    const body = `Hello ${user.firstName ?? ""},\n\nYour application (${applicationId}) has been ${status.toLowerCase()}.\n\nRegards,\nUniApply`;
+    const body = `Hello ${user.firstName ?? ""},
+
+Your application (${applicationId}) has been ${status.toLowerCase()}
+
+Regards,
+UniApply`;
 
     await ses.send(
       new SendEmailCommand({
@@ -1138,7 +1199,7 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
           const vRole = vRoleRes.Item
             ? (unmarshall(vRoleRes.Item) as any)
             : null;
-          canModifyRoleAccess = !!vRole?.access?.canModifyUserRoleAccess;
+          canModifyRoleAccess = !!vRole?.access?.roles?.update;
         }
       }
       const sanitized = canModifyRoleAccess
@@ -1178,13 +1239,219 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
             const vRole = vRoleRes.Item
               ? (unmarshall(vRoleRes.Item) as any)
               : null;
-            const canModifyRoleAccess =
-              !!vRole?.access?.canModifyUserRoleAccess;
+            const canModifyRoleAccess = !!vRole?.access?.roles?.update;
             if (!canModifyRoleAccess)
               return response(200, { roleName: role.roleName });
           }
         }
         return response(200, role);
+      }
+    }
+
+    // Roles POST endpoint
+    if (method === "POST" && path === "/roles") {
+      const viewerSub = requesterSub(event);
+      if (!viewerSub) return response(403, { message: "Forbidden" });
+
+      // Load viewer role
+      const viewerRes = await ddb.send(
+        new GetItemCommand({
+          TableName: USERS_TABLE,
+          Key: marshall({ id: viewerSub }),
+        })
+      );
+      const viewer = viewerRes.Item
+        ? (unmarshall(viewerRes.Item) as any)
+        : null;
+      const roleName = viewer?.role as string | undefined;
+      if (!roleName) return response(403, { message: "Forbidden" });
+
+      const roleRes = await ddb.send(
+        new GetItemCommand({
+          TableName: process.env.ROLES_TABLE!,
+          Key: marshall({ roleName }),
+        })
+      );
+      const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+      if (!role?.access?.roles?.create) {
+        return response(403, { message: "Forbidden" });
+      }
+
+      const d = jsonParse(event.body) as any;
+      const validPayload = validate(RoleSchema.partial(), d);
+
+      const now = new Date().toISOString();
+      const defaultAccess = {
+        applications: {
+          create: true,
+          update: false,
+          delete: false,
+          approve: false,
+          reject: false,
+          readAll: false,
+          readOwn: true,
+        },
+        formTemplates: {
+          create: false,
+          readAll: false,
+          readActive: true,
+          update: false,
+          delete: false,
+        },
+        users: {
+          create: false,
+          readAll: false,
+          update: false,
+          delete: false,
+        },
+        auditLogs: {
+          read: false,
+        },
+        systemSettings: {
+          read: false,
+          update: false,
+        },
+        roles: {
+          readAll: false,
+          create: false,
+          update: false,
+          delete: false,
+        },
+      };
+
+      const item = {
+        roleName: validPayload.roleName,
+        roleLabel: validPayload.roleLabel || "New Role",
+        access: { ...defaultAccess, ...(validPayload.access || {}) },
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await ddb.send(
+        new PutItemCommand({
+          TableName: process.env.ROLES_TABLE!,
+          Item: marshall(item),
+          ConditionExpression: "attribute_not_exists(roleName)",
+        })
+      );
+
+      // Log audit
+      await ddb.send(
+        new PutItemCommand({
+          TableName: AUDIT_TABLE,
+          Item: marshall({
+            id: randomUUID(),
+            entity: "Role",
+            entityId: item.roleName,
+            actorUserId: viewerSub,
+            action: "CREATE",
+            changed: item,
+            createdAt: now,
+          }),
+        })
+      );
+
+      return response(201, item);
+    }
+
+    // Roles PUT endpoint
+    {
+      const roleName = getPathParam(path, "/roles/");
+      if (roleName && method === "PUT") {
+        const viewerSub = requesterSub(event);
+        if (!viewerSub) return response(403, { message: "Forbidden" });
+
+        // Load viewer role
+        const viewerRes = await ddb.send(
+          new GetItemCommand({
+            TableName: USERS_TABLE,
+            Key: marshall({ id: viewerSub }),
+          })
+        );
+        const viewer = viewerRes.Item
+          ? (unmarshall(viewerRes.Item) as any)
+          : null;
+        const viewerRoleName = viewer?.role as string | undefined;
+        if (!viewerRoleName) return response(403, { message: "Forbidden" });
+
+        const viewerRoleRes = await ddb.send(
+          new GetItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Key: marshall({ roleName: viewerRoleName }),
+          })
+        );
+        const viewerRole = viewerRoleRes.Item
+          ? (unmarshall(viewerRoleRes.Item) as any)
+          : null;
+        if (!viewerRole?.access?.roles?.update) {
+          return response(403, { message: "Forbidden" });
+        }
+
+        // Check if target role exists
+        const targetRoleRes = await ddb.send(
+          new GetItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Key: marshall({ roleName }),
+          })
+        );
+        if (!targetRoleRes.Item) {
+          return response(404, { message: "Role not found" });
+        }
+
+        const before = unmarshall(targetRoleRes.Item) as any;
+        const rawUpdates = jsonParse(event.body) as any;
+        const validatedUpdates = validate(RoleSchema.partial(), rawUpdates);
+
+        // Don't allow changing roleName (it's the primary key)
+        if (
+          validatedUpdates.roleName &&
+          validatedUpdates.roleName !== roleName
+        ) {
+          return response(400, { message: "Cannot change roleName" });
+        }
+
+        const now = new Date().toISOString();
+        const updatedItem = {
+          ...before,
+          ...validatedUpdates,
+          roleName, // Ensure roleName stays the same
+          updatedAt: now,
+        };
+
+        await ddb.send(
+          new PutItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Item: marshall(updatedItem),
+          })
+        );
+
+        // Log audit
+        const changed: any = {};
+        Object.keys(validatedUpdates).forEach((k) => {
+          if (
+            k !== "updatedAt" &&
+            (validatedUpdates as any)[k] !== (before as any)[k]
+          ) {
+            changed[k] = (validatedUpdates as any)[k];
+          }
+        });
+
+        await ddb.send(
+          new PutItemCommand({
+            TableName: AUDIT_TABLE,
+            Item: marshall({
+              id: randomUUID(),
+              entity: "Role",
+              entityId: roleName,
+              actorUserId: viewerSub,
+              action: "UPDATE",
+              changed,
+              createdAt: now,
+            }),
+          })
+        );
+
+        return response(200, updatedItem);
       }
     }
 
@@ -1226,7 +1493,7 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
         })
       );
       const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-      const canViewAll = !!role?.access?.canViewAllFormTemplates;
+      const canViewAll = !!role?.access?.formTemplates?.readAll;
 
       const all = await ddb.send(new ScanCommand({ TableName: FORMS_TABLE }));
       const items = (all.Items || []).map((it: any) => unmarshall(it));
@@ -1280,7 +1547,7 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
         })
       );
       const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
-      const canViewAll = !!role?.access?.canViewAllApplications;
+      const canViewAll = !!role?.access?.applications?.readAll;
 
       // If viewer can view all, allow optional status filter using status GSI
       if (canViewAll) {
@@ -1345,6 +1612,141 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       }
     }
 
+    // Audit Logs
+    if (method === "GET" && path === "/audit-logs") {
+      const viewerSub = requesterSub(event);
+      if (!viewerSub) return response(403, { message: "Forbidden" });
+
+      // Load viewer role
+      const viewerRes = await ddb.send(
+        new GetItemCommand({
+          TableName: USERS_TABLE,
+          Key: marshall({ id: viewerSub }),
+        })
+      );
+      const viewer = viewerRes.Item
+        ? (unmarshall(viewerRes.Item) as any)
+        : null;
+      const roleName = viewer?.role as string | undefined;
+      if (!roleName) return response(403, { message: "Forbidden" });
+
+      const roleRes = await ddb.send(
+        new GetItemCommand({
+          TableName: process.env.ROLES_TABLE!,
+          Key: marshall({ roleName }),
+        })
+      );
+      const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+      if (!role?.access?.auditLogs?.read) {
+        return response(403, { message: "Forbidden" });
+      }
+
+      const qs = (event.queryStringParameters || {}) as Record<string, string>;
+      const entity = qs.entity as string | undefined;
+      const action = qs.action as string | undefined;
+      const dateFrom = qs.dateFrom as string | undefined;
+      const dateTo = qs.dateTo as string | undefined;
+      const page = parseInt(qs.page || "1");
+      const limit = Math.min(parseInt(qs.limit || "20"), 100);
+
+      // Build filter expression
+      let filterExpressions: string[] = [];
+      let expressionAttributeValues: Record<string, any> = {};
+      let expressionAttributeNames: Record<string, string> = {};
+
+      if (entity) {
+        filterExpressions.push("#entity = :entity");
+        expressionAttributeNames["#entity"] = "entity";
+        expressionAttributeValues[":entity"] = entity;
+      }
+
+      if (action) {
+        filterExpressions.push("#action = :action");
+        expressionAttributeNames["#action"] = "action";
+        expressionAttributeValues[":action"] = action;
+      }
+
+      if (dateFrom) {
+        filterExpressions.push("#createdAt >= :dateFrom");
+        expressionAttributeNames["#createdAt"] = "createdAt";
+        expressionAttributeValues[":dateFrom"] = dateFrom;
+      }
+
+      if (dateTo) {
+        filterExpressions.push("#createdAt <= :dateTo");
+        expressionAttributeNames["#createdAt"] = "createdAt";
+        expressionAttributeValues[":dateTo"] = dateTo;
+      }
+
+      const scanParams: any = {
+        TableName: AUDIT_TABLE,
+        Limit: limit,
+      };
+
+      if (filterExpressions.length > 0) {
+        scanParams.FilterExpression = filterExpressions.join(" AND ");
+        scanParams.ExpressionAttributeNames = expressionAttributeNames;
+        scanParams.ExpressionAttributeValues = marshall(
+          expressionAttributeValues
+        );
+      }
+
+      const result = await ddb.send(new ScanCommand(scanParams));
+      const items = (result.Items || []).map((it: any) => unmarshall(it));
+
+      // Sort by createdAt descending (newest first)
+      items.sort(
+        (a: any, b: any) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      // Simple pagination (in a real app, you'd use DynamoDB's LastEvaluatedKey)
+      const startIndex = (page - 1) * limit;
+      const paginatedItems = items.slice(startIndex, startIndex + limit);
+
+      // Fetch user emails for actorUserId
+      const enrichedItems = await Promise.all(
+        paginatedItems.map(async (item: any) => {
+          try {
+            if (item.actorUserId && item.actorUserId !== "system") {
+              const userRes = await ddb.send(
+                new GetItemCommand({
+                  TableName: USERS_TABLE,
+                  Key: marshall({ id: item.actorUserId }),
+                })
+              );
+              const user = userRes.Item
+                ? (unmarshall(userRes.Item) as any)
+                : null;
+              return {
+                ...item,
+                userEmail: user?.email || "Unknown User",
+              };
+            } else {
+              return {
+                ...item,
+                userEmail: "System",
+              };
+            }
+          } catch (error) {
+            console.error("Error fetching user email:", error);
+            return {
+              ...item,
+              userEmail: "Unknown User",
+            };
+          }
+        })
+      );
+
+      return response(200, {
+        items: enrichedItems,
+        total: items.length,
+        page,
+        limit,
+        hasMore: startIndex + limit < items.length,
+      });
+    }
+
     return response(404, { message: "Not found" });
   } catch (err: any) {
     if (err?.statusCode === 400)
@@ -1400,7 +1802,12 @@ export const notifyStatusChange: APIGatewayProxyHandlerV2 = async (event) => {
 
     const finalStatus = status ?? application.status ?? "UPDATED";
     const subject = `Your application ${applicationId} status update`;
-    const bodyText = `Hello ${user.firstName ?? ""},\n\nYour application (${applicationId}) status is now: ${finalStatus}.\n\nRegards,\nUniApply`;
+    const bodyText = `Hello ${user.firstName ?? ""},
+
+Your application (${applicationId}) status is now: ${finalStatus}.
+
+Regards,
+UniApply`;
 
     await ses.send(
       new SendEmailCommand({

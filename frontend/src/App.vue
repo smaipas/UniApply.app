@@ -30,9 +30,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useModalStore } from '@/common/store/modal'
-import UiToast from '@/common/components/UiToast.vue'
-import UiModal from '@/common/components/UiModal.vue'
-import UiButton from '@/common/components/UiButton.vue'
+import { UiToast, UiModal } from '@/common/components'
+import { UiButton } from '@/common/components'
 
 const modal = useModalStore()
 

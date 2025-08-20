@@ -261,24 +261,54 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import UiButton from '@/common/components/UiButton.vue'
-import UiInput from '@/common/components/UiInput.vue'
-import UiCard from '@/common/components/UiCard.vue'
-import UiLoadingOverlay from '@/common/components/UiLoadingOverlay.vue'
+import { UiButton } from '@/common/components'
+import { UiInput, UiCard, UiLoadingOverlay } from '@/common/components'
 import api from '@/app/axios'
 import { mdiArrowLeft, mdiFloppy, mdiClose, mdiCheck, mdiPlus } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
 import { useRolesStore } from '@/common/store/roles'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
-import UiSelect from '@/common/components/UiSelect.vue'
-import UiCheckbox from '@/common/components/UiCheckbox.vue'
+import { UiSelect, UiCheckbox } from '@/common/components'
 
 // Extended user type with access permissions
 type UserWithAccess = {
   access?: {
-    canModifyFormTemplates?: boolean
-    [key: string]: boolean | undefined
+    applications?: {
+      create?: boolean
+      update?: boolean
+      delete?: boolean
+      approve?: boolean
+      reject?: boolean
+      readAll?: boolean
+      readOwn?: boolean
+    }
+    formTemplates?: {
+      create?: boolean
+      readAll?: boolean
+      readActive?: boolean
+      update?: boolean
+      delete?: boolean
+    }
+    users?: {
+      create?: boolean
+      readAll?: boolean
+      update?: boolean
+      delete?: boolean
+    }
+    auditLogs?: {
+      read?: boolean
+    }
+    systemSettings?: {
+      read?: boolean
+      update?: boolean
+    }
+    roles?: {
+      readAll?: boolean
+      create?: boolean
+      update?: boolean
+      delete?: boolean
+    }
   }
 }
 
@@ -324,7 +354,7 @@ const roleOptions = computed(() => rolesStore.roleNames)
 
 // Permission check
 const canModifyFormTemplates = computed(() => {
-  return (authStore.profile as UserWithAccess)?.access?.canModifyFormTemplates || false
+  return (authStore.profile as UserWithAccess)?.access?.formTemplates?.update || false
 })
 
 // Field name sanitization and errors

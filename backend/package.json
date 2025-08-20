@@ -4,7 +4,9 @@
   "type": "commonjs",
   "scripts": {
     "dev": "sls offline",
-    "deploy": "serverless deploy"
+    "deploy": "npx serverless deploy",
+    "migrate:admin-role": "node scripts/update-admin-role.js",
+    "migrate:role-access": "node scripts/migrate-role-access.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.868.0",
@@ -17,6 +19,7 @@
     "@uniapply/shared": "^0.1.0",
     "@vendia/serverless-express": "^4.12.6",
     "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "jwks-rsa": "^3.0.1",

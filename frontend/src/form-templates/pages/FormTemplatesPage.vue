@@ -57,10 +57,8 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { format } from 'date-fns'
-import UiButton from '@/common/components/UiButton.vue'
-import UiTable from '@/common/components/UiTable.vue'
-import UiChip from '@/common/components/UiChip.vue'
-import UiModal from '@/common/components/UiModal.vue'
+import { UiButton } from '@/common/components'
+import { UiTable, UiChip, UiModal } from '@/common/components'
 import api from '@/app/axios'
 import { mdiPlus, mdiClose } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
@@ -70,8 +68,41 @@ import { useAuthStore } from '@/auth/store'
 // Extended user type with access permissions
 type UserWithAccess = {
   access?: {
-    canModifyFormTemplates?: boolean
-    [key: string]: boolean | undefined
+    applications?: {
+      create?: boolean
+      update?: boolean
+      delete?: boolean
+      approve?: boolean
+      reject?: boolean
+      readAll?: boolean
+      readOwn?: boolean
+    }
+    formTemplates?: {
+      create?: boolean
+      readAll?: boolean
+      readActive?: boolean
+      update?: boolean
+      delete?: boolean
+    }
+    users?: {
+      create?: boolean
+      readAll?: boolean
+      update?: boolean
+      delete?: boolean
+    }
+    auditLogs?: {
+      read?: boolean
+    }
+    systemSettings?: {
+      read?: boolean
+      update?: boolean
+    }
+    roles?: {
+      readAll?: boolean
+      create?: boolean
+      update?: boolean
+      delete?: boolean
+    }
   }
 }
 
@@ -104,7 +135,7 @@ const deleting = ref(false)
 
 // Permission check
 const canModifyFormTemplates = computed(() => {
-  return (authStore.profile as UserWithAccess)?.access?.canModifyFormTemplates || false
+  return (authStore.profile as UserWithAccess)?.access?.formTemplates?.update || false
 })
 
 function formatDate(dateString?: string): string {

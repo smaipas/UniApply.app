@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import UiLogo from '@/common/components/UiLogo.vue'
+import { UiLogo } from '@/common/components'
 
 withDefaults(
   defineProps<{

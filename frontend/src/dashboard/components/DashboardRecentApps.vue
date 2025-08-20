@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import UiCard from '@/common/components/UiCard.vue'
+import { UiCard } from '@/common/components'
 import type { Application } from '@uniapply/shared'
 
 defineProps<{ items: Application[] }>()

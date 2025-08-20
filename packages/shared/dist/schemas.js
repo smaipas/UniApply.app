@@ -43,17 +43,53 @@ export const AddressSchema = z
 // ========= Roles =========
 export const RoleAccessSchema = z
     .object({
-    canCreateFormTemplates: z.boolean(),
-    canModifyFormTemplates: z.boolean(),
-    canCreateApplications: z.boolean(),
-    canApproveForms: z.boolean(),
-    canModifyApplicationSettings: z.boolean(),
-    canModifyUserData: z.boolean(),
-    canViewApplications: z.boolean(),
-    canViewAllApplications: z.boolean(),
-    canViewAllFormTemplates: z.boolean(),
-    canViewAllUsers: z.boolean(),
-    canModifyUserRoleAccess: z.boolean(),
+    applications: z
+        .object({
+        create: z.boolean(),
+        update: z.boolean(),
+        delete: z.boolean(),
+        approve: z.boolean(),
+        reject: z.boolean(),
+        readAll: z.boolean(),
+        readOwn: z.boolean(),
+    })
+        .strict(),
+    formTemplates: z
+        .object({
+        create: z.boolean(),
+        readAll: z.boolean(),
+        readActive: z.boolean(),
+        update: z.boolean(),
+        delete: z.boolean(),
+    })
+        .strict(),
+    users: z
+        .object({
+        create: z.boolean(),
+        readAll: z.boolean(),
+        update: z.boolean(),
+        delete: z.boolean(),
+    })
+        .strict(),
+    auditLogs: z
+        .object({
+        read: z.boolean(),
+    })
+        .strict(),
+    systemSettings: z
+        .object({
+        read: z.boolean(),
+        update: z.boolean(),
+    })
+        .strict(),
+    roles: z
+        .object({
+        readAll: z.boolean(),
+        create: z.boolean(),
+        update: z.boolean(),
+        delete: z.boolean(),
+    })
+        .strict(),
 })
     .strict();
 export const RoleSchema = z
@@ -63,6 +99,7 @@ export const RoleSchema = z
         .min(2)
         .max(64)
         .transform((s) => s.toUpperCase().replace(/\s+/g, "")),
+    roleLabel: z.string().min(2).max(128),
     access: RoleAccessSchema,
 })
     .strict();

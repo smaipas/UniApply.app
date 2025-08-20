@@ -26,11 +26,11 @@
 
 <script setup lang="ts">
 import { mdiMenu, mdiLogout, mdiMagnify } from '@mdi/js'
-import UiButton from '@/common/components/UiButton.vue'
-import UiIcon from '@/common/components/UiIcon.vue'
+import { UiButton } from '@/common/components'
+import { UiIcon } from '@/common/components'
 import { useAuthStore } from '@/auth/store'
 import { useRouter } from 'vue-router'
-import UiInput from '@/common/components/UiInput.vue'
+import { UiInput } from '@/common/components'
 
 withDefaults(defineProps<{ title?: string; showMenuButton?: boolean }>(), {
   showMenuButton: true,

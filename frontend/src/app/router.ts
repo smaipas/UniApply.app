@@ -9,8 +9,8 @@ import dashboardRoutes from '@/dashboard/routes'
 import applicationsRoutes from '@/applications/routes'
 import templatesRoutes from '@/form-templates/routes'
 import usersRoutes from '@/users/routes'
+import settingsRoutes from '@/settings/routes'
 // import approvalsRoutes from '@/approvals/routes';
-// import settingsRoutes from '@/settings/routes';
 // import auditRoutes from '@/audit/routes';
 
 import AppLayout from '@/layouts/AppLayout.vue'
@@ -20,8 +20,8 @@ const protectedChildren: RouteRecordRaw[] = [
   ...applicationsRoutes,
   ...templatesRoutes,
   ...usersRoutes,
+  ...settingsRoutes,
   // ...approvalsRoutes,
-  // ...settingsRoutes,
   // ...auditRoutes,
 ]
 

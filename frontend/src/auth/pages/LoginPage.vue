@@ -41,8 +41,8 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, email as emailValidator, helpers } from '@vuelidate/validators'
 
 import AuthCard from '@/auth/components/AuthCard.vue'
-import UiInput from '@/common/components/UiInput.vue'
-import UiButton from '@/common/components/UiButton.vue'
+import { UiInput } from '@/common/components'
+import { UiButton } from '@/common/components'
 import { useAuthStore } from '@/auth/store'
 import { errorMessageHandler } from '@/common/utils/validation'
 

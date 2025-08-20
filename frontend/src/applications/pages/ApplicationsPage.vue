@@ -23,8 +23,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import UiTable from '@/common/components/UiTable.vue'
-import UiButton from '@/common/components/UiButton.vue'
+import { UiTable } from '@/common/components'
+import { UiButton } from '@/common/components'
 import api from '@/app/axios'
 import { mdiPlus } from '@mdi/js'
 
