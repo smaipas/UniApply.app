@@ -711,7 +711,7 @@ function getDateMax(f: TemplateField): string | undefined {
 }
 
 onMounted(async () => {
-  await rolesStore.ensureLoaded()
+  // Roles are now loaded by the layout component
   await load()
 })
 </script>

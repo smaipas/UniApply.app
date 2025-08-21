@@ -13,7 +13,7 @@
       </div>
 
       <ul class="space-y-1 px-3 pb-4">
-        <li v-for="item in items" :key="item.label">
+        <li v-for="item in visibleItems" :key="item.label">
           <button
             @click="go(item.to)"
             class="group flex w-full items-center cursor-pointer gap-3 rounded-lg px-3 py-2 text-sm transition"
@@ -30,12 +30,15 @@
       </ul>
 
       <!-- System Section -->
-      <div class="px-5 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-white/60">
+      <div
+        v-if="visibleSystemItems.length > 0"
+        class="px-5 pt-4 pb-2 text-[11px] font-semibold uppercase tracking-wide text-white/60"
+      >
         System
       </div>
 
       <ul class="space-y-1 px-3 pb-4">
-        <li v-for="item in systemItems" :key="item.label">
+        <li v-for="item in visibleSystemItems" :key="item.label">
           <button
             @click="go(item.to)"
             class="group flex w-full items-center cursor-pointer gap-3 rounded-lg px-3 py-2 text-sm transition"
@@ -63,6 +66,7 @@
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UiIcon, UiLogo } from '@/common/components'
+import { usePermissions } from '@/common/utils/permissions'
 import {
   mdiViewDashboard,
   mdiFileDocumentEdit,
@@ -70,24 +74,70 @@ import {
   mdiAccountGroup,
   mdiAccountMultiple,
   mdiClipboardList,
-  mdiAccount,
 } from '@mdi/js'
 
 const route = useRoute()
 const router = useRouter()
+const { getUserPermissions } = usePermissions()
 
-const items = [
+const allItems = [
   { to: { name: 'Dashboard' }, label: 'Dashboard', icon: mdiViewDashboard },
   { to: { name: 'ApplicationsPage' }, label: 'Applications', icon: mdiFileDocument },
-  { to: { name: 'FormTemplatesPage' }, label: 'Form Templates', icon: mdiFileDocumentEdit },
-  { to: { name: 'profile' }, label: 'My Profile', icon: mdiAccount },
-  { to: { name: 'UsersPage' }, label: 'Users', icon: mdiAccountGroup },
+  {
+    to: { name: 'FormTemplatesPage' },
+    label: 'Form Templates',
+    icon: mdiFileDocumentEdit,
+    permission: 'formTemplates.readAll',
+  },
+  { to: { name: 'UsersPage' }, label: 'Users', icon: mdiAccountGroup, permission: 'users.readAll' },
 ]
 
-const systemItems = [
-  { to: { name: 'user-groups' }, label: 'User Groups', icon: mdiAccountMultiple },
-  { to: { name: 'logs' }, label: 'Logs', icon: mdiClipboardList },
+const allSystemItems = [
+  {
+    to: { name: 'user-groups' },
+    label: 'User Groups',
+    icon: mdiAccountMultiple,
+    permission: 'roles.readAll',
+  },
+  { to: { name: 'logs' }, label: 'Logs', icon: mdiClipboardList, permission: 'auditLogs.read' },
 ]
+
+// Filter items based on permissions
+const visibleItems = computed(() => {
+  const permissions = getUserPermissions()
+  return allItems.filter((item) => {
+    if (!item.permission) return true // No permission required
+
+    const [resource, action] = item.permission.split('.')
+    switch (resource) {
+      case 'users':
+        return permissions.users[action as keyof typeof permissions.users] || false
+      case 'formTemplates':
+        return permissions.formTemplates[action as keyof typeof permissions.formTemplates] || false
+      case 'applications':
+        return permissions.applications[action as keyof typeof permissions.applications] || false
+      default:
+        return false
+    }
+  })
+})
+
+const visibleSystemItems = computed(() => {
+  const permissions = getUserPermissions()
+  return allSystemItems.filter((item) => {
+    if (!item.permission) return true // No permission required
+
+    const [resource, action] = item.permission.split('.')
+    switch (resource) {
+      case 'roles':
+        return permissions.roles[action as keyof typeof permissions.roles] || false
+      case 'auditLogs':
+        return permissions.auditLogs[action as keyof typeof permissions.auditLogs] || false
+      default:
+        return false
+    }
+  })
+})
 
 const emit = defineEmits<{ (e: 'navigate'): void }>()
 

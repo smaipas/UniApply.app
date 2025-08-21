@@ -71,6 +71,7 @@ import {
   required,
   email as emailValidator,
   minLength,
+  maxLength,
   sameAs,
   helpers,
 } from '@vuelidate/validators'
@@ -100,9 +101,13 @@ const step = ref<'form' | 'confirm'>('form')
 const rules = computed(() => ({
   first: {
     required: helpers.withMessage('First name is required', required),
+    minLength: helpers.withMessage('First name must be at least 2 characters', minLength(2)),
+    maxLength: helpers.withMessage('First name must be at most 64 characters', maxLength(64)),
   },
   last: {
     required: helpers.withMessage('Last name is required', required),
+    minLength: helpers.withMessage('Last name must be at least 2 characters', minLength(2)),
+    maxLength: helpers.withMessage('Last name must be at most 64 characters', maxLength(64)),
   },
   email: {
     required: helpers.withMessage('Email is required', required),

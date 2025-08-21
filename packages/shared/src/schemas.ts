@@ -269,12 +269,27 @@ export const ApplicationCreateSchema = z
   .object({
     userId: z.string().min(1).max(64),
     formId: z.string().min(1).max(64),
+    formTitle: z.string().min(1).max(256),
     fields: z.record(z.string(), z.any()),
-    approvalSteps: z.array(ApplicationStepSchema).min(1).max(10),
+    approvalSteps: z.array(ApplicationStepSchema).max(10),
     status: z
       .enum(["DRAFT", "APPROVED", "REJECTED", "PENDING_APPROVAL"])
       .default("DRAFT"),
   })
+  .refine(
+    (data) => {
+      // For DRAFT status, approvalSteps can be empty
+      if (data.status === "DRAFT") {
+        return true; // Allow empty array
+      }
+      // For other statuses, approvalSteps must have at least 1 item
+      return data.approvalSteps.length >= 1;
+    },
+    {
+      message: "Approval steps are required for non-draft applications",
+      path: ["approvalSteps"],
+    }
+  )
   .strict();
 
 export const ApplicationUpdateSchema = z
@@ -285,6 +300,28 @@ export const ApplicationUpdateSchema = z
       .enum(["DRAFT", "APPROVED", "REJECTED", "PENDING_APPROVAL"])
       .optional(),
   })
+  .refine(
+    (data) => {
+      // If approvalSteps is not provided, validation passes
+      if (!data.approvalSteps) {
+        return true;
+      }
+      // If status is not provided, we can't validate (will be validated by backend)
+      if (!data.status) {
+        return true;
+      }
+      // For DRAFT status, approvalSteps can be empty
+      if (data.status === "DRAFT") {
+        return true; // Allow empty array
+      }
+      // For other statuses, approvalSteps must have at least 1 item
+      return data.approvalSteps.length >= 1;
+    },
+    {
+      message: "Approval steps are required for non-draft applications",
+      path: ["approvalSteps"],
+    }
+  )
   .strict();
 
 // Add a DB model schema (what you actually store in DynamoDB)
@@ -293,12 +330,20 @@ export const ApplicationModelSchema = z
     id: z.string().min(1).max(64),
     userId: z.string().min(1).max(64),
     formId: z.string().min(1).max(64),
+    formTitle: z.string().min(1).max(256),
     formVersion: z.number().int().min(1),
     fields: z.record(z.string(), z.any()),
     approvalSteps: z.array(ApplicationStepSchema),
     status: z.enum(["DRAFT", "APPROVED", "REJECTED", "PENDING_APPROVAL"]),
     createdAt: z.string(),
     updatedAt: z.string(),
+    user: z
+      .object({
+        firstName: z.string(),
+        lastName: z.string(),
+        studentId: z.string().optional(),
+      })
+      .optional(),
   })
   .strict();
 

@@ -123,7 +123,7 @@ export const useAuthStore = defineStore('auth', () => {
         accessToken: r.AccessToken,
         refreshToken: r.RefreshToken ?? tokens.value?.refreshToken ?? null,
       })
-      await loadProfile()
+      // Profile loading is now handled by the layout component
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err: any = e
@@ -207,7 +207,7 @@ export const useAuthStore = defineStore('auth', () => {
         // refresh token usually unchanged for REFRESH_TOKEN_AUTH
         refreshToken: tokens.value.refreshToken,
       })
-      await loadProfile()
+      // Profile loading is now handled by the layout component
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err: any = e
@@ -228,7 +228,7 @@ export const useAuthStore = defineStore('auth', () => {
   // When app loads with saved tokens, schedule a refresh immediately.
   if (tokens.value?.idToken) {
     scheduleRefreshFrom(tokens.value.idToken, tokens.value.refreshToken)
-    void loadProfile()
+    // Profile loading is now handled by the layout component
   }
 
   // Refresh when tab becomes visible and token is near/after expiry.

@@ -18,10 +18,9 @@
       <div class="p-6">
         <UserForm
           v-model="formData"
-          :errors="errors"
           :loading="saving"
           @submit="saveProfile"
-          @cancel="resetForm"
+          @cancel="handleCancel"
         />
       </div>
     </div>
@@ -30,20 +29,20 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { UserForm } from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
 import api from '@/app/axios'
 
 const router = useRouter()
+const route = useRoute()
 const toastStore = useToastStore()
 const authStore = useAuthStore()
 
 const loading = ref(false)
 const saving = ref(false)
 const formData = ref<any>({})
-const errors = ref<any>({})
 
 onMounted(async () => {
   await loadProfile()
@@ -123,6 +122,12 @@ async function saveProfile(data: any) {
   } finally {
     saving.value = false
   }
+}
+
+function handleCancel() {
+  // Navigate to the previous route if available, otherwise go to dashboard
+  const previousRoute = (route.query.redirect as string) || '/dashboard'
+  router.push(previousRoute)
 }
 
 function resetForm() {

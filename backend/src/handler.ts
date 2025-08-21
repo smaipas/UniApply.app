@@ -133,6 +133,50 @@ function diff(
   return out;
 }
 
+// Enrich applications with user information
+async function enrichApplicationsWithUsers(applications: any[]) {
+  if (!applications.length) return applications;
+
+  // Get unique user IDs
+  const userIds = [...new Set(applications.map((app) => app.userId))];
+
+  // Batch get users
+  const userPromises = userIds.map(async (userId) => {
+    try {
+      const userRes = await ddb.send(
+        new GetItemCommand({
+          TableName: USERS_TABLE,
+          Key: marshall({ id: userId }),
+        })
+      );
+      return userRes.Item ? unmarshall(userRes.Item) : null;
+    } catch (error) {
+      console.error(`Failed to fetch user ${userId}:`, error);
+      return null;
+    }
+  });
+
+  const users = await Promise.all(userPromises);
+  const userMap = new Map();
+  users.forEach((user) => {
+    if (user) {
+      userMap.set(user.id, user);
+    }
+  });
+
+  // Enrich applications with user data
+  return applications.map((app) => ({
+    ...app,
+    user: userMap.get(app.userId)
+      ? {
+          firstName: userMap.get(app.userId).firstName,
+          lastName: userMap.get(app.userId).lastName,
+          studentId: userMap.get(app.userId).studentId,
+        }
+      : null,
+  }));
+}
+
 // Write minimal audit log
 async function writeAudit(
   entity: "USER" | "FORM_TEMPLATE" | "APPLICATION",
@@ -1001,6 +1045,7 @@ async function createApplication(event: APIGatewayProxyEventV2) {
     id,
     userId: dto.userId,
     formId: dto.formId,
+    formTitle: form.title,
     formVersion: form.version || 1,
     fields: dto.fields,
     approvalSteps: dto.approvalSteps,
@@ -1025,13 +1070,8 @@ async function createApplication(event: APIGatewayProxyEventV2) {
   );
 
   // Send notification to first approval group if application is submitted (not draft)
-  if (
-    dto.status === "PENDING_APPROVAL" &&
-    dto.approvalSteps &&
-    dto.approvalSteps.length > 0
-  ) {
-    await tryNotifyApprovers(id, dto.approvalSteps[0], form.title);
-  }
+  // Note: Applications are always created as DRAFT, so we don't notify here
+  // Notifications will be sent when the application is submitted via the submit endpoint
 
   return response(201, item);
 }
@@ -1144,6 +1184,93 @@ async function getApplication(event: APIGatewayProxyEventV2, id: string) {
   const canViewAll = !!role?.access?.applications?.readAll;
   if (!canViewAll) return response(403, { message: "Forbidden" });
   return response(200, application);
+}
+
+async function submitApplication(event: APIGatewayProxyEventV2, id: string) {
+  const viewerSub = requesterSub(event);
+  if (!viewerSub) return response(403, { message: "Forbidden" });
+
+  // Get the application
+  const res = await ddb.send(
+    new GetItemCommand({ TableName: APPLICATIONS_TABLE, Key: marshall({ id }) })
+  );
+  if (!res.Item) return response(404, { message: "Application not found" });
+  const application = unmarshall(res.Item) as any;
+
+  // Authorization: only owner can submit their own applications
+  if (application.userId !== viewerSub) {
+    return response(403, { message: "Forbidden" });
+  }
+
+  // Only DRAFT applications can be submitted
+  if (application.status !== "DRAFT") {
+    return response(400, {
+      message: "Only DRAFT applications can be submitted",
+    });
+  }
+
+  // Get the form template to create approval steps
+  const formRes = await ddb.send(
+    new GetItemCommand({
+      TableName: FORMS_TABLE,
+      Key: marshall({ id: application.formId }),
+    })
+  );
+  const form = formRes.Item ? (unmarshall(formRes.Item) as any) : null;
+  if (!form) {
+    return response(404, { message: "Form template not found" });
+  }
+
+  // Create approval steps for submission
+  const approvalSteps = [
+    {
+      role: "ADMIN", // This should come from the form template or be configurable
+      status: "PENDING_APPROVAL",
+      createdAt: nowIso(),
+    },
+  ];
+
+  // Update status to PENDING_APPROVAL and add approval steps
+  const updated = await ddb.send(
+    new UpdateItemCommand({
+      TableName: APPLICATIONS_TABLE,
+      Key: marshall({ id }),
+      UpdateExpression:
+        "SET #status = :status, #updatedAt = :updatedAt, #approvalSteps = :approvalSteps",
+      ExpressionAttributeNames: {
+        "#status": "status",
+        "#updatedAt": "updatedAt",
+        "#approvalSteps": "approvalSteps",
+      },
+      ExpressionAttributeValues: marshall({
+        ":status": "PENDING_APPROVAL",
+        ":updatedAt": nowIso(),
+        ":approvalSteps": approvalSteps,
+      }),
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  const updatedApplication = updated.Attributes
+    ? (unmarshall(updated.Attributes) as any)
+    : {
+        ...application,
+        status: "PENDING_APPROVAL",
+        updatedAt: nowIso(),
+        approvalSteps,
+      };
+
+  // Notify approvers now that the application is submitted
+  if (approvalSteps.length > 0) {
+    await tryNotifyApprovers(id, approvalSteps[0], form.title);
+  }
+
+  // Log audit
+  await writeAudit("APPLICATION", id, viewerSub, "SUBMIT", {
+    status: "PENDING_APPROVAL",
+  });
+
+  return response(200, updatedApplication);
 }
 
 // Strict status update with sequential approval and role matching
@@ -1773,6 +1900,13 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       if (id && method === "PUT") return await updateApplication(event, id);
       if (id && method === "GET") return await getApplication(event, id);
     }
+    // Submit application route
+    {
+      const match = path.match(/^\/applications\/([^/]+)\/submit$/);
+      if (match && method === "POST") {
+        return await submitApplication(event, match[1]);
+      }
+    }
     // Applications list with optional status filter
     if (method === "GET" && path === "/applications") {
       const viewerSub = requesterSub(event);
@@ -1819,14 +1953,16 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
             })
           );
           const items = (out.Items || []).map((it: any) => unmarshall(it));
-          return response(200, items);
+          const itemsWithUsers = await enrichApplicationsWithUsers(items);
+          return response(200, itemsWithUsers);
         }
         // fallback: scan (could add a GSI for createdAt)
         const out = await ddb.send(
           new ScanCommand({ TableName: APPLICATIONS_TABLE })
         );
         const items = (out.Items || []).map((it: any) => unmarshall(it));
-        return response(200, items);
+        const itemsWithUsers = await enrichApplicationsWithUsers(items);
+        return response(200, itemsWithUsers);
       }
 
       // Otherwise, list only own applications; optional status filter in memory or via userId-index

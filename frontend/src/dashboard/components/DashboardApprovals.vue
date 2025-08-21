@@ -5,10 +5,16 @@
         <li v-for="a in items" :key="a.id" class="flex items-center justify-between gap-3 py-3">
           <div class="min-w-0">
             <div class="truncate text-sm font-medium text-gray-900">
-              {{ a.formId }} • {{ a.id }}
+              {{ a.formTitle }}
             </div>
             <div class="text-xs text-gray-600">
-              From: {{ a.userId }} •
+              From:
+              {{
+                a.user
+                  ? `${a.user.firstName} ${a.user.lastName}${a.user.studentId ? ` (${a.user.studentId})` : ''}`
+                  : a.userId
+              }}
+              •
               {{ (a.updatedAt || a.createdAt)?.slice(0, 19).replace('T', ' ') }}
             </div>
           </div>

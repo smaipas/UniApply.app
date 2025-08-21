@@ -468,6 +468,7 @@ export declare const ApplicationStepSchema: z.ZodObject<{
 export declare const ApplicationCreateSchema: z.ZodObject<{
     userId: z.ZodString;
     formId: z.ZodString;
+    formTitle: z.ZodString;
     fields: z.ZodRecord<z.ZodString, z.ZodAny>;
     approvalSteps: z.ZodArray<z.ZodObject<{
         role: z.ZodString;
@@ -511,6 +512,7 @@ export declare const ApplicationModelSchema: z.ZodObject<{
     id: z.ZodString;
     userId: z.ZodString;
     formId: z.ZodString;
+    formTitle: z.ZodString;
     formVersion: z.ZodNumber;
     fields: z.ZodRecord<z.ZodString, z.ZodAny>;
     approvalSteps: z.ZodArray<z.ZodObject<{
@@ -532,6 +534,11 @@ export declare const ApplicationModelSchema: z.ZodObject<{
     }>;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
+    user: z.ZodOptional<z.ZodObject<{
+        firstName: z.ZodString;
+        lastName: z.ZodString;
+        studentId: z.ZodOptional<z.ZodString>;
+    }, z.core.$strip>>;
 }, z.core.$strict>;
 export declare const AuditLogSchema: z.ZodObject<{
     id: z.ZodString;

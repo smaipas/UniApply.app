@@ -12,7 +12,6 @@
       </div>
 
       <div class="flex space-x-3">
-        <UiButton flat @click="goBack"> Back </UiButton>
         <UiButton flat @click="printApplication">
           <UiIcon :path="mdiPrinter" class="mr-2" />
           Print
@@ -83,7 +82,11 @@
 
       <!-- Application History -->
       <div
-        v-if="application?.approvalSteps && application.approvalSteps.length > 0"
+        v-if="
+          application?.approvalSteps &&
+          application.approvalSteps.length > 0 &&
+          application.status !== 'DRAFT'
+        "
         class="px-6 py-4 border-b border-gray-200"
       >
         <h3 class="text-lg font-semibold text-gray-900 mb-4">Approval History</h3>
@@ -95,14 +98,23 @@
           >
             <div class="flex-shrink-0">
               <div
-                class="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                class="w-8 h-8 rounded-full flex items-center justify-center text-white"
                 :class="{
                   'bg-green-500': step.status === 'APPROVED',
                   'bg-red-500': step.status === 'REJECTED',
                   'bg-yellow-500': step.status === 'PENDING_APPROVAL',
                 }"
               >
-                {{ step.status === 'APPROVED' ? '✓' : step.status === 'REJECTED' ? '✗' : '⏳' }}
+                <UiIcon
+                  :path="
+                    step.status === 'APPROVED'
+                      ? mdiCheck
+                      : step.status === 'REJECTED'
+                        ? mdiCancel
+                        : mdiTimerSand
+                  "
+                  class="w-5 h-5"
+                />
               </div>
             </div>
             <div class="flex-1 min-w-0">
@@ -178,6 +190,17 @@
                 {{ formatGender(authStore.profile?.gender) }}
               </div>
             </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+              <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
+                {{
+                  authStore.profile?.nationality
+                    ? getCountryName(authStore.profile.nationality)
+                    : 'Not provided'
+                }}
+              </div>
+            </div>
           </div>
 
           <div>
@@ -196,13 +219,11 @@
             </div>
 
             <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+              <label class="block text-sm font-medium text-gray-700 mb-1">
+                {{ formatOfficialIdType(authStore.profile?.userOfficialType) }}
+              </label>
               <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
-                {{
-                  authStore.profile?.nationality
-                    ? getCountryName(authStore.profile.nationality)
-                    : 'Not provided'
-                }}
+                {{ authStore.profile?.userOfficialId || 'Not provided' }}
               </div>
             </div>
           </div>
@@ -320,16 +341,16 @@
 
         <!-- Form Actions -->
         <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
-          <UiButton flat @click="goBack"> Cancel </UiButton>
+          <UiButton flat @click="goBack"> {{ isEditing ? 'Back' : 'Cancel' }} </UiButton>
 
           <!-- Approval Actions -->
           <template v-if="canApprove">
-            <UiButton :disabled="approving" color="success" @click="showApprovalModal">
+            <UiButton :disabled="approving" color="green" @click="showApprovalModal">
               {{ approving ? 'Approving...' : 'Approve' }}
             </UiButton>
             <UiButton
               :disabled="rejecting || !canReject"
-              color="danger"
+              color="red"
               flat
               @click="showRejectionModal"
             >
@@ -340,21 +361,25 @@
           <!-- Application Actions -->
           <template v-else>
             <UiButton
-              v-if="!isReadOnly && !isEditing"
-              type="submit"
-              :loading="submitting"
-              :disabled="submitting"
-              @click="confirmSubmission"
-            >
-              Submit Application
-            </UiButton>
-            <UiButton
-              v-else-if="!isReadOnly && isEditing"
+              v-if="!isReadOnly"
               @click="saveDraft"
               :loading="saving"
               :disabled="saving"
+              flat
             >
-              Save Draft
+              <UiIcon :path="mdiContentSave" class="mr-2" />
+              {{ isEditing ? 'Save' : 'Save As Draft' }}
+            </UiButton>
+            <UiButton
+              v-if="!isReadOnly && (application?.status === 'DRAFT' || !isEditing)"
+              type="submit"
+              :loading="submitting"
+              :disabled="submitting"
+              color="green"
+              @click="confirmSubmission"
+            >
+              <UiIcon :path="mdiSend" class="mr-2" />
+              Submit Application
             </UiButton>
           </template>
         </div>
@@ -362,7 +387,7 @@
     </div>
 
     <!-- Error State -->
-    <div v-else class="text-center py-12">
+    <div v-else-if="!loading" class="text-center py-12">
       <div class="text-gray-400 mb-4">
         <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
@@ -400,10 +425,7 @@
     <template #footer>
       <div class="flex justify-end space-x-3">
         <UiButton flat @click="cancelComment">Cancel</UiButton>
-        <UiButton
-          :color="pendingAction === 'approve' ? 'success' : 'danger'"
-          @click="confirmAction"
-        >
+        <UiButton :color="pendingAction === 'approve' ? 'green' : 'red'" @click="confirmAction">
           {{ pendingAction === 'approve' ? 'Approve' : 'Reject' }}
         </UiButton>
       </div>
@@ -444,7 +466,7 @@
     <template #footer>
       <div class="flex justify-end space-x-3">
         <UiButton flat @click="showSubmissionModal = false">Cancel</UiButton>
-        <UiButton color="success" @click="submitApplication">
+        <UiButton color="green" @click="submitApplication">
           {{ submitting ? 'Submitting...' : 'Submit Application' }}
         </UiButton>
       </div>
@@ -455,12 +477,20 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mdiPrinter, mdiDownload } from '@mdi/js'
+import {
+  mdiPrinter,
+  mdiDownload,
+  mdiContentSave,
+  mdiSend,
+  mdiTimerSand,
+  mdiCheck,
+  mdiCancel,
+} from '@mdi/js'
 import { UiButton, UiInput, UiCheckbox, UiChip, UiIcon, UiModal } from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
 import { usePermissions } from '@/common/utils/permissions'
-import { useRolesStore } from '@/common/store/roles'
+
 import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/utils/profile'
 import { getCountryName } from '@/common/utils/countries'
 import api from '@/app/axios'
@@ -569,9 +599,7 @@ const statusVariant = computed(() => {
 })
 
 onMounted(async () => {
-  // Ensure roles are loaded for permission checking
-  const { ensureLoaded } = useRolesStore()
-  await ensureLoaded()
+  // Roles are now loaded by the layout component
   await loadData()
 })
 
@@ -579,29 +607,36 @@ async function loadData() {
   loading.value = true
 
   try {
-    const templateId = (route.query.template as string) || (route.params.templateId as string)
-
-    if (templateId) {
-      // Load template
-      const templateResponse = await api.get(`/forms/${templateId}`)
-      template.value = templateResponse.data
-
-      // Initialize form data with default values
-      if (template.value?.fields) {
-        template.value.fields.forEach((field) => {
-          if (field.defaultValue !== undefined) {
-            formData.value[field.name] = field.defaultValue
-          }
-        })
-      }
-    }
-
     if (isEditing.value) {
-      // Load existing application
+      // Load existing application first
       const appResponse = await api.get(`/applications/${route.params.id}`)
       application.value = appResponse.data
+
       if (application.value) {
+        // Load template using the application's formId
+        const templateResponse = await api.get(`/forms/${application.value.formId}`)
+        template.value = templateResponse.data
+
+        // Load form data from the application
         formData.value = { ...application.value.fields }
+      }
+    } else {
+      // Creating new application - load template from route
+      const templateId = (route.query.template as string) || (route.params.templateId as string)
+
+      if (templateId) {
+        // Load template
+        const templateResponse = await api.get(`/forms/${templateId}`)
+        template.value = templateResponse.data
+
+        // Initialize form data with default values
+        if (template.value?.fields) {
+          template.value.fields.forEach((field) => {
+            if (field.defaultValue !== undefined) {
+              formData.value[field.name] = field.defaultValue
+            }
+          })
+        }
       }
     }
   } catch (error) {
@@ -647,34 +682,54 @@ async function submitApplication() {
   submitting.value = true
 
   try {
-    // Get current user info for approval steps
-    const userResponse = await api.get('/users/me')
-    const currentUser = userResponse.data
+    if (isEditing.value) {
+      // When editing, submit the existing application
+      if (!application.value?.id) {
+        throw new Error('Application ID not found')
+      }
 
-    const payload = {
-      userId: currentUser.id,
-      formId: template.value!.id,
-      fields: formData.value,
-      status: 'PENDING_APPROVAL',
-      approvalSteps: [
-        {
-          role: 'ADMIN', // This should come from the form template or be configurable
-          status: 'PENDING_APPROVAL',
-        },
-      ],
+      await api.post(`/applications/${application.value.id}/submit`)
+
+      toastStore.show({
+        tone: 'success',
+        title: 'Success',
+        message: 'Application submitted successfully',
+      })
+
+      // Redirect to applications list
+      router.push('/applications')
+    } else {
+      // When creating new, create application first then submit
+      const userResponse = await api.get('/users/me')
+      const currentUser = userResponse.data
+
+      const payload = {
+        userId: currentUser.id,
+        formId: template.value!.id,
+        formTitle: template.value!.title,
+        fields: formData.value,
+        // Don't send approval steps - they will be created by the backend when submitted
+        approvalSteps: [],
+      }
+
+      // Create the application (backend will set status to DRAFT)
+      const response = await api.post('/applications', payload)
+      application.value = response.data
+
+      // Submit the application to change status to PENDING_APPROVAL
+      if (application.value?.id) {
+        await api.post(`/applications/${application.value.id}/submit`)
+      }
+
+      toastStore.show({
+        tone: 'success',
+        title: 'Success',
+        message: 'Application submitted successfully',
+      })
+
+      // Redirect to applications list
+      router.push('/applications')
     }
-
-    const response = await api.post('/applications', payload)
-    application.value = response.data
-
-    toastStore.show({
-      tone: 'success',
-      title: 'Success',
-      message: 'Application submitted successfully',
-    })
-
-    // Redirect to applications list
-    router.push('/applications')
   } catch (error) {
     console.error('Failed to submit application:', error)
     toastStore.show({
@@ -691,35 +746,44 @@ async function saveDraft() {
   saving.value = true
 
   try {
-    // Get current user info for approval steps
-    const userResponse = await api.get('/users/me')
-    const currentUser = userResponse.data
-
-    const payload = {
-      userId: currentUser.id,
-      formId: template.value!.id,
-      fields: formData.value,
-      status: 'PENDING_APPROVAL',
-      approvalSteps: [
-        {
-          role: 'ADMIN', // This should come from the form template or be configurable
-          status: 'PENDING_APPROVAL',
-        },
-      ],
-    }
-
     if (isEditing.value) {
-      await api.put(`/applications/${route.params.id}`, payload)
-    } else {
-      const response = await api.post('/applications', payload)
-      application.value = response.data
-    }
+      // For updates, only send fields (userId and formId are not allowed in updates)
+      const updatePayload = {
+        fields: formData.value,
+      }
 
-    toastStore.show({
-      tone: 'success',
-      title: 'Success',
-      message: 'Draft saved successfully',
-    })
+      await api.put(`/applications/${route.params.id}`, updatePayload)
+      toastStore.show({
+        tone: 'success',
+        title: 'Success',
+        message: 'Draft saved successfully',
+      })
+    } else {
+      // For new applications, send full payload
+      const userResponse = await api.get('/users/me')
+      const currentUser = userResponse.data
+
+      const createPayload = {
+        userId: currentUser.id,
+        formId: template.value!.id,
+        formTitle: template.value!.title,
+        fields: formData.value,
+        // Don't create approval steps for drafts - they will be created when submitted
+        approvalSteps: [],
+      }
+
+      const response = await api.post('/applications', createPayload)
+      application.value = response.data
+
+      toastStore.show({
+        tone: 'success',
+        title: 'Success',
+        message: 'Draft saved successfully',
+      })
+
+      // Navigate to edit route for the newly created application
+      router.replace(`/applications/${response.data.id}/edit`)
+    }
   } catch (error) {
     console.error('Failed to save draft:', error)
     toastStore.show({
@@ -953,8 +1017,12 @@ function generatePDFContent(): string {
           <div class="text-gray-700">${authStore.profile?.studentId || 'Not provided'}</div>
         </div>
         <div>
+          <div class="font-semibold text-gray-900">${formatOfficialIdType(authStore.profile?.userOfficialType)}:</div>
+          <div class="text-gray-700">${authStore.profile?.userOfficialId || 'Not provided'}</div>
+        </div>
+        <div>
           <div class="font-semibold text-gray-900">Nationality:</div>
-                          <div class="text-gray-700">${authStore.profile?.nationality ? getCountryName(authStore.profile.nationality) : 'Not provided'}</div>
+          <div class="text-gray-700">${authStore.profile?.nationality ? getCountryName(authStore.profile.nationality) : 'Not provided'}</div>
         </div>
       </div>
     </div>
@@ -1055,60 +1123,6 @@ async function confirmAction() {
   }
 }
 
-async function approveApplication() {
-  if (!application.value?.id) return
-
-  approving.value = true
-  try {
-    await api.post(`/applications/${application.value.id}/status`, { status: 'APPROVED' })
-
-    // Reload application data
-    await loadData()
-
-    toastStore.show({
-      tone: 'success',
-      title: 'Success',
-      message: 'Application approved successfully',
-    })
-  } catch (error) {
-    console.error('Failed to approve application:', error)
-    toastStore.show({
-      tone: 'error',
-      title: 'Error',
-      message: 'Failed to approve application',
-    })
-  } finally {
-    approving.value = false
-  }
-}
-
-async function rejectApplication() {
-  if (!application.value?.id) return
-
-  rejecting.value = true
-  try {
-    await api.post(`/applications/${application.value.id}/status`, { status: 'REJECTED' })
-
-    // Reload application data
-    await loadData()
-
-    toastStore.show({
-      tone: 'success',
-      title: 'Success',
-      message: 'Application rejected successfully',
-    })
-  } catch (error) {
-    console.error('Failed to reject application:', error)
-    toastStore.show({
-      tone: 'error',
-      title: 'Error',
-      message: 'Failed to reject application',
-    })
-  } finally {
-    rejecting.value = false
-  }
-}
-
 function formatAddress(): string {
   const profile = authStore.profile
   if (!profile?.address) return 'Not provided'
@@ -1136,6 +1150,19 @@ function formatGender(gender?: string): string {
   }
 
   return genderMap[gender] || gender
+}
+
+function formatOfficialIdType(type?: string): string {
+  if (!type) return 'Official ID'
+
+  const typeMap: Record<string, string> = {
+    ID: 'ID Card',
+    PASSPORT: 'Passport',
+    DRIVING_LICENCE: 'Driving Licence',
+    OTHER: 'Other ID',
+  }
+
+  return typeMap[type] || type
 }
 
 function goToProfile() {

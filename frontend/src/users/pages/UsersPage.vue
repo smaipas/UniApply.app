@@ -3,35 +3,55 @@
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Users</h1>
     </div>
-    <UiTable :columns="columns" :items="rows">
-      <template #cell-active="{ value }">
-        <UiChip :variant="value ? 'success' : 'gray'" size="sm">
-          {{ value ? 'Active' : 'Inactive' }}
-        </UiChip>
-      </template>
-      <template #cell-createdAt="{ value }">
-        {{ formatDateTime(value) }}
-      </template>
-      <template #cell-actions="{ row }">
-        <UiDropdown placement="left" width="w-48">
-          <template #trigger="{ toggle }">
-            <UiButton flat size="md" :icon="mdiDotsVertical" @click="toggle" />
-          </template>
-          <UiDropdownItem
-            :label="row.active ? 'Deactivate' : 'Activate'"
-            :icon="row.active ? mdiAccountOff : mdiAccountCheck"
-            :variant="row.active ? 'warning' : 'default'"
-            @click="showToggleStatusModal(row as UserRow)"
+
+    <!-- No Access Message -->
+    <div v-if="!canViewUsers" class="text-center py-12">
+      <div class="text-gray-400 mb-4">
+        <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
           />
-          <UiDropdownItem
-            label="Delete"
-            :icon="mdiDelete"
-            variant="danger"
-            @click="showDeleteUserModal(row as UserRow)"
-          />
-        </UiDropdown>
-      </template>
-    </UiTable>
+        </svg>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No content available</h3>
+      <p class="text-gray-600">You don't have permission to view users.</p>
+    </div>
+
+    <!-- Users Table -->
+    <div v-else>
+      <UiTable :columns="columns" :items="rows">
+        <template #cell-active="{ value }">
+          <UiChip :variant="value ? 'success' : 'gray'" size="sm">
+            {{ value ? 'Active' : 'Inactive' }}
+          </UiChip>
+        </template>
+        <template #cell-createdAt="{ value }">
+          {{ formatDateTime(value) }}
+        </template>
+        <template #cell-actions="{ row }">
+          <UiDropdown placement="left" width="w-48">
+            <template #trigger="{ toggle }">
+              <UiButton flat size="md" :icon="mdiDotsVertical" @click="toggle" />
+            </template>
+            <UiDropdownItem
+              :label="row.active ? 'Deactivate' : 'Activate'"
+              :icon="row.active ? mdiAccountOff : mdiAccountCheck"
+              :variant="row.active ? 'warning' : 'default'"
+              @click="showToggleStatusModal(row as UserRow)"
+            />
+            <UiDropdownItem
+              label="Delete"
+              :icon="mdiDelete"
+              variant="danger"
+              @click="showDeleteUserModal(row as UserRow)"
+            />
+          </UiDropdown>
+        </template>
+      </UiTable>
+    </div>
 
     <!-- Toggle Status Confirmation Modal -->
     <UiModal v-model="showToggleModal" title="Confirm Status Change" size="sm">
@@ -117,10 +137,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 import { mdiDotsVertical, mdiAccountOff, mdiAccountCheck, mdiDelete } from '@mdi/js'
 import { UiTable, UiButton, UiModal, UiChip, UiDropdown, UiDropdownItem } from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
+import { usePermissions } from '@/common/utils/permissions'
 import { formatDateTime } from '@/common/utils/date'
 import api from '@/app/axios'
 
@@ -151,8 +172,17 @@ const selectedUser = ref<UserRow | null>(null)
 const toggleLoading = ref(false)
 const deleteLoading = ref(false)
 const toastStore = useToastStore()
+const { getUserPermissions } = usePermissions()
+
+// Check if user can view users
+const canViewUsers = computed(() => {
+  const permissions = getUserPermissions()
+  return permissions.users.readAll
+})
 
 async function fetchUsers() {
+  if (!canViewUsers.value) return
+
   try {
     const res = await api.get('/users')
     rows.value = res.data as UserRow[]

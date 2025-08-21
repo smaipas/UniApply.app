@@ -10,152 +10,175 @@
       </UiButton>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-    </div>
-
-    <!-- Roles Tabs -->
-    <div v-else-if="roles.length > 0">
-      <div class="border-b border-gray-200 mb-6">
-        <nav class="-mb-px flex space-x-8">
-          <button
-            v-for="role in roles"
-            :key="role.roleName"
-            @click="activeRole = role"
-            :class="[
-              'py-2 px-1 border-b-2 font-medium text-sm',
-              activeRole?.roleName === role.roleName
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-            ]"
-          >
-            {{ role.roleLabel }}
-          </button>
-        </nav>
-      </div>
-
-      <!-- Role Permissions -->
-      <div v-if="activeRole" class="space-y-6">
-        <!-- Role Info -->
-        <div class="bg-gray-50 p-4 rounded-lg">
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
-              <input
-                v-model="activeRole.roleName"
-                :disabled="true"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-                placeholder="e.g., MODERATOR"
-              />
-              <p class="text-xs text-gray-500 mt-1">Role name cannot be modified after creation</p>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Display Label</label>
-              <input
-                v-model="activeRole.roleLabel"
-                :disabled="!canModifyRoles"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-                placeholder="e.g., Moderator"
-              />
-            </div>
-          </div>
-        </div>
-
-        <!-- Permissions Grid -->
-        <div class="space-y-6">
-          <div
-            v-for="(permissions, resource) in permissionGroups"
-            :key="resource"
-            class="bg-white border border-gray-200 rounded-lg p-6"
-          >
-            <h3 class="text-lg font-medium text-gray-900 mb-4 capitalize">
-              {{ resource.replace(/([A-Z])/g, ' $1').trim() }}
-            </h3>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-              <div
-                v-for="(permission, key) in permissions"
-                :key="key"
-                class="flex items-center space-x-3"
-              >
-                <UiCheckbox
-                  :model-value="activeRole.access[resource]?.[key] || false"
-                  :disabled="!canModifyRoles"
-                  @update:model-value="updatePermission(resource, key, $event)"
-                />
-                <label class="text-sm font-medium text-gray-700 capitalize">
-                  {{ key.replace(/([A-Z])/g, ' $1').trim() }}
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Save Button -->
-        <div v-if="canModifyRoles" class="flex justify-end">
-          <UiButton :icon="mdiFloppy" :loading="saving" @click="saveRole"> Save Changes </UiButton>
-        </div>
-      </div>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else class="text-center py-12">
+    <!-- No Access Message -->
+    <div v-if="!canViewRoles" class="text-center py-12">
       <div class="text-gray-400 mb-4">
         <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path
             stroke-linecap="round"
             stroke-linejoin="round"
             stroke-width="2"
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
           />
         </svg>
       </div>
-      <h3 class="text-lg font-medium text-gray-900 mb-2">No roles found</h3>
-      <p class="text-gray-600 mb-4">Get started by creating your first role.</p>
-      <UiButton v-if="canModifyRoles" :icon="mdiPlus" @click="showAddRoleModal = true">
-        Add User Group
-      </UiButton>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No content available</h3>
+      <p class="text-gray-600">You don't have permission to view user groups.</p>
     </div>
 
-    <!-- Add Role Modal -->
-    <UiModal v-model="showAddRoleModal" title="Add New User Group" size="md">
-      <div class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">User Group Name</label>
-          <input
-            v-model="newRole.roleName"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="e.g., MODERATOR"
-            @input="updateRoleName"
-          />
-          <p class="text-xs text-gray-500 mt-1">Internal name (uppercase, no spaces)</p>
+    <!-- User Groups Content -->
+    <div v-else>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+
+      <!-- Roles Tabs -->
+      <div v-else-if="roles.length > 0">
+        <div class="border-b border-gray-200 mb-6">
+          <nav class="-mb-px flex space-x-8">
+            <button
+              v-for="role in roles"
+              :key="role.roleName"
+              @click="activeRole = role"
+              :class="[
+                'py-2 px-1 border-b-2 font-medium text-sm',
+                activeRole?.roleName === role.roleName
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
+              ]"
+            >
+              {{ role.roleLabel }}
+            </button>
+          </nav>
         </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Display Label</label>
-          <input
-            v-model="newRole.roleLabel"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            placeholder="e.g., Moderator"
-          />
-          <p class="text-xs text-gray-500 mt-1">Display name shown to users</p>
+
+        <!-- Role Permissions -->
+        <div v-if="activeRole" class="space-y-6">
+          <!-- Role Info -->
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
+                <input
+                  v-model="activeRole.roleName"
+                  :disabled="true"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                  placeholder="e.g., MODERATOR"
+                />
+                <p class="text-xs text-gray-500 mt-1">
+                  Role name cannot be modified after creation
+                </p>
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Display Label</label>
+                <input
+                  v-model="activeRole.roleLabel"
+                  :disabled="!canModifyRoles"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                  placeholder="e.g., Moderator"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Permissions Grid -->
+          <div class="space-y-6">
+            <div
+              v-for="(permissions, resource) in permissionGroups"
+              :key="resource"
+              class="bg-white border border-gray-200 rounded-lg p-6"
+            >
+              <h3 class="text-lg font-medium text-gray-900 mb-4 capitalize">
+                {{ resource.replace(/([A-Z])/g, ' $1').trim() }}
+              </h3>
+
+              <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div
+                  v-for="(permission, key) in permissions"
+                  :key="key"
+                  class="flex items-center space-x-3"
+                >
+                  <UiCheckbox
+                    :model-value="activeRole.access[resource]?.[key] || false"
+                    :disabled="!canModifyRoles"
+                    @update:model-value="updatePermission(resource, key, $event)"
+                  />
+                  <label class="text-sm font-medium text-gray-700 capitalize">
+                    {{ key.replace(/([A-Z])/g, ' $1').trim() }}
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Save Button -->
+          <div v-if="canModifyRoles" class="flex justify-end">
+            <UiButton :icon="mdiFloppy" :loading="saving" @click="saveRole">
+              Save Changes
+            </UiButton>
+          </div>
         </div>
       </div>
 
-      <template #footer>
-        <div class="flex justify-end space-x-3">
-          <UiButton flat @click="showAddRoleModal = false"> Cancel </UiButton>
-          <UiButton
-            :icon="mdiPlus"
-            :loading="creating"
-            :disabled="!newRole.roleName || !newRole.roleLabel"
-            @click="createRole"
-          >
-            Create User Group
-          </UiButton>
+      <!-- Empty State -->
+      <div v-else class="text-center py-12">
+        <div class="text-gray-400 mb-4">
+          <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+            />
+          </svg>
         </div>
-      </template>
-    </UiModal>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No roles found</h3>
+        <p class="text-gray-600 mb-4">Get started by creating your first role.</p>
+        <UiButton v-if="canModifyRoles" :icon="mdiPlus" @click="showAddRoleModal = true">
+          Add User Group
+        </UiButton>
+      </div>
+
+      <!-- Add Role Modal -->
+      <UiModal v-model="showAddRoleModal" title="Add New User Group" size="md">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">User Group Name</label>
+            <input
+              v-model="newRole.roleName"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="e.g., MODERATOR"
+              @input="updateRoleName"
+            />
+            <p class="text-xs text-gray-500 mt-1">Internal name (uppercase, no spaces)</p>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Display Label</label>
+            <input
+              v-model="newRole.roleLabel"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="e.g., Moderator"
+            />
+            <p class="text-xs text-gray-500 mt-1">Display name shown to users</p>
+          </div>
+        </div>
+
+        <template #footer>
+          <div class="flex justify-end space-x-3">
+            <UiButton flat @click="showAddRoleModal = false"> Cancel </UiButton>
+            <UiButton
+              :icon="mdiPlus"
+              :loading="creating"
+              :disabled="!newRole.roleName || !newRole.roleLabel"
+              @click="createRole"
+            >
+              Create User Group
+            </UiButton>
+          </div>
+        </template>
+      </UiModal>
+    </div>
   </div>
 </template>
 
@@ -164,6 +187,7 @@ import { ref, computed, onMounted } from 'vue'
 import { mdiPlus, mdiFloppy } from '@mdi/js'
 import { useAuthStore } from '@/auth/store'
 import { useToastStore } from '@/common/store/toast'
+import { usePermissions } from '@/common/utils/permissions'
 import { UiButton, UiCheckbox, UiModal } from '@/common/components'
 import axios from '@/app/axios'
 
@@ -213,6 +237,7 @@ type Role = {
 // Stores
 const authStore = useAuthStore()
 const toastStore = useToastStore()
+const { getUserPermissions } = usePermissions()
 
 // Reactive data
 const roles = ref<Role[]>([])
@@ -227,7 +252,15 @@ const newRole = ref({
 })
 
 // Computed
-const canModifyRoles = computed(() => authStore.profile?.access?.roles?.update)
+const canViewRoles = computed(() => {
+  const permissions = getUserPermissions()
+  return permissions.roles.readAll
+})
+
+const canModifyRoles = computed(() => {
+  const permissions = getUserPermissions()
+  return permissions.roles.update
+})
 
 const permissionGroups = computed(() => ({
   applications: {

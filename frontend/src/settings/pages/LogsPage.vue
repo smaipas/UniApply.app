@@ -7,132 +7,155 @@
       </div>
     </div>
 
-    <!-- Filters -->
-    <div class="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Entity</label>
-          <UiSelect v-model="filters.entity" :options="entityOptions" placeholder="All entities" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
-          <UiSelect v-model="filters.action" :options="actionOptions" placeholder="All actions" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-          <input
-            v-model="filters.dateFrom"
-            type="date"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+    <!-- No Access Message -->
+    <div v-if="!canViewLogs" class="text-center py-12">
+      <div class="text-gray-400 mb-4">
+        <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
           />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-          <input
-            v-model="filters.dateTo"
-            type="date"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-          />
-        </div>
-        <div class="flex items-end">
-          <UiButton flat @click="clearFilters" class="w-full">Clear Filters</UiButton>
-        </div>
+        </svg>
       </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No content available</h3>
+      <p class="text-gray-600">You don't have permission to view audit logs.</p>
     </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-8">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-    </div>
-
-    <!-- Logs Table -->
+    <!-- Logs Content -->
     <div v-else>
-      <UiTable
-        :columns="tableHeaders"
-        :items="logs"
-        :loading="loading"
-        class="bg-white border border-gray-200 rounded-lg overflow-hidden"
-      >
-        <template #cell-entity="{ value }">
-          <UiChip :color="getEntityColor(value)" :bordered="true">
-            {{ value }}
-          </UiChip>
-        </template>
-
-        <template #cell-action="{ value }">
-          <UiChip :color="getActionColor(value)" :bordered="true">
-            {{ value }}
-          </UiChip>
-        </template>
-
-        <template #cell-user="{ value }">
-          <span class="font-medium text-gray-900">{{ value }}</span>
-        </template>
-
-        <template #cell-changes="{ value }">
-          <UiButton
-            flat
-            size="sm"
-            @click="viewChanges(value)"
-            :disabled="!value || Object.keys(value).length === 0"
-          >
-            {{ Object.keys(value || {}).length > 0 ? 'View Changes' : 'No Changes' }}
-          </UiButton>
-        </template>
-
-        <template #cell-createdAt="{ value }">
-          <span class="text-gray-600">{{ formatDate(value) }}</span>
-        </template>
-      </UiTable>
-
-      <!-- Pagination -->
-      <div v-if="logs.length > 0" class="flex justify-between items-center mt-4">
-        <div class="text-sm text-gray-600">
-          Showing {{ (page - 1) * limit + 1 }} to {{ Math.min(page * limit, total) }} of
-          {{ total }} logs
-        </div>
-        <div class="flex space-x-2">
-          <UiButton flat :disabled="page <= 1" @click="previousPage">Previous</UiButton>
-          <UiButton flat :disabled="!hasMore" @click="nextPage">Next</UiButton>
-        </div>
-      </div>
-
-      <!-- Empty State -->
-      <div v-if="logs.length === 0 && !loading" class="text-center py-12">
-        <div class="text-gray-400 mb-4">
-          <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      <!-- Filters -->
+      <div class="bg-white border border-gray-200 rounded-lg p-4 mb-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Entity</label>
+            <UiSelect
+              v-model="filters.entity"
+              :options="entityOptions"
+              placeholder="All entities"
             />
-          </svg>
-        </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
-        <p class="text-gray-600">No audit logs match your current filters.</p>
-      </div>
-    </div>
-
-    <!-- Changes Modal -->
-    <UiModal v-model="showChangesModal" title="Changes Details" size="lg">
-      <div v-if="selectedChanges" class="space-y-4">
-        <div
-          v-for="(change, key) in selectedChanges"
-          :key="key"
-          class="border-b border-gray-200 pb-4 last:border-b-0"
-        >
-          <h4 class="font-medium text-gray-900 mb-2 capitalize">
-            {{ key.replace(/([A-Z])/g, ' $1').trim() }}
-          </h4>
-          <div class="bg-gray-50 p-3 rounded-md">
-            <pre class="text-sm text-gray-700 whitespace-pre-wrap">{{
-              JSON.stringify(change, null, 2)
-            }}</pre>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Action</label>
+            <UiSelect v-model="filters.action" :options="actionOptions" placeholder="All actions" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
+            <input
+              v-model="filters.dateFrom"
+              type="date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
+            <input
+              v-model="filters.dateTo"
+              type="date"
+              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+          </div>
+          <div class="flex items-end">
+            <UiButton flat @click="clearFilters" class="w-full">Clear Filters</UiButton>
           </div>
         </div>
       </div>
-    </UiModal>
+
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+
+      <!-- Logs Table -->
+      <div v-else>
+        <UiTable
+          :columns="tableHeaders"
+          :items="logs"
+          :loading="loading"
+          class="bg-white border border-gray-200 rounded-lg overflow-hidden"
+        >
+          <template #cell-entity="{ value }">
+            <UiChip :color="getEntityColor(value)" :bordered="true">
+              {{ value }}
+            </UiChip>
+          </template>
+
+          <template #cell-action="{ value }">
+            <UiChip :color="getActionColor(value)" :bordered="true">
+              {{ value }}
+            </UiChip>
+          </template>
+
+          <template #cell-user="{ value }">
+            <span class="font-medium text-gray-900">{{ value }}</span>
+          </template>
+
+          <template #cell-changes="{ value }">
+            <UiButton
+              flat
+              size="sm"
+              @click="viewChanges(value)"
+              :disabled="!value || Object.keys(value).length === 0"
+            >
+              {{ Object.keys(value || {}).length > 0 ? 'View Changes' : 'No Changes' }}
+            </UiButton>
+          </template>
+
+          <template #cell-createdAt="{ value }">
+            <span class="text-gray-600">{{ formatDate(value) }}</span>
+          </template>
+        </UiTable>
+
+        <!-- Pagination -->
+        <div v-if="logs.length > 0" class="flex justify-between items-center mt-4">
+          <div class="text-sm text-gray-600">
+            Showing {{ (page - 1) * limit + 1 }} to {{ Math.min(page * limit, total) }} of
+            {{ total }} logs
+          </div>
+          <div class="flex space-x-2">
+            <UiButton flat :disabled="page <= 1" @click="previousPage">Previous</UiButton>
+            <UiButton flat :disabled="!hasMore" @click="nextPage">Next</UiButton>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="logs.length === 0 && !loading" class="text-center py-12">
+          <div class="text-gray-400 mb-4">
+            <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          </div>
+          <h3 class="text-lg font-medium text-gray-900 mb-2">No logs found</h3>
+          <p class="text-gray-600">No audit logs match your current filters.</p>
+        </div>
+      </div>
+
+      <!-- Changes Modal -->
+      <UiModal v-model="showChangesModal" title="Changes Details" size="lg">
+        <div v-if="selectedChanges" class="space-y-4">
+          <div
+            v-for="(change, key) in selectedChanges"
+            :key="key"
+            class="border-b border-gray-200 pb-4 last:border-b-0"
+          >
+            <h4 class="font-medium text-gray-900 mb-2 capitalize">
+              {{ key.replace(/([A-Z])/g, ' $1').trim() }}
+            </h4>
+            <div class="bg-gray-50 p-3 rounded-md">
+              <pre class="text-sm text-gray-700 whitespace-pre-wrap">{{
+                JSON.stringify(change, null, 2)
+              }}</pre>
+            </div>
+          </div>
+        </div>
+      </UiModal>
+    </div>
   </div>
 </template>
 
@@ -141,6 +164,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { format } from 'date-fns'
 import { useAuthStore } from '@/auth/store'
 import { useToastStore } from '@/common/store/toast'
+import { usePermissions } from '@/common/utils/permissions'
 import { UiButton, UiChip, UiModal, UiSelect, UiTable } from '@/common/components'
 import axios from '@/app/axios'
 
@@ -165,6 +189,7 @@ type Filters = {
 // Stores
 const authStore = useAuthStore()
 const toastStore = useToastStore()
+const { getUserPermissions } = usePermissions()
 
 // Reactive data
 const logs = ref<Log[]>([])
@@ -184,7 +209,10 @@ const filters = ref<Filters>({
 })
 
 // Computed
-const canViewLogs = computed(() => authStore.profile?.access?.auditLogs?.read)
+const canViewLogs = computed(() => {
+  const permissions = getUserPermissions()
+  return permissions.auditLogs.read
+})
 
 const tableHeaders = computed(() => [
   { key: 'entity', label: 'Entity' },

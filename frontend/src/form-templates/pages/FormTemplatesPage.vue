@@ -2,54 +2,76 @@
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Form Templates</h1>
-      <UiButton :icon="mdiPlus" @click="goCreate">New Template</UiButton>
-    </div>
-    <div>
-      <UiTable :columns="columns" :items="rows" :loading="loading" @row-click="handleRowClick">
-        <template #cell-active="{ value }">
-          <UiChip :color="value ? 'green' : 'red'">
-            {{ value ? 'Active' : 'Inactive' }}
-          </UiChip>
-        </template>
-        <template #cell-updatedAt="{ value }">
-          {{ formatDate(value) }}
-        </template>
-        <template #cell-actions="{ row }">
-          <UiButton
-            v-if="canModifyFormTemplates"
-            flat
-            color="red"
-            :icon="mdiClose"
-            size="sm"
-            @click.stop="handleDeleteClick(row)"
-            title="Delete template"
-          />
-        </template>
-      </UiTable>
+      <UiButton v-if="canViewFormTemplates" :icon="mdiPlus" @click="goCreate"
+        >New Template</UiButton
+      >
     </div>
 
-    <!-- Delete Confirmation Modal -->
-    <UiModal v-model="showDeleteModal" title="Delete Form Template" size="sm">
-      <div class="space-y-4">
-        <p class="text-gray-700">
-          Are you sure you want to delete the form template
-          <strong>"{{ deletingTemplate?.title }}"</strong>?
-        </p>
-        <p class="text-sm text-gray-600">
-          This action cannot be undone. If this template has any applications, they must be deleted
-          first.
-        </p>
+    <!-- No Access Message -->
+    <div v-if="!canViewFormTemplates" class="text-center py-12">
+      <div class="text-gray-400 mb-4">
+        <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
+        </svg>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mb-2">No content available</h3>
+      <p class="text-gray-600">You don't have permission to view form templates.</p>
+    </div>
+
+    <!-- Form Templates Content -->
+    <div v-else>
+      <div>
+        <UiTable :columns="columns" :items="rows" :loading="loading" @row-click="handleRowClick">
+          <template #cell-active="{ value }">
+            <UiChip :color="value ? 'green' : 'red'">
+              {{ value ? 'Active' : 'Inactive' }}
+            </UiChip>
+          </template>
+          <template #cell-updatedAt="{ value }">
+            {{ formatDate(value) }}
+          </template>
+          <template #cell-actions="{ row }">
+            <UiButton
+              v-if="canModifyFormTemplates"
+              flat
+              color="red"
+              :icon="mdiClose"
+              size="sm"
+              @click.stop="handleDeleteClick(row)"
+              title="Delete template"
+            />
+          </template>
+        </UiTable>
       </div>
 
-      <template #footer>
-        <div class="flex items-center justify-end gap-2">
-          <UiButton flat @click="cancelDelete" :disabled="deleting"> Cancel </UiButton>
-          <UiButton color="red" @click="confirmDelete" :disabled="deleting" :loading="deleting">
-            {{ deleting ? 'Deleting...' : 'Delete' }}
-          </UiButton>
+      <!-- Delete Confirmation Modal -->
+      <UiModal v-model="showDeleteModal" title="Delete Form Template" size="sm">
+        <div class="space-y-4">
+          <p class="text-gray-700">
+            Are you sure you want to delete the form template
+            <strong>"{{ deletingTemplate?.title }}"</strong>?
+          </p>
+          <p class="text-sm text-gray-600">
+            This action cannot be undone. If this template has any applications, they must be
+            deleted first.
+          </p>
         </div>
-      </template>
-    </UiModal>
+
+        <template #footer>
+          <div class="flex items-center justify-end gap-2">
+            <UiButton flat @click="cancelDelete" :disabled="deleting"> Cancel </UiButton>
+            <UiButton color="red" @click="confirmDelete" :disabled="deleting" :loading="deleting">
+              {{ deleting ? 'Deleting...' : 'Delete' }}
+            </UiButton>
+          </div>
+        </template>
+      </UiModal>
+    </div>
   </div>
 </template>
 
@@ -64,6 +86,7 @@ import { mdiPlus, mdiClose } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
+import { usePermissions } from '@/common/utils/permissions'
 
 // Extended user type with access permissions
 type UserWithAccess = {
@@ -127,13 +150,19 @@ const loading = ref(false)
 const router = useRouter()
 const toastStore = useToastStore()
 const authStore = useAuthStore()
+const { getUserPermissions } = usePermissions()
 
 // Delete confirmation modal state
 const showDeleteModal = ref(false)
 const deletingTemplate = ref<TemplateRow | null>(null)
 const deleting = ref(false)
 
-// Permission check
+// Permission checks
+const canViewFormTemplates = computed(() => {
+  const permissions = getUserPermissions()
+  return permissions.formTemplates.readAll
+})
+
 const canModifyFormTemplates = computed(() => {
   return (authStore.profile as UserWithAccess)?.access?.formTemplates?.update || false
 })
@@ -148,6 +177,8 @@ function formatDate(dateString?: string): string {
 }
 
 async function fetchTemplates() {
+  if (!canViewFormTemplates.value) return
+
   loading.value = true
   try {
     const res = await api.get('/forms')

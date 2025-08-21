@@ -15,8 +15,9 @@
             id="firstName"
             v-model="formData.firstName"
             placeholder="Enter first name"
-            :error="errors.firstName"
+            :error="errorMessageHandler(v$.firstName)"
             :disabled="disabled"
+            @blur="v$.firstName.$touch"
             required
           />
         </div>
@@ -29,8 +30,9 @@
             id="lastName"
             v-model="formData.lastName"
             placeholder="Enter last name"
-            :error="errors.lastName"
+            :error="errorMessageHandler(v$.lastName)"
             :disabled="disabled"
+            @blur="v$.lastName.$touch"
             required
           />
         </div>
@@ -45,8 +47,9 @@
           v-model="formData.email"
           type="email"
           placeholder="Enter email"
-          :error="errors.email"
+          :error="errorMessageHandler(v$.email)"
           :disabled="disabled"
+          @blur="v$.email.$touch"
           required
         />
       </div>
@@ -59,8 +62,9 @@
           id="tel"
           v-model="formData.tel"
           placeholder="+1234567890"
-          :error="errors.tel"
+          :error="errorMessageHandler(v$.tel)"
           :disabled="disabled"
+          @blur="v$.tel.$touch"
           required
         />
         <p class="text-sm text-gray-500 mt-1">Use international format (e.g., +35712345678)</p>
@@ -74,8 +78,9 @@
           id="dateOfBirth"
           v-model="formData.dateOfBirth"
           type="date"
-          :error="errors.dateOfBirth"
+          :error="errorMessageHandler(v$.dateOfBirth)"
           :disabled="disabled"
+          @blur="v$.dateOfBirth.$touch"
         />
       </div>
 
@@ -86,8 +91,9 @@
           v-model="formData.gender"
           :options="genderOptions"
           placeholder="Select gender"
-          :error="errors.gender"
+          :error="errorMessageHandler(v$.gender)"
           :disabled="disabled"
+          @blur="v$.gender.$touch"
         />
       </div>
 
@@ -99,8 +105,9 @@
           id="nationality"
           v-model="formData.nationality"
           placeholder="Search for your nationality..."
-          :error="errors.nationality"
+          :error="errorMessageHandler(v$.nationality)"
           :disabled="disabled"
+          @blur="v$.nationality.$touch"
         />
       </div>
     </div>
@@ -119,8 +126,9 @@
           id="studentId"
           v-model="formData.studentId"
           placeholder="Enter student ID"
-          :error="errors.studentId"
+          :error="errorMessageHandler(v$.studentId)"
           :disabled="disabled"
+          @blur="v$.studentId.$touch"
           required
         />
       </div>
@@ -134,8 +142,9 @@
             id="userOfficialId"
             v-model="formData.userOfficialId"
             placeholder="Enter official ID number"
-            :error="errors.userOfficialId"
+            :error="errorMessageHandler(v$.userOfficialId)"
             :disabled="disabled"
+            @blur="v$.userOfficialId.$touch"
             required
           />
         </div>
@@ -149,8 +158,9 @@
             v-model="formData.userOfficialType"
             :options="officialIdTypeOptions"
             placeholder="Select ID type"
-            :error="errors.userOfficialType"
+            :error="errorMessageHandler(v$.userOfficialType)"
             :disabled="disabled"
+            @blur="v$.userOfficialType.$touch"
             required
           />
         </div>
@@ -165,37 +175,46 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="street" class="block text-sm font-medium text-gray-700 mb-1"> Street </label>
+          <label for="street" class="block text-sm font-medium text-gray-700 mb-1">
+            Street <span class="text-red-500">*</span>
+          </label>
           <UiInput
             id="street"
             v-model="formData.address.street"
             placeholder="Enter street name"
-            :error="errors.address?.street"
+            :error="errorMessageHandler(v$.address.street)"
             :disabled="disabled"
+            @blur="v$.address.street.$touch"
           />
         </div>
 
         <div>
-          <label for="number" class="block text-sm font-medium text-gray-700 mb-1"> Number </label>
+          <label for="number" class="block text-sm font-medium text-gray-700 mb-1">
+            Number <span class="text-red-500">*</span>
+          </label>
           <UiInput
             id="number"
             v-model="formData.address.number"
             placeholder="Enter house number"
-            :error="errors.address?.number"
+            :error="errorMessageHandler(v$.address.number)"
             :disabled="disabled"
+            @blur="v$.address.number.$touch"
           />
         </div>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label for="city" class="block text-sm font-medium text-gray-700 mb-1"> City </label>
+          <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
+            City <span class="text-red-500">*</span>
+          </label>
           <UiInput
             id="city"
             v-model="formData.address.city"
             placeholder="Enter city"
-            :error="errors.address?.city"
+            :error="errorMessageHandler(v$.address.city)"
             :disabled="disabled"
+            @blur="v$.address.city.$touch"
           />
         </div>
 
@@ -207,8 +226,9 @@
             id="province"
             v-model="formData.address.province"
             placeholder="Enter province or state"
-            :error="errors.address?.province"
+            :error="errorMessageHandler(v$.address.province)"
             :disabled="disabled"
+            @blur="v$.address.province.$touch"
           />
         </div>
       </div>
@@ -216,27 +236,29 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label for="zipCode" class="block text-sm font-medium text-gray-700 mb-1">
-            ZIP/Postal Code
+            ZIP/Postal Code <span class="text-red-500">*</span>
           </label>
           <UiInput
             id="zipCode"
             v-model="formData.address.zipCode"
             placeholder="Enter ZIP or postal code"
-            :error="errors.address?.zipCode"
+            :error="errorMessageHandler(v$.address.zipCode)"
             :disabled="disabled"
+            @blur="v$.address.zipCode.$touch"
           />
         </div>
 
         <div>
           <label for="country" class="block text-sm font-medium text-gray-700 mb-1">
-            Country
+            Country <span class="text-red-500">*</span>
           </label>
           <UiCountrySelect
             id="country"
             v-model="formData.address.country"
             placeholder="Search for a country..."
-            :error="errors.address?.country"
+            :error="errorMessageHandler(v$.address.country)"
             :disabled="disabled"
+            @blur="v$.address.country.$touch"
           />
         </div>
       </div>
@@ -246,7 +268,7 @@
     <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
       <slot name="actions" :form-data="formData" :errors="errors" :loading="loading">
         <UiButton flat @click="$emit('cancel')">Cancel</UiButton>
-        <UiButton type="submit" :loading="loading" :disabled="loading || disabled">
+        <UiButton type="submit" :loading="loading" :disabled="loading || disabled || v$.$invalid">
           {{ loading ? 'Saving...' : 'Save' }}
         </UiButton>
       </slot>
@@ -256,7 +278,16 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
+import { useVuelidate } from '@vuelidate/core'
+import {
+  required,
+  email as emailValidator,
+  minLength,
+  maxLength,
+  helpers,
+} from '@vuelidate/validators'
 import { UiButton, UiInput, UiSelect, UiCountrySelect } from '@/common/components'
+import { errorMessageHandler } from '@/common/utils/validation'
 
 interface Address {
   street?: string
@@ -335,6 +366,82 @@ const formData = ref<FormData>({
   nationality: '',
 })
 
+// Vuelidate rules based on schema requirements
+const rules = computed(() => ({
+  firstName: {
+    required: helpers.withMessage('First name is required', required),
+    minLength: helpers.withMessage('First name must be at least 2 characters', minLength(2)),
+    maxLength: helpers.withMessage('First name must be at most 64 characters', maxLength(64)),
+  },
+  lastName: {
+    required: helpers.withMessage('Last name is required', required),
+    minLength: helpers.withMessage('Last name must be at least 2 characters', minLength(2)),
+    maxLength: helpers.withMessage('Last name must be at most 64 characters', maxLength(64)),
+  },
+  email: {
+    required: helpers.withMessage('Email is required', required),
+    email: helpers.withMessage('Please enter a valid email address', emailValidator),
+  },
+  tel: {
+    required: helpers.withMessage('Phone number is required', required),
+    e164Phone: helpers.withMessage(
+      'Please enter a valid phone number in international format (e.g., +35712345678)',
+      helpers.regex(/^\+?[1-9]\d{1,14}$/),
+    ),
+  },
+  dateOfBirth: {
+    // Optional field, no validation needed
+  },
+  gender: {
+    // Optional field, no validation needed
+  },
+  studentId: {
+    required: helpers.withMessage('Student ID is required', required),
+    minLength: helpers.withMessage('Student ID must be at least 1 character', minLength(1)),
+    maxLength: helpers.withMessage('Student ID must be at most 10 characters', maxLength(10)),
+  },
+  userOfficialId: {
+    required: helpers.withMessage('Official ID number is required', required),
+    minLength: helpers.withMessage(
+      'Official ID number must be at least 2 characters',
+      minLength(2),
+    ),
+    maxLength: helpers.withMessage(
+      'Official ID number must be at most 32 characters',
+      maxLength(32),
+    ),
+  },
+  userOfficialType: {
+    required: helpers.withMessage('Official ID type is required', required),
+  },
+  address: {
+    street: {
+      required: helpers.withMessage('Street is required', required),
+    },
+    number: {
+      required: helpers.withMessage('House number is required', required),
+    },
+    city: {
+      required: helpers.withMessage('City is required', required),
+    },
+    province: {
+      // Optional field, no validation needed
+    },
+    zipCode: {
+      required: helpers.withMessage('ZIP/Postal code is required', required),
+    },
+    country: {
+      required: helpers.withMessage('Country is required', required),
+    },
+  },
+  nationality: {
+    minLength: helpers.withMessage('Nationality must be at least 1 character', minLength(1)),
+    maxLength: helpers.withMessage('Nationality must be at most 100 characters', maxLength(100)),
+  },
+}))
+
+const v$ = useVuelidate(rules, formData)
+
 const officialIdTypeOptions = [
   { label: 'National ID', value: 'ID' },
   { label: 'Passport', value: 'PASSPORT' },
@@ -407,7 +514,11 @@ onUnmounted(() => {
   }
 })
 
-function handleSubmit() {
+async function handleSubmit() {
+  const isValid = await v$.value.$validate()
+  if (!isValid) {
+    return
+  }
   emit('submit', formData.value)
 }
 
@@ -428,6 +539,7 @@ defineExpose({
       address: {},
       nationality: '',
     }
+    v$.value.$reset()
   },
 })
 </script>

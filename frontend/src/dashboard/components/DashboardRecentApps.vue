@@ -5,7 +5,6 @@
         <table class="min-w-full text-left text-sm">
           <thead class="bg-gray-50 text-xs font-semibold text-gray-600">
             <tr>
-              <th class="px-4 py-2">ID</th>
               <th class="px-4 py-2">Form</th>
               <th class="px-4 py-2">Status</th>
               <th class="px-4 py-2">Updated</th>
@@ -18,10 +17,9 @@
                   :to="{ name: 'applications.view', params: { id: a.id } }"
                   class="text-primary hover:underline"
                 >
-                  {{ a.id }}
+                  {{ a.formTitle }}
                 </router-link>
               </td>
-              <td class="px-4 py-2">{{ a.formId }}</td>
               <td class="px-4 py-2">
                 <span
                   class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
