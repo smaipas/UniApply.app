@@ -1073,7 +1073,9 @@ async function createApplication(event: APIGatewayProxyEventV2) {
   // Note: Applications are always created as DRAFT, so we don't notify here
   // Notifications will be sent when the application is submitted via the submit endpoint
 
-  return response(201, item);
+  // Enrich with user data before returning
+  const enrichedItem = await enrichApplicationsWithUsers([item]);
+  return response(201, enrichedItem[0]);
 }
 
 async function updateApplication(event: APIGatewayProxyEventV2, id: string) {
@@ -1161,7 +1163,13 @@ async function getApplication(event: APIGatewayProxyEventV2, id: string) {
   // Authorization: only owner or users whose role has canViewAllApplications
   const viewerSub = requesterSub(event);
   if (!viewerSub) return response(403, { message: "Forbidden" });
-  if (application.userId === viewerSub) return response(200, application);
+  if (application.userId === viewerSub) {
+    // Enrich with user data for owner
+    const enrichedApplication = await enrichApplicationsWithUsers([
+      application,
+    ]);
+    return response(200, enrichedApplication[0]);
+  }
 
   // Load viewer role
   const viewerRes = await ddb.send(
@@ -1183,7 +1191,10 @@ async function getApplication(event: APIGatewayProxyEventV2, id: string) {
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
   const canViewAll = !!role?.access?.applications?.readAll;
   if (!canViewAll) return response(403, { message: "Forbidden" });
-  return response(200, application);
+
+  // Enrich with user data for users with readAll access
+  const enrichedApplication = await enrichApplicationsWithUsers([application]);
+  return response(200, enrichedApplication[0]);
 }
 
 async function submitApplication(event: APIGatewayProxyEventV2, id: string) {
@@ -1270,7 +1281,11 @@ async function submitApplication(event: APIGatewayProxyEventV2, id: string) {
     status: "PENDING_APPROVAL",
   });
 
-  return response(200, updatedApplication);
+  // Enrich with user data before returning
+  const enrichedApplication = await enrichApplicationsWithUsers([
+    updatedApplication,
+  ]);
+  return response(200, enrichedApplication[0]);
 }
 
 // Strict status update with sequential approval and role matching
@@ -1335,7 +1350,9 @@ async function updateApplicationStatus(
     status: requested,
     statusText: body?.comment || undefined,
     updatedAt: nowIso(),
-    updatedByEmail: viewer?.email || undefined,
+    updatedById: viewerSub,
+    updatedByFullName:
+      `${viewer?.firstName || ""} ${viewer?.lastName || ""}`.trim(),
   };
 
   // Compute overall application status
@@ -1977,10 +1994,9 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
           })
         );
         const items = (out.Items || []).map((it: any) => unmarshall(it));
-        return response(
-          200,
-          items.filter((i: any) => i.status === status)
-        );
+        const filteredItems = items.filter((i: any) => i.status === status);
+        const itemsWithUsers = await enrichApplicationsWithUsers(filteredItems);
+        return response(200, itemsWithUsers);
       }
       const out = await ddb.send(
         new QueryCommand({
@@ -1992,7 +2008,8 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
         })
       );
       const items = (out.Items || []).map((it: any) => unmarshall(it));
-      return response(200, items);
+      const itemsWithUsers = await enrichApplicationsWithUsers(items);
+      return response(200, itemsWithUsers);
     }
     // Applications status update
     {

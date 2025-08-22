@@ -463,7 +463,8 @@ export declare const ApplicationStepSchema: z.ZodObject<{
     }>;
     statusText: z.ZodOptional<z.ZodString>;
     updatedAt: z.ZodOptional<z.ZodString>;
-    updatedByEmail: z.ZodOptional<z.ZodEmail>;
+    updatedById: z.ZodOptional<z.ZodString>;
+    updatedByFullName: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
 export declare const ApplicationCreateSchema: z.ZodObject<{
     userId: z.ZodString;
@@ -479,7 +480,8 @@ export declare const ApplicationCreateSchema: z.ZodObject<{
         }>;
         statusText: z.ZodOptional<z.ZodString>;
         updatedAt: z.ZodOptional<z.ZodString>;
-        updatedByEmail: z.ZodOptional<z.ZodEmail>;
+        updatedById: z.ZodOptional<z.ZodString>;
+        updatedByFullName: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
     status: z.ZodDefault<z.ZodEnum<{
         DRAFT: "DRAFT";
@@ -499,7 +501,8 @@ export declare const ApplicationUpdateSchema: z.ZodObject<{
         }>;
         statusText: z.ZodOptional<z.ZodString>;
         updatedAt: z.ZodOptional<z.ZodString>;
-        updatedByEmail: z.ZodOptional<z.ZodEmail>;
+        updatedById: z.ZodOptional<z.ZodString>;
+        updatedByFullName: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>>;
     status: z.ZodOptional<z.ZodEnum<{
         DRAFT: "DRAFT";
@@ -524,7 +527,8 @@ export declare const ApplicationModelSchema: z.ZodObject<{
         }>;
         statusText: z.ZodOptional<z.ZodString>;
         updatedAt: z.ZodOptional<z.ZodString>;
-        updatedByEmail: z.ZodOptional<z.ZodEmail>;
+        updatedById: z.ZodOptional<z.ZodString>;
+        updatedByFullName: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
     status: z.ZodEnum<{
         DRAFT: "DRAFT";

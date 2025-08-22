@@ -16,10 +16,6 @@
           <UiIcon :path="mdiPrinter" class="mr-2" />
           Print
         </UiButton>
-        <UiButton flat @click="downloadPDF">
-          <UiIcon :path="mdiDownload" class="mr-2" />
-          Download PDF
-        </UiButton>
       </div>
     </div>
 
@@ -59,7 +55,11 @@
     </div>
 
     <!-- Application Form -->
-    <div v-else-if="template" class="bg-white rounded-lg border border-gray-200">
+    <div
+      v-else-if="template"
+      class="bg-white rounded-lg border border-gray-200"
+      ref="applicationFormRef"
+    >
       <!-- Form Header -->
       <div class="px-6 py-4 border-b border-gray-200">
         <div class="flex items-center justify-between">
@@ -70,9 +70,7 @@
             </p>
           </div>
           <div class="flex items-center space-x-4">
-            <UiChip :variant="statusVariant" size="sm">
-              {{ applicationStatus }}
-            </UiChip>
+            <StatusChip :status="application?.status || 'DRAFT'" />
             <span v-if="application?.id" class="text-sm text-gray-500">
               ID: {{ application.id }}
             </span>
@@ -127,10 +125,14 @@
                 </div>
               </div>
               <div class="text-sm text-gray-600 mt-1">
-                Status: {{ step.status.replace('_', ' ') }}
+                Status: <StatusChip :status="step.status" />
               </div>
-              <div v-if="step.updatedByEmail" class="text-xs text-gray-500 mt-1">
-                By: {{ step.updatedByEmail }}
+              <div v-if="step.updatedByFullName" class="text-xs text-gray-500 mt-1">
+                By: {{ step.updatedByFullName }}
+                <span v-if="step.updatedAt">
+                  on {{ new Date(step.updatedAt).toLocaleDateString() }} at
+                  {{ new Date(step.updatedAt).toLocaleTimeString() }}
+                </span>
               </div>
               <div
                 v-if="step.statusText"
@@ -477,16 +479,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import {
-  mdiPrinter,
-  mdiDownload,
-  mdiContentSave,
-  mdiSend,
-  mdiTimerSand,
-  mdiCheck,
-  mdiCancel,
-} from '@mdi/js'
-import { UiButton, UiInput, UiCheckbox, UiChip, UiIcon, UiModal } from '@/common/components'
+import { mdiPrinter, mdiContentSave, mdiSend, mdiTimerSand, mdiCheck, mdiCancel } from '@mdi/js'
+import { UiButton, UiInput, UiCheckbox, StatusChip, UiIcon, UiModal } from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
 import { usePermissions } from '@/common/utils/permissions'
@@ -494,8 +488,6 @@ import { usePermissions } from '@/common/utils/permissions'
 import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/utils/profile'
 import { getCountryName } from '@/common/utils/countries'
 import api from '@/app/axios'
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
 
 interface FormField {
   name: string
@@ -504,7 +496,7 @@ interface FormField {
   inputType: 'TEXT' | 'LONG_TEXT' | 'NUMBER' | 'DATE' | 'SELECT' | 'CHECKBOX' | 'FILE'
   validationRules?: Array<{
     rule: string
-    value?: any
+    value?: string | number | boolean
     message?: string
   }>
   options?: string[] | Array<{ label: string; value: string }>
@@ -531,7 +523,8 @@ interface Application {
     status: string
     statusText?: string
     updatedAt?: string
-    updatedByEmail?: string
+    updatedById?: string
+    updatedByFullName?: string
   }>
   createdAt?: string
   updatedAt?: string
@@ -555,6 +548,7 @@ const template = ref<FormTemplate | null>(null)
 const application = ref<Application | null>(null)
 const formData = ref<Record<string, any>>({})
 const fieldErrors = ref<Record<string, string>>({})
+const applicationFormRef = ref<HTMLElement | null>(null)
 
 const isEditing = computed(() => !!route.params.id)
 const isReadOnly = computed(() => {
@@ -576,27 +570,6 @@ const canReject = computed(() => {
 
 const profileStatus = computed(() => checkProfileCompletion(authStore.profile))
 const profileCompletionMessage = computed(() => getProfileCompletionMessage(profileStatus.value))
-
-const applicationStatus = computed(() => {
-  if (!application.value) return 'Draft'
-  return application.value.status.replace('_', ' ').toLowerCase()
-})
-
-const statusVariant = computed(() => {
-  if (!application.value) return 'gray'
-  switch (application.value.status) {
-    case 'DRAFT':
-      return 'gray'
-    case 'PENDING_APPROVAL':
-      return 'warning'
-    case 'APPROVED':
-      return 'success'
-    case 'REJECTED':
-      return 'danger'
-    default:
-      return 'gray'
-  }
-})
 
 onMounted(async () => {
   // Roles are now loaded by the layout component
@@ -808,249 +781,313 @@ function getFileName(file: File | string): string {
   return file.name
 }
 
-function printApplication() {
-  // Create a new window for printing
-  const printWindow = window.open('', '_blank')
-  if (!printWindow) {
+async function printApplication() {
+  if (!applicationFormRef.value) {
     toastStore.show({
       tone: 'error',
       title: 'Error',
-      message: 'Please allow popups to print applications',
+      message: 'Application form not found',
     })
     return
   }
 
-  const printContent = generatePDFContent()
+  try {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) {
+      toastStore.show({
+        tone: 'error',
+        title: 'Error',
+        message: 'Please allow popups to print applications',
+      })
+      return
+    }
 
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>${template.value?.title || 'Application'}</title>
+    // Clone the application form content
+    const formClone = applicationFormRef.value.cloneNode(true) as HTMLElement
+
+    // Remove action buttons and other non-printable elements
+    const actionButtons = formClone.querySelectorAll('.flex.justify-end.space-x-3')
+    actionButtons.forEach((button) => button.remove())
+
+    // Remove the header buttons (print/download)
+    const headerButtons = formClone.querySelectorAll('.flex.space-x-3')
+    headerButtons.forEach((button) => button.remove())
+
+    // Remove approval history section
+    const approvalElements = formClone.querySelectorAll('h3')
+    approvalElements.forEach((h3) => {
+      if (h3.textContent?.includes('Approval History')) {
+        const parentSection = h3.closest('.px-6, .p-6')
+        if (parentSection) {
+          parentSection.remove()
+        }
+      }
+    })
+
+    // Replace form field values with display text (same approach as PDF)
+    if (template.value?.fields && formData.value) {
+      template.value.fields.forEach((field) => {
+        const fieldValue = formData.value[field.name]
+
+        if (fieldValue !== undefined && fieldValue !== null && fieldValue !== '') {
+          const fieldElement = formClone.querySelector(`#${field.name}`) as HTMLElement
+
+          if (fieldElement) {
+            // Create display value
+            const displayValue = document.createElement('div')
+            displayValue.className = 'print-field-value'
+            displayValue.style.cssText = `
+              border: 1px solid #d1d5db;
+              border-radius: 4px;
+              padding: 8px 12px;
+              background-color: #f9fafb;
+              margin-top: 4px;
+              min-height: 20px;
+              font-size: 13px;
+              line-height: 1.4;
+              color: #374151;
+              display: block;
+              width: 100%;
+              box-sizing: border-box;
+              word-wrap: break-word;
+              white-space: pre-wrap;
+            `
+
+            let displayText = ''
+            if (field.inputType === 'SELECT' && field.options) {
+              const selectedOption = field.options.find((opt) =>
+                typeof opt === 'string' ? opt === fieldValue : opt.value === fieldValue,
+              )
+              displayText = selectedOption
+                ? typeof selectedOption === 'string'
+                  ? selectedOption
+                  : selectedOption.label
+                : fieldValue.toString()
+            } else if (field.inputType === 'DATE' && fieldValue) {
+              displayText = new Date(fieldValue.toString()).toLocaleDateString()
+            } else if (field.inputType === 'FILE') {
+              displayText =
+                typeof fieldValue === 'string' ? fieldValue : fieldValue.name || 'File selected'
+            } else if (field.inputType === 'CHECKBOX') {
+              displayText = fieldValue ? 'Yes' : 'No'
+            } else {
+              displayText = fieldValue.toString()
+            }
+
+            displayValue.textContent = displayText || 'Not provided'
+
+            // Replace the field element with the display value
+            fieldElement.parentNode?.replaceChild(displayValue, fieldElement)
+          }
+        }
+      })
+    }
+
+    // Hide any remaining form elements that weren't replaced
+    const allFormElements = formClone.querySelectorAll('input, textarea, select, button')
+    allFormElements.forEach((element) => {
+      ;(element as HTMLElement).style.display = 'none'
+    })
+
+    // Add print-specific styles
+    const printStyles = `
       <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .field { margin-bottom: 20px; }
-        .field-label { font-weight: bold; margin-bottom: 5px; }
-        .field-value { margin-left: 20px; }
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 0; 
+          padding: 20px; 
+          background: white; 
+          color: black; 
+          font-size: 13px;
+          line-height: 1.4;
+        }
+        
+        /* Maintain visual structure */
+        .bg-white { 
+          background: white !important; 
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 4px !important;
+          padding: 16px !important;
+          margin-bottom: 16px !important;
+        }
+        
+        /* Form sections */
+        .space-y-4 > * {
+          margin-bottom: 16px !important;
+        }
+        
+        .space-y-6 > * {
+          margin-bottom: 24px !important;
+        }
+        
+        /* Grid layouts */
+        .grid {
+          display: grid !important;
+          gap: 16px !important;
+        }
+        
+        .grid-cols-1.md\\:grid-cols-2 {
+          grid-template-columns: 1fr 1fr !important;
+        }
+        
+        /* Form fields */
+        .px-3.py-2 {
+          padding: 8px 12px !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 4px !important;
+          background: #f9fafb !important;
+          margin-top: 4px !important;
+          display: block !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        
+        /* Labels */
+        label {
+          font-weight: 600 !important;
+          color: #374151 !important;
+          margin-bottom: 4px !important;
+          display: block !important;
+        }
+        
+        /* Headers */
+        h1, h2, h3 {
+          font-size: 15px !important;
+          margin-bottom: 12px !important;
+          font-weight: 700 !important;
+          color: #111827 !important;
+          border-bottom: 1px solid #e5e7eb !important;
+          padding-bottom: 8px !important;
+        }
+        
+        /* Status chip */
+        .text-xs.font-medium.px-2\\.5.py-0\\.5.rounded-sm {
+          display: inline-block !important;
+          padding: 4px 8px !important;
+          border-radius: 4px !important;
+          font-size: 11px !important;
+          font-weight: 600 !important;
+          text-transform: uppercase !important;
+          letter-spacing: 0.5px !important;
+        }
+        
+        /* Typography */
+        .text-3xl { font-size: 20px !important; }
+        .text-2xl { font-size: 18px !important; }
+        .text-xl { font-size: 16px !important; }
+        .text-lg { font-size: 14px !important; }
+        .text-sm { font-size: 12px !important; }
+        .text-xs { font-size: 11px !important; }
+        
+        /* Colors */
+        .text-gray-900 { color: #111827 !important; }
+        .text-gray-600 { color: #4b5563 !important; }
+        .text-gray-700 { color: #374151 !important; }
+        .text-gray-500 { color: #6b7280 !important; }
+        
+        /* Backgrounds */
+        .bg-gray-50 { background: #f9fafb !important; }
+        .bg-gray-100 { background: #f3f4f6 !important; }
+        .bg-green-500 { background: #10b981 !important; color: white !important; }
+        .bg-red-500 { background: #ef4444 !important; color: white !important; }
+        .bg-yellow-500 { background: #f59e0b !important; color: white !important; }
+        .bg-blue-500 { background: #3b82f6 !important; color: white !important; }
+        
+        /* Borders */
+        .border-gray-200 { border-color: #e5e7eb !important; }
+        .border-b { border-bottom: 1px solid #e5e7eb !important; }
+        .border-t { border-top: 1px solid #e5e7eb !important; }
+        
+        /* Spacing */
+        .p-6 { padding: 24px !important; }
+        .px-6 { padding-left: 24px !important; padding-right: 24px !important; }
+        .py-4 { padding-top: 16px !important; padding-bottom: 16px !important; }
+        .mb-1 { margin-bottom: 4px !important; }
+        .mb-2 { margin-bottom: 8px !important; }
+        .mb-4 { margin-bottom: 16px !important; }
+        .mt-1 { margin-top: 4px !important; }
+        .mt-2 { margin-top: 8px !important; }
+        
+        /* Flexbox */
+        .flex { display: flex !important; }
+        .items-center { align-items: center !important; }
+        .justify-between { justify-content: space-between !important; }
+        .space-x-3 > * + * { margin-left: 12px !important; }
+        .space-x-4 > * + * { margin-left: 16px !important; }
+        
+        /* Status colors */
+        .text-green-600 { color: #059669 !important; }
+        .text-red-600 { color: #dc2626 !important; }
+        .text-yellow-600 { color: #d97706 !important; }
+        .text-blue-600 { color: #2563eb !important; }
+        
+        /* Hide elements that shouldn't print */
+        .flex.space-x-3 { display: none !important; }
+        input, textarea, select, button { display: none !important; }
+        
+        /* Hide form elements more aggressively */
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"] { display: none !important; }
+        textarea, select, button, .relative input { display: none !important; }
+        
+        /* Hide UiInput component wrapper contents */
+        .relative { position: static !important; }
+        .relative input { display: none !important; }
+        label input { display: none !important; }
+        label textarea { display: none !important; }
+        label select { display: none !important; }
+        
+        /* Styling for generated field values */
+        .print-field-value, .pdf-field-value {
+          border: 1px solid #d1d5db !important;
+          border-radius: 4px !important;
+          padding: 8px 12px !important;
+          background: #f9fafb !important;
+          margin-top: 4px !important;
+          min-height: 20px !important;
+          font-size: 13px !important;
+          line-height: 1.4 !important;
+          color: #374151 !important;
+          display: block !important;
+          width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        
         @media print {
-          body { margin: 0; }
+          body { margin: 0; font-size: 13px; }
+          * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
         }
       </style>
+    `
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${template.value?.title || 'Application'} - Print</title>
+          ${printStyles}
     </head>
     <body>
-      ${printContent}
+          ${formClone.outerHTML}
     </body>
     </html>
   `)
 
-  printWindow.document.close()
-  printWindow.focus()
+    printWindow.document.close()
 
-  // Wait for content to load then print
-  setTimeout(() => {
-    printWindow.print()
-    printWindow.close()
-  }, 500)
-}
-
-async function downloadPDF() {
-  if (!template.value) return
-
-  try {
-    // Create a temporary container for the PDF content
-    const pdfContainer = document.createElement('div')
-    pdfContainer.className = 'pdf-container bg-white p-8 max-w-4xl mx-auto'
-    pdfContainer.style.position = 'absolute'
-    pdfContainer.style.left = '-9999px'
-    pdfContainer.style.top = '0'
-    document.body.appendChild(pdfContainer)
-
-    // Generate PDF content
-    const pdfContent = generatePDFContent()
-    pdfContainer.innerHTML = pdfContent
-
-    // Wait for content to render
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    // Convert to canvas
-    const canvas = await html2canvas(pdfContainer, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-    })
-
-    // Remove temporary container
-    document.body.removeChild(pdfContainer)
-
-    // Create PDF
-    const imgData = canvas.toDataURL('image/png')
-    const pdf = new jsPDF('p', 'mm', 'a4')
-    const imgWidth = 210
-    const pageHeight = 295
-    const imgHeight = (canvas.height * imgWidth) / canvas.width
-    let heightLeft = imgHeight
-
-    let position = 0
-
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
-
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight
-      pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
-    }
-
-    // Download PDF
-    const fileName = `${template.value.title}_${application.value?.id || 'draft'}.pdf`
-    pdf.save(fileName)
-
-    toastStore.show({
-      tone: 'success',
-      title: 'Success',
-      message: 'PDF downloaded successfully',
-    })
+    // Wait for content to load then print
+    setTimeout(() => {
+      printWindow.print()
+      printWindow.close()
+    }, 500)
   } catch (error) {
-    console.error('PDF generation error:', error)
+    console.error('Print error:', error)
     toastStore.show({
       tone: 'error',
-      title: 'Error',
-      message: 'Failed to generate PDF',
+      title: 'Print Error',
+      message: 'There was an error preparing the application for printing.',
     })
   }
-}
-
-function generatePDFContent(): string {
-  if (!template.value) return ''
-
-  const status = application.value?.status || 'DRAFT'
-  const applicationId = application.value?.id || 'Draft'
-  const createdAt = application.value?.createdAt
-    ? new Date(application.value.createdAt).toLocaleDateString()
-    : new Date().toLocaleDateString()
-
-  let fieldsHtml = ''
-  if (template.value.fields) {
-    fieldsHtml = template.value.fields
-      .map((field) => {
-        const value = formData.value[field.name] || 'Not provided'
-        return `
-          <div class="mb-4">
-            <div class="font-semibold text-gray-900 mb-1">${field.label}</div>
-            <div class="text-gray-700">${value}</div>
-          </div>
-        `
-      })
-      .join('')
-  }
-
-  let approvalHistoryHtml = ''
-  if (application.value?.approvalSteps && application.value.approvalSteps.length > 0) {
-    approvalHistoryHtml = `
-      <div class="border-t border-gray-200 pt-6 mt-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Approval History</h2>
-        <div class="space-y-3">
-          ${application.value.approvalSteps
-            .map((step: any) => {
-              const statusIcon =
-                step.status === 'APPROVED' ? '✓' : step.status === 'REJECTED' ? '✗' : '⏳'
-              const statusColor =
-                step.status === 'APPROVED'
-                  ? 'text-green-600'
-                  : step.status === 'REJECTED'
-                    ? 'text-red-600'
-                    : 'text-yellow-600'
-              const date = step.updatedAt
-                ? new Date(step.updatedAt).toLocaleDateString()
-                : 'Pending'
-
-              return `
-                <div class="border border-gray-200 rounded p-3">
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="font-semibold text-gray-900">${step.role}</div>
-                    <div class="text-sm text-gray-500">${date}</div>
-                  </div>
-                  <div class="flex items-center space-x-2 mb-2">
-                    <span class="${statusColor} font-medium">${statusIcon} ${step.status.replace('_', ' ')}</span>
-                    ${step.updatedByEmail ? `<span class="text-sm text-gray-600">by ${step.updatedByEmail}</span>` : ''}
-                  </div>
-                  ${step.statusText ? `<div class="text-sm text-gray-700 bg-gray-50 p-2 rounded">${step.statusText}</div>` : ''}
-                </div>
-              `
-            })
-            .join('')}
-        </div>
-      </div>
-    `
-  }
-
-  // Generate user details HTML
-  const userDetailsHtml = `
-    <div class="border-t border-gray-200 pt-6 mb-6">
-      <h2 class="text-xl font-semibold text-gray-900 mb-4">Applicant Information</h2>
-      <div class="grid grid-cols-2 gap-4 text-sm">
-        <div>
-          <div class="font-semibold text-gray-900">Full Name:</div>
-          <div class="text-gray-700">${authStore.profile?.firstName || ''} ${authStore.profile?.lastName || ''}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">Email:</div>
-          <div class="text-gray-700">${authStore.profile?.email || 'Not provided'}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">Phone:</div>
-          <div class="text-gray-700">${authStore.profile?.tel || 'Not provided'}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">Date of Birth:</div>
-          <div class="text-gray-700">${authStore.profile?.dateOfBirth ? new Date(authStore.profile.dateOfBirth).toLocaleDateString() : 'Not provided'}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">Address:</div>
-          <div class="text-gray-700">${formatAddress()}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">Student ID:</div>
-          <div class="text-gray-700">${authStore.profile?.studentId || 'Not provided'}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">${formatOfficialIdType(authStore.profile?.userOfficialType)}:</div>
-          <div class="text-gray-700">${authStore.profile?.userOfficialId || 'Not provided'}</div>
-        </div>
-        <div>
-          <div class="font-semibold text-gray-900">Nationality:</div>
-          <div class="text-gray-700">${authStore.profile?.nationality ? getCountryName(authStore.profile.nationality) : 'Not provided'}</div>
-        </div>
-      </div>
-    </div>
-  `
-
-  return `
-    <div class="font-sans">
-      <div class="text-center mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">${template.value.title}</h1>
-        <div class="text-gray-600">
-          <p>Application ID: ${applicationId}</p>
-          <p>Status: ${status.replace('_', ' ')}</p>
-          <p>Created: ${createdAt}</p>
-        </div>
-      </div>
-      
-      ${template.value.description ? `<div class="mb-6 text-gray-700">${template.value.description}</div>` : ''}
-      
-      ${userDetailsHtml}
-      
-      <div class="border-t border-gray-200 pt-6">
-        <h2 class="text-xl font-semibold text-gray-900 mb-4">Application Details</h2>
-        ${fieldsHtml}
-      </div>
-      
-      ${approvalHistoryHtml}
-    </div>
-  `
 }
 
 function showApprovalModal() {
@@ -1165,6 +1202,8 @@ function formatOfficialIdType(type?: string): string {
   return typeMap[type] || type
 }
 
+// Removed unused color conversion functions
+
 function goToProfile() {
   router.push('/profile')
 }
@@ -1179,5 +1218,89 @@ function goBack() {
   .flex.space-x-3 {
     display: none !important;
   }
+
+  body {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    color: black !important;
+    background: white !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  .bg-white {
+    background: white !important;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: black !important;
+  }
+}
+
+/* Print and PDF specific styles */
+.print-container {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.print-container .bg-white {
+  background: white !important;
+}
+
+.print-container .text-gray-900 {
+  color: black !important;
+}
+
+.print-container .text-gray-600 {
+  color: #4a5568 !important;
+}
+
+.print-container .text-gray-700 {
+  color: #2d3748 !important;
+}
+
+.print-container .border-gray-200 {
+  border-color: #e2e8f0 !important;
+}
+
+.print-container .bg-gray-50 {
+  background: #f7fafc !important;
+}
+
+.print-container .bg-gray-100 {
+  background: #edf2f7 !important;
+}
+
+.print-container .bg-green-500 {
+  background: #48bb78 !important;
+}
+
+.print-container .bg-red-500 {
+  background: #f56565 !important;
+}
+
+.print-container .bg-yellow-500 {
+  background: #ed8936 !important;
+}
+
+.print-container .text-white {
+  color: white !important;
+}
+
+.print-container .text-green-600 {
+  color: #38a169 !important;
+}
+
+.print-container .text-red-600 {
+  color: #e53e3e !important;
+}
+
+.print-container .text-yellow-600 {
+  color: #d69e2e !important;
 }
 </style>

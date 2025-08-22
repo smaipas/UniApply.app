@@ -6,9 +6,7 @@
     </div>
     <UiTable :columns="columns" :items="rows" @row-click="handleRowClick">
       <template #cell-status="{ value }">
-        <UiChip :variant="getStatusVariant(value)" size="sm">
-          {{ value.replace('_', ' ').toLowerCase() }}
-        </UiChip>
+        <StatusChip :status="value" />
       </template>
       <template #cell-form="{ value, row }">
         <div class="flex items-center">
@@ -32,7 +30,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { UiTable, UiButton, UiChip, FormTemplateSelector } from '@/common/components'
+import { UiTable, UiButton, StatusChip, FormTemplateSelector } from '@/common/components'
 import { formatDateTime } from '@/common/utils/date'
 import api from '@/app/axios'
 import { mdiPlus } from '@mdi/js'
@@ -59,13 +57,13 @@ const router = useRouter()
 
 async function fetchApplications() {
   const res = await api.get('/applications')
-  const mappedData = res.data.map((app: any) => ({
-    id: app.id,
-    form: app.formTitle,
-    formVersion: app.formVersion,
-    status: app.status,
-    createdAt: app.createdAt,
-    updatedAt: app.updatedAt,
+  const mappedData = res.data.map((app: Record<string, unknown>) => ({
+    id: app.id as string,
+    form: app.formTitle as string,
+    formVersion: app.formVersion as number,
+    status: app.status as AppRow['status'],
+    createdAt: app.createdAt as string,
+    updatedAt: app.updatedAt as string,
   })) as AppRow[]
 
   // Sort by updatedAt (most recent first)
@@ -74,23 +72,8 @@ async function fetchApplications() {
   )
 }
 
-function getStatusVariant(status: string) {
-  switch (status) {
-    case 'DRAFT':
-      return 'gray'
-    case 'PENDING_APPROVAL':
-      return 'warning'
-    case 'APPROVED':
-      return 'success'
-    case 'REJECTED':
-      return 'danger'
-    default:
-      return 'gray'
-  }
-}
-
-function handleRowClick(row: Record<string, any>) {
-  router.push(`/applications/${row.id}`)
+function handleRowClick(row: Record<string, unknown>) {
+  router.push(`/applications/${row.id as string}`)
 }
 
 onMounted(fetchApplications)

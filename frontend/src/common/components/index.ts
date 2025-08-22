@@ -21,6 +21,7 @@ export { default as UiLoadingOverlay } from '@/common/components/UiLoadingOverla
 export { default as UiLogo } from '@/common/components/UiLogo.vue'
 export { default as UiModal } from '@/common/components/UiModal.vue'
 export { default as UiSelect } from '@/common/components/UiSelect.vue'
+export { default as StatusChip } from '@/common/components/StatusChip.vue'
 export { default as UiTable } from '@/common/components/UiTable.vue'
 export { default as UiToast } from '@/common/components/UiToast.vue'
 export { default as UiTooltip } from '@/common/components/UiTooltip.vue'

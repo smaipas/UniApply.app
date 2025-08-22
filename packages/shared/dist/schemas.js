@@ -238,7 +238,8 @@ export const ApplicationStepSchema = z
     status: z.enum(["APPROVED", "REJECTED", "PENDING_APPROVAL"]),
     statusText: z.string().max(1024).optional(),
     updatedAt: z.string().optional(), // <-- added
-    updatedByEmail: z.email().optional(),
+    updatedById: z.string().min(1).max(64).optional(), // <-- user ID who made the decision
+    updatedByFullName: z.string().min(1).max(128).optional(), // <-- full name of user who made the decision
 })
     .strict();
 // Create / Update DTOs stay the same (they’ll accept steps with/without updatedAt)
@@ -306,11 +307,13 @@ export const ApplicationModelSchema = z
     status: z.enum(["DRAFT", "APPROVED", "REJECTED", "PENDING_APPROVAL"]),
     createdAt: z.string(),
     updatedAt: z.string(),
-    user: z.object({
+    user: z
+        .object({
         firstName: z.string(),
         lastName: z.string(),
         studentId: z.string().optional(),
-    }).optional(),
+    })
+        .optional(),
 })
     .strict();
 // ========= Audit Logs (minimal diff) =========

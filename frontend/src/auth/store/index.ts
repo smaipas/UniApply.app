@@ -11,6 +11,7 @@ import {
 } from '@/auth/services/cognito'
 import api from '@/app/axios'
 import type { User as UserModel } from '@uniapply/shared'
+import { useDashboardStore } from '@/dashboard/store'
 
 type AuthTokens = {
   accessToken: string
@@ -223,6 +224,14 @@ export const useAuthStore = defineStore('auth', () => {
     profile.value = null
     clearRefreshTimer()
     persist(null)
+
+    // Clear dashboard data when user logs out
+    try {
+      const dashboardStore = useDashboardStore()
+      dashboardStore.clear()
+    } catch {
+      // Ignore errors if dashboard store is not available
+    }
   }
 
   // When app loads with saved tokens, schedule a refresh immediately.

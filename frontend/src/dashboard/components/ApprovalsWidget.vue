@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+  <div class="rounded-xs border border-gray-200 bg-white p-4 shadow-sm">
     <div class="mb-3 flex items-center justify-between">
       <h3 class="text-base font-semibold">Pending Approvals</h3>
       <router-link to="/approvals" class="text-sm text-blue-700 hover:underline"
@@ -25,7 +25,7 @@
           <td class="px-2 py-2">{{ formatDate(a.updatedAt || a.createdAt) }}</td>
           <td class="px-2 py-2">
             <span
-              class="inline-flex items-center rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+              class="inline-flex items-center rounded-xs bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
               >Pending</span
             >
           </td>

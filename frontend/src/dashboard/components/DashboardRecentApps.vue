@@ -21,12 +21,7 @@
                 </router-link>
               </td>
               <td class="px-4 py-2">
-                <span
-                  class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium"
-                  :class="statusClass(a.status)"
-                >
-                  {{ a.status }}
-                </span>
+                <StatusChip :status="a.status" />
               </td>
               <td class="px-4 py-2">
                 {{ (a.updatedAt || a.createdAt)?.slice(0, 19).replace('T', ' ') }}
@@ -43,15 +38,8 @@
 </template>
 
 <script setup lang="ts">
-import { UiCard } from '@/common/components'
+import { UiCard, StatusChip } from '@/common/components'
 import type { Application } from '@uniapply/shared'
 
 defineProps<{ items: Application[] }>()
-
-function statusClass(s: Application['status']) {
-  if (s === 'APPROVED') return 'bg-green-50 text-green-700'
-  if (s === 'REJECTED') return 'bg-red-50 text-red-700'
-  if (s === 'PENDING_APPROVAL') return 'bg-secondary/10 text-secondary'
-  return 'bg-gray-100 text-gray-700'
-}
 </script>

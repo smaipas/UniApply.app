@@ -3,68 +3,289 @@
     <!-- Profile Completion Warning -->
     <div
       v-if="!profileStatus.isComplete"
-      class="bg-yellow-50 border border-yellow-200 rounded-lg p-4"
+      class="bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xs p-6"
     >
-      <div class="flex">
+      <div class="flex items-start">
         <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fill-rule="evenodd"
-              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+            <svg class="h-5 w-5 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
+              <path
+                fill-rule="evenodd"
+                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
         </div>
-        <div class="ml-3">
-          <h3 class="text-sm font-medium text-yellow-800">Complete Your Profile</h3>
+        <div class="ml-4">
+          <h3 class="text-lg font-semibold text-yellow-800">Complete Your Profile</h3>
           <div class="mt-2 text-sm text-yellow-700">
             <p>{{ profileCompletionMessage }}</p>
-            <div class="mt-3">
-              <UiButton size="sm" @click="goToProfile">Complete Profile</UiButton>
+            <div class="mt-4">
+              <UiButton size="sm" @click="goToProfile" class="bg-yellow-600 hover:bg-yellow-700">
+                Complete Profile
+              </UiButton>
             </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Stats -->
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <DashboardStat v-for="s in store.stats" :key="s.label" :label="s.label" :value="s.value" />
+    <!-- Loading state -->
+    <div v-if="store.loading" class="flex items-center justify-center py-16">
+      <div class="text-center">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-6"
+        ></div>
+        <p class="text-gray-600 text-lg">Loading your dashboard...</p>
+      </div>
     </div>
 
-    <!-- Two columns -->
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <div class="lg:col-span-2">
-        <DashboardRecentApps :items="store.recentApps" />
+    <!-- Error state -->
+    <div v-else-if="store.error" class="flex items-center justify-center py-16">
+      <div class="text-center max-w-md">
+        <div
+          class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6"
+        >
+          <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+            />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
+        <p class="text-gray-600 mb-6">{{ store.error }}</p>
+        <UiButton @click="loadDashboardData" size="lg">Try Again</UiButton>
       </div>
-      <div class="lg:col-span-1">
-        <DashboardApprovals :items="store.pendingApprovals" />
+    </div>
+
+    <!-- Dashboard content -->
+    <div v-else class="space-y-8">
+      <!-- Welcome Header -->
+      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xs p-8 text-white">
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-3xl font-bold mb-2">
+              Welcome back, {{ authStore.profile?.firstName || 'User' }}!
+            </h1>
+            <p class="text-blue-100 text-lg">
+              Here's what's happening with your applications today.
+            </p>
+          </div>
+          <div class="hidden lg:block">
+            <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+              <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats Cards -->
+      <div v-if="statsToShow.length > 0">
+        <h2 class="text-xl font-semibold text-gray-900 mb-6">Overview</h2>
+        <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
+          <DashboardStatCard
+            v-for="stat in statsToShow"
+            :key="stat.label"
+            :label="stat.label"
+            :value="stat.value"
+            :icon="stat.icon"
+            :variant="stat.variant"
+            :trend="stat.trend"
+          />
+        </div>
+      </div>
+
+      <!-- Applications Widgets Grid -->
+      <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <!-- Recent Applications Widget -->
+        <div v-if="showRecentApplications" class="lg:col-span-2">
+          <DashboardApplicationsWidget
+            title="Recent Applications"
+            :items="store.data.recentApplications"
+            :loading="store.loading"
+            view-all-link="/applications"
+            empty-message="No applications yet"
+          />
+        </div>
+
+        <!-- Pending Approvals Widget -->
+        <div v-if="showPendingApprovals" class="lg:col-span-1">
+          <DashboardApplicationsWidget
+            title="Pending Approval"
+            :items="store.data.pendingApprovals"
+            :loading="store.loading"
+            view-all-link="/applications"
+            empty-message="No pending approvals"
+          />
+        </div>
+      </div>
+
+      <!-- Audit Logs Widget - Full Width -->
+      <div v-if="showAuditLogs" class="w-full">
+        <DashboardAuditLogsWidget :items="store.data.auditLogs" :loading="store.loading" />
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="!hasAnyWidgets" class="text-center py-16">
+        <div
+          class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6"
+        >
+          <svg
+            class="w-12 h-12 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+            />
+          </svg>
+        </div>
+        <h3 class="text-xl font-semibold text-gray-900 mb-2">No data available</h3>
+        <p class="text-gray-600">
+          Your dashboard will populate once you have applications or permissions to view data.
+        </p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed } from 'vue'
+import { onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/dashboard/store'
 import { useAuthStore } from '@/auth/store'
+import { usePermissions } from '@/common/utils/permissions'
+import { useRolesStore } from '@/common/store/roles'
 import { UiButton } from '@/common/components'
 import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/utils/profile'
-import DashboardStat from '@/dashboard/components/DashboardStat.vue'
-import DashboardRecentApps from '@/dashboard/components/DashboardRecentApps.vue'
-import DashboardApprovals from '@/dashboard/components/DashboardApprovals.vue'
+import DashboardStatCard from '@/dashboard/components/DashboardStatCard.vue'
+import DashboardApplicationsWidget from '@/dashboard/components/DashboardApplicationsWidget.vue'
+import DashboardAuditLogsWidget from '@/dashboard/components/DashboardAuditLogsWidget.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useDashboardStore()
+const rolesStore = useRolesStore()
+const { getUserPermissions } = usePermissions()
 
 const profileStatus = computed(() => checkProfileCompletion(authStore.profile))
 const profileCompletionMessage = computed(() => getProfileCompletionMessage(profileStatus.value))
+
+// Permission-based computed properties
+const permissions = computed(() => getUserPermissions())
+
+const statsToShow = computed(() => {
+  const { applications, users } = permissions.value
+
+  if (applications.readAll) {
+    // Admin view - show admin stats + active users if available
+    const stats = [...store.data.adminStats]
+
+    // Add active users card if user has permission and there are active users
+    if (users.readAll) {
+      stats.push({
+        label: 'Active Users',
+        value: store.data.activeUsersCount,
+        icon: 'mdiAccountGroupOutline',
+        variant: 'info',
+      })
+    }
+
+    return stats
+  } else {
+    // User view - show user stats
+    return store.data.userStats
+  }
+})
+
+const showRecentApplications = computed(() => {
+  // Show for admins (always) or for users with data/loading
+  if (permissions.value.applications.readAll) {
+    return true // Admins always see this widget
+  }
+  return store.data.recentApplications.length > 0 || store.loading
+})
+
+const showPendingApprovals = computed(() => {
+  // Show for admins (always) or for users with data/loading
+  if (permissions.value.applications.readAll) {
+    return true // Admins always see this widget
+  }
+  return store.data.pendingApprovals.length > 0 || store.loading
+})
+
+const showAuditLogs = computed(() => {
+  return permissions.value.auditLogs.read && (store.data.auditLogs.length > 0 || store.loading)
+})
+
+const hasAnyWidgets = computed(() => {
+  return (
+    statsToShow.value.length > 0 ||
+    showRecentApplications.value ||
+    showPendingApprovals.value ||
+    showAuditLogs.value
+  )
+})
 
 function goToProfile() {
   router.push('/profile')
 }
 
-onMounted(() => store.load(authStore.user?.sub))
+// Load dashboard data when profile becomes available
+async function loadDashboardData() {
+  if (authStore.user?.sub && authStore.isAuthenticated && rolesStore.roles.length > 0) {
+    const userPermissions = getUserPermissions()
+    await store.load(authStore.user.sub, userPermissions)
+  }
+}
+
+onMounted(() => {
+  loadDashboardData()
+})
+
+// Watch for profile changes and reload dashboard data
+watch(
+  () => authStore.user?.sub,
+  (newUserId) => {
+    if (newUserId) {
+      loadDashboardData()
+    }
+  },
+  { immediate: true },
+)
+
+// Watch for authentication state changes
+watch(
+  () => authStore.isAuthenticated,
+  (isAuthenticated) => {
+    if (isAuthenticated && authStore.user?.sub) {
+      loadDashboardData()
+    }
+  },
+)
+
+// Watch for roles being loaded
+watch(
+  () => rolesStore.roles.length,
+  (rolesCount) => {
+    if (rolesCount > 0 && authStore.user?.sub && authStore.isAuthenticated) {
+      loadDashboardData()
+    }
+  },
+)
 </script>
