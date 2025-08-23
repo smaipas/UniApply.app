@@ -357,6 +357,31 @@ export declare const FormFieldSchema: z.ZodObject<{
         value: z.ZodString;
     }, z.core.$strict>>]>>;
 }, z.core.$strict>;
+export declare const ApprovalStepType: z.ZodEnum<{
+    USER_GROUP: "USER_GROUP";
+    FIXED_USER: "FIXED_USER";
+    DYNAMIC_USER: "DYNAMIC_USER";
+}>;
+export declare const UserInfoSchema: z.ZodObject<{
+    id: z.ZodString;
+    firstName: z.ZodString;
+    lastName: z.ZodString;
+}, z.core.$strict>;
+export declare const TemplateApprovalStepSchema: z.ZodDiscriminatedUnion<[z.ZodObject<{
+    type: z.ZodLiteral<"USER_GROUP">;
+    role: z.ZodString;
+}, z.core.$strict>, z.ZodObject<{
+    type: z.ZodLiteral<"FIXED_USER">;
+    user: z.ZodObject<{
+        id: z.ZodString;
+        firstName: z.ZodString;
+        lastName: z.ZodString;
+    }, z.core.$strict>;
+}, z.core.$strict>, z.ZodObject<{
+    type: z.ZodLiteral<"DYNAMIC_USER">;
+    role: z.ZodString;
+    label: z.ZodString;
+}, z.core.$strict>], "type">;
 export declare const FormTemplateCreateSchema: z.ZodObject<{
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
@@ -392,9 +417,21 @@ export declare const FormTemplateCreateSchema: z.ZodObject<{
             value: z.ZodString;
         }, z.core.$strict>>]>>;
     }, z.core.$strict>>;
-    approvalSteps: z.ZodArray<z.ZodObject<{
+    approvalSteps: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"USER_GROUP">;
         role: z.ZodString;
-    }, z.core.$strict>>;
+    }, z.core.$strict>, z.ZodObject<{
+        type: z.ZodLiteral<"FIXED_USER">;
+        user: z.ZodObject<{
+            id: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+        }, z.core.$strict>;
+    }, z.core.$strict>, z.ZodObject<{
+        type: z.ZodLiteral<"DYNAMIC_USER">;
+        role: z.ZodString;
+        label: z.ZodString;
+    }, z.core.$strict>], "type">>;
     visibleToRoles: z.ZodArray<z.ZodString>;
     active: z.ZodDefault<z.ZodBoolean>;
 }, z.core.$strict>;
@@ -433,9 +470,21 @@ export declare const FormTemplateUpdateSchema: z.ZodObject<{
             value: z.ZodString;
         }, z.core.$strict>>]>>;
     }, z.core.$strict>>>;
-    approvalSteps: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    approvalSteps: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"USER_GROUP">;
         role: z.ZodString;
-    }, z.core.$strict>>>;
+    }, z.core.$strict>, z.ZodObject<{
+        type: z.ZodLiteral<"FIXED_USER">;
+        user: z.ZodObject<{
+            id: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+        }, z.core.$strict>;
+    }, z.core.$strict>, z.ZodObject<{
+        type: z.ZodLiteral<"DYNAMIC_USER">;
+        role: z.ZodString;
+        label: z.ZodString;
+    }, z.core.$strict>], "type">>>;
     visibleToRoles: z.ZodOptional<z.ZodArray<z.ZodString>>;
     active: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
 }, z.core.$strict>;
@@ -444,10 +493,21 @@ export declare const FormTemplateModelSchema: z.ZodObject<{
     title: z.ZodString;
     description: z.ZodOptional<z.ZodString>;
     fields: z.ZodArray<z.ZodAny>;
-    approvalSteps: z.ZodArray<z.ZodObject<{
+    approvalSteps: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
+        type: z.ZodLiteral<"USER_GROUP">;
         role: z.ZodString;
-        stepOrder: z.ZodNumber;
-    }, z.core.$strict>>;
+    }, z.core.$strict>, z.ZodObject<{
+        type: z.ZodLiteral<"FIXED_USER">;
+        user: z.ZodObject<{
+            id: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+        }, z.core.$strict>;
+    }, z.core.$strict>, z.ZodObject<{
+        type: z.ZodLiteral<"DYNAMIC_USER">;
+        role: z.ZodString;
+        label: z.ZodString;
+    }, z.core.$strict>], "type">>;
     visibleToRoles: z.ZodArray<z.ZodString>;
     active: z.ZodBoolean;
     version: z.ZodNumber;
@@ -455,7 +515,18 @@ export declare const FormTemplateModelSchema: z.ZodObject<{
     updatedAt: z.ZodString;
 }, z.core.$strict>;
 export declare const ApplicationStepSchema: z.ZodObject<{
-    role: z.ZodString;
+    type: z.ZodEnum<{
+        USER_GROUP: "USER_GROUP";
+        FIXED_USER: "FIXED_USER";
+        DYNAMIC_USER: "DYNAMIC_USER";
+    }>;
+    role: z.ZodOptional<z.ZodString>;
+    user: z.ZodOptional<z.ZodObject<{
+        id: z.ZodString;
+        firstName: z.ZodString;
+        lastName: z.ZodString;
+    }, z.core.$strict>>;
+    label: z.ZodOptional<z.ZodString>;
     status: z.ZodEnum<{
         APPROVED: "APPROVED";
         REJECTED: "REJECTED";
@@ -470,9 +541,21 @@ export declare const ApplicationCreateSchema: z.ZodObject<{
     userId: z.ZodString;
     formId: z.ZodString;
     formTitle: z.ZodString;
+    formVersion: z.ZodOptional<z.ZodNumber>;
     fields: z.ZodRecord<z.ZodString, z.ZodAny>;
     approvalSteps: z.ZodArray<z.ZodObject<{
-        role: z.ZodString;
+        type: z.ZodEnum<{
+            USER_GROUP: "USER_GROUP";
+            FIXED_USER: "FIXED_USER";
+            DYNAMIC_USER: "DYNAMIC_USER";
+        }>;
+        role: z.ZodOptional<z.ZodString>;
+        user: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+        }, z.core.$strict>>;
+        label: z.ZodOptional<z.ZodString>;
         status: z.ZodEnum<{
             APPROVED: "APPROVED";
             REJECTED: "REJECTED";
@@ -493,7 +576,18 @@ export declare const ApplicationCreateSchema: z.ZodObject<{
 export declare const ApplicationUpdateSchema: z.ZodObject<{
     fields: z.ZodOptional<z.ZodRecord<z.ZodString, z.ZodAny>>;
     approvalSteps: z.ZodOptional<z.ZodArray<z.ZodObject<{
-        role: z.ZodString;
+        type: z.ZodEnum<{
+            USER_GROUP: "USER_GROUP";
+            FIXED_USER: "FIXED_USER";
+            DYNAMIC_USER: "DYNAMIC_USER";
+        }>;
+        role: z.ZodOptional<z.ZodString>;
+        user: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+        }, z.core.$strict>>;
+        label: z.ZodOptional<z.ZodString>;
         status: z.ZodEnum<{
             APPROVED: "APPROVED";
             REJECTED: "REJECTED";
@@ -519,7 +613,18 @@ export declare const ApplicationModelSchema: z.ZodObject<{
     formVersion: z.ZodNumber;
     fields: z.ZodRecord<z.ZodString, z.ZodAny>;
     approvalSteps: z.ZodArray<z.ZodObject<{
-        role: z.ZodString;
+        type: z.ZodEnum<{
+            USER_GROUP: "USER_GROUP";
+            FIXED_USER: "FIXED_USER";
+            DYNAMIC_USER: "DYNAMIC_USER";
+        }>;
+        role: z.ZodOptional<z.ZodString>;
+        user: z.ZodOptional<z.ZodObject<{
+            id: z.ZodString;
+            firstName: z.ZodString;
+            lastName: z.ZodString;
+        }, z.core.$strict>>;
+        label: z.ZodOptional<z.ZodString>;
         status: z.ZodEnum<{
             APPROVED: "APPROVED";
             REJECTED: "REJECTED";

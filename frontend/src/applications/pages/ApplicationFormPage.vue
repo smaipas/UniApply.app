@@ -118,7 +118,7 @@
             <div class="flex-1 min-w-0">
               <div class="flex items-center justify-between">
                 <div class="text-sm font-medium text-gray-900">
-                  {{ step.role }}
+                  {{ getStepDisplayText(step) }}
                 </div>
                 <div class="text-xs text-gray-500">
                   {{ step.updatedAt ? new Date(step.updatedAt).toLocaleDateString() : 'Pending' }}
@@ -226,6 +226,97 @@
               </label>
               <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
                 {{ authStore.profile?.userOfficialId || 'Not provided' }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Approval Users Section -->
+        <div v-if="dynamicApprovalSteps.length > 0" class="space-y-4">
+          <h2 class="text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2">
+            Approval Assignments
+          </h2>
+
+          <div class="space-y-4">
+            <div
+              v-for="(step, index) in dynamicApprovalSteps"
+              :key="index"
+              class="p-4 border border-gray-200 rounded-lg"
+            >
+              <div class="flex items-center justify-between mb-3">
+                <div>
+                  <h3 class="font-medium text-gray-900">{{ step.label }}</h3>
+                </div>
+              </div>
+
+              <div class="space-y-3">
+                <div v-if="!selectedDynamicUsers[index]">
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    Search for {{ step.label }}
+                  </label>
+                  <UiInput
+                    v-model="dynamicUserQueries[index]"
+                    placeholder="Search by name or email..."
+                    @input="searchDynamicUser(index)"
+                  />
+                </div>
+
+                <div
+                  v-if="dynamicUserResults[index]?.length > 0"
+                  class="max-h-48 overflow-y-auto border rounded-lg"
+                >
+                  <div
+                    v-for="user in dynamicUserResults[index]"
+                    :key="user.id"
+                    class="flex items-center justify-between p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0"
+                    @click="selectDynamicUser(index, user)"
+                  >
+                    <div>
+                      <div class="font-medium">{{ user.firstName }} {{ user.lastName }}</div>
+                      <div class="text-sm text-gray-600">{{ user.email }}</div>
+                    </div>
+                    <UiIcon
+                      :path="mdiCheck"
+                      v-if="selectedDynamicUsers[index]?.id === user.id"
+                      class="text-primary"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  v-if="
+                    dynamicUserQueries[index] &&
+                    dynamicUserResults[index]?.length === 0 &&
+                    !dynamicUserSearching[index]
+                  "
+                  class="text-sm text-gray-500"
+                >
+                  No users found matching "{{ dynamicUserQueries[index] }}"
+                </div>
+
+                <div v-if="dynamicUserSearching[index]" class="text-sm text-gray-500">
+                  Searching...
+                </div>
+
+                <div
+                  v-if="selectedDynamicUsers[index]"
+                  class="p-3 bg-green-50 border border-green-200 rounded-lg"
+                >
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <div class="font-medium text-green-900">
+                        Selected: {{ selectedDynamicUsers[index].firstName }}
+                        {{ selectedDynamicUsers[index].lastName }}
+                      </div>
+                      <div class="text-sm text-green-700">
+                        {{ selectedDynamicUsers[index].email }}
+                      </div>
+                    </div>
+                    <UiButton flat color="red" size="sm" @click="clearDynamicUser(index)">
+                      Change
+                    </UiButton>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -487,6 +578,7 @@ import { usePermissions } from '@/common/utils/permissions'
 
 import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/utils/profile'
 import { getCountryName } from '@/common/utils/countries'
+import { getStepDisplayText } from '@/common/utils/approvalSteps'
 import api from '@/app/axios'
 
 interface FormField {
@@ -510,6 +602,16 @@ interface FormTemplate {
   version?: number
   fields: FormField[]
   active?: boolean
+  approvalSteps?: Array<{
+    type: 'USER_GROUP' | 'FIXED_USER' | 'DYNAMIC_USER'
+    role?: string
+    user?: {
+      id: string
+      firstName: string
+      lastName: string
+    }
+    label?: string
+  }>
 }
 
 interface Application {
@@ -519,7 +621,14 @@ interface Application {
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'
   fields: Record<string, any>
   approvalSteps?: Array<{
-    role: string
+    type: 'USER_GROUP' | 'FIXED_USER' | 'DYNAMIC_USER'
+    role?: string
+    user?: {
+      id: string
+      firstName: string
+      lastName: string
+    }
+    label?: string
     status: string
     statusText?: string
     updatedAt?: string
@@ -550,6 +659,20 @@ const formData = ref<Record<string, any>>({})
 const fieldErrors = ref<Record<string, string>>({})
 const applicationFormRef = ref<HTMLElement | null>(null)
 
+interface User {
+  id: string
+  firstName: string
+  lastName: string
+  email: string
+  role: string
+}
+
+// Dynamic approval functionality
+const dynamicUserQueries = ref<Record<number, string>>({})
+const dynamicUserResults = ref<Record<number, User[]>>({})
+const dynamicUserSearching = ref<Record<number, boolean>>({})
+const selectedDynamicUsers = ref<Record<number, User | null>>({})
+
 const isEditing = computed(() => !!route.params.id)
 const isReadOnly = computed(() => {
   if (!application.value) return false
@@ -570,6 +693,12 @@ const canReject = computed(() => {
 
 const profileStatus = computed(() => checkProfileCompletion(authStore.profile))
 const profileCompletionMessage = computed(() => getProfileCompletionMessage(profileStatus.value))
+
+// Dynamic approval steps from template
+const dynamicApprovalSteps = computed(() => {
+  if (!template.value?.approvalSteps) return []
+  return template.value.approvalSteps.filter((step) => step.type === 'DYNAMIC_USER')
+})
 
 onMounted(async () => {
   // Roles are now loaded by the layout component
@@ -622,6 +751,60 @@ async function loadData() {
   } finally {
     loading.value = false
   }
+}
+
+// Dynamic user search functions
+async function searchDynamicUser(index: number) {
+  const query = dynamicUserQueries.value[index]
+  if (!query || query.length < 2) {
+    dynamicUserResults.value[index] = []
+    return
+  }
+
+  // Get the form ID and step index
+  const formId = template.value?.id
+  if (!formId) {
+    console.error('No form template ID available')
+    dynamicUserResults.value[index] = []
+    return
+  }
+
+  // Find the step index in the original template approval steps
+  const stepIndex =
+    template.value?.approvalSteps?.findIndex(
+      (step) =>
+        step.type === 'DYNAMIC_USER' && step.label === dynamicApprovalSteps.value[index]?.label,
+    ) || 0
+
+  dynamicUserSearching.value[index] = true
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      stepIndex: stepIndex.toString(),
+    })
+    const response = await api.get(`/applications/${formId}/approval-users?${params.toString()}`)
+    dynamicUserResults.value[index] = response.data
+  } catch (error) {
+    console.error('Error searching users:', error)
+    dynamicUserResults.value[index] = []
+  } finally {
+    dynamicUserSearching.value[index] = false
+  }
+}
+
+function selectDynamicUser(
+  index: number,
+  user: { id: string; firstName: string; lastName: string; email: string; role: string },
+) {
+  selectedDynamicUsers.value[index] = user
+  dynamicUserResults.value[index] = []
+  dynamicUserQueries.value[index] = ''
+}
+
+function clearDynamicUser(index: number) {
+  selectedDynamicUsers.value[index] = null
+  dynamicUserQueries.value[index] = ''
+  dynamicUserResults.value[index] = []
 }
 
 function isFieldRequired(field: FormField): boolean {

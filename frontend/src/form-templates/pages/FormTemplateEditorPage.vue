@@ -179,8 +179,7 @@
 
       <UiCard title="Approval steps">
         <label class="mb-5 block text-sm font-medium text-gray-500">
-          Select the user groups that will have to approve the applications created from this
-          template.
+          Configure the approval workflow for applications created from this template.
         </label>
         <div class="space-y-6">
           <div v-for="(s, i) in form.approvalSteps" :key="i" class="relative pl-10">
@@ -197,44 +196,39 @@
             ></div>
 
             <div class="flex items-center gap-3">
-              <template v-if="s.role && editingIndex !== i">
-                <span class="text-sm font-medium text-gray-800">{{ s.role }}</span>
-                <UiButton flat color="red" :icon="mdiClose" size="sm" @click="removeStep(i)" />
-              </template>
-
-              <template v-else-if="editingIndex === i">
-                <UiSelect
-                  class="w-72"
-                  v-model="pendingRole"
-                  :options="availableRoles(i).map((r) => ({ label: r, value: r }))"
-                  placeholder="Select a role…"
-                />
-                <UiButton flat color="red" :icon="mdiClose" size="sm" @click="cancelEdit(i)" />
-                <UiButton
-                  flat
-                  color="green"
-                  :icon="mdiCheck"
-                  size="sm"
-                  :disabled="!pendingRole"
-                  @click="acceptEdit(i)"
-                />
-              </template>
+              <div class="flex-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-medium text-gray-500 uppercase">{{
+                    getStepTypeLabel(s.type)
+                  }}</span>
+                  <span class="text-sm font-medium text-gray-800">
+                    {{ getStepDisplayText(s) }}
+                  </span>
+                </div>
+                <div v-if="s.type === 'DYNAMIC_USER' && s.label" class="text-xs text-gray-600">
+                  Label: {{ s.label }}
+                </div>
+              </div>
+              <UiButton flat color="red" :icon="mdiClose" size="sm" @click="removeStep(i)" />
             </div>
           </div>
 
-          <UiButton
-            color="secondary"
-            :icon="mdiPlus"
-            outline
-            :disabled="!canAddStep"
-            @click="addStep"
+          <UiButton color="secondary" :icon="mdiPlus" outline @click="showApprovalStepModal = true"
             >Add step</UiButton
           >
           <p v-if="approvalStepsError" class="text-sm text-red-600 mt-1">
-            At least one approval group is required
+            At least one approval step is required
           </p>
         </div>
       </UiCard>
+
+      <!-- Approval Step Modal -->
+      <ApprovalStepModal
+        v-model="showApprovalStepModal"
+        :available-roles="roleOptions"
+        :existing-steps="form.approvalSteps"
+        @add="addApprovalStep"
+      />
 
       <UiCard title="Visible to user groups" class="md:col-span-2">
         <label class="mb-5 block text-sm font-medium text-gray-500">
@@ -264,12 +258,14 @@ import { useRoute, useRouter } from 'vue-router'
 import { UiButton } from '@/common/components'
 import { UiInput, UiCard, UiLoadingOverlay } from '@/common/components'
 import api from '@/app/axios'
-import { mdiArrowLeft, mdiFloppy, mdiClose, mdiCheck, mdiPlus } from '@mdi/js'
+import { mdiArrowLeft, mdiFloppy, mdiClose, mdiPlus } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'
 import { useRolesStore } from '@/common/store/roles'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
 import { UiSelect, UiCheckbox } from '@/common/components'
+import ApprovalStepModal from '../components/ApprovalStepModal.vue'
+import { getStepDisplayText, getStepTypeLabel } from '@/common/utils/approvalSteps'
 
 // Extended user type with access permissions
 type UserWithAccess = {
@@ -322,11 +318,22 @@ type TemplateField = {
   options?: string[]
   validationRules?: unknown[]
 }
+interface ApprovalStep {
+  type: 'USER_GROUP' | 'FIXED_USER' | 'DYNAMIC_USER'
+  role?: string
+  user?: {
+    id: string
+    firstName: string
+    lastName: string
+  }
+  label?: string
+}
+
 type TemplateForm = {
   title: string
   description?: string
   fields: TemplateField[]
-  approvalSteps: Array<{ role: string }>
+  approvalSteps: ApprovalStep[]
   visibleToRoles: string[]
   active: boolean
 }
@@ -338,11 +345,13 @@ const isEdit = computed(() => !!id.value)
 const saving = ref(false)
 const loading = ref(false)
 const formVersion = ref<number | undefined>()
+const showApprovalStepModal = ref(false)
+
 const form = ref<TemplateForm>({
   title: '',
   description: '',
   fields: [],
-  approvalSteps: [{ role: 'ADMIN' }],
+  approvalSteps: [{ type: 'USER_GROUP', role: 'ADMIN' }],
   visibleToRoles: ['USER', 'ADMIN'],
   active: true,
 })
@@ -427,67 +436,25 @@ function onFieldTypeChange(index: number, newType: string) {
   }
 }
 
-// Inline editor state for approval steps
-const editingIndex = ref<number | null>(null)
-const pendingRole = ref<string>('')
+// Approval step functions
 
-function availableRoles(currentIndex: number): string[] {
-  const used = new Set(
-    form.value.approvalSteps
-      .map((s, idx) => (idx === currentIndex ? '' : s.role))
-      .filter((r): r is string => !!r),
-  )
-  return roleOptions.value.filter((r) => !used.has(r))
+function addApprovalStep(step: ApprovalStep) {
+  form.value.approvalSteps.push(step)
 }
 
-const canAddStep = computed(() => {
-  const used = new Set(form.value.approvalSteps.map((s) => s.role).filter((r): r is string => !!r))
-  return roleOptions.value.some((r) => !used.has(r))
-})
+function removeStep(i: number) {
+  form.value.approvalSteps.splice(i, 1)
+}
 
 function isRoleVisible(role: string): boolean {
   return form.value.visibleToRoles.includes(role)
 }
+
 function toggleVisibleRole(role: string, checked: boolean) {
   const set = new Set(form.value.visibleToRoles)
   if (checked) set.add(role)
   else set.delete(role)
   form.value.visibleToRoles = Array.from(set)
-}
-
-function addStep() {
-  const emptyIdx = form.value.approvalSteps.findIndex((s) => !s.role)
-  if (emptyIdx !== -1) {
-    editingIndex.value = emptyIdx
-    pendingRole.value = ''
-    return
-  }
-  form.value.approvalSteps.push({ role: '' })
-  editingIndex.value = form.value.approvalSteps.length - 1
-  pendingRole.value = ''
-}
-
-function cancelEdit(index: number) {
-  if (editingIndex.value === index && !form.value.approvalSteps[index]?.role) {
-    form.value.approvalSteps.splice(index, 1)
-  }
-  editingIndex.value = null
-  pendingRole.value = ''
-}
-
-function acceptEdit(index: number) {
-  if (!pendingRole.value) return
-  form.value.approvalSteps[index].role = pendingRole.value
-  editingIndex.value = null
-  pendingRole.value = ''
-}
-
-function removeStep(i: number) {
-  form.value.approvalSteps.splice(i, 1)
-  if (editingIndex.value !== null && i === editingIndex.value) {
-    editingIndex.value = null
-    pendingRole.value = ''
-  }
 }
 
 function addField() {
@@ -551,7 +518,22 @@ async function load() {
       title: t.title,
       description: t.description,
       fields: normalizedFields,
-      approvalSteps: t.approvalSteps?.map((s: { role: string }) => ({ role: s.role })) || [],
+      approvalSteps:
+        t.approvalSteps?.map(
+          (s: {
+            role?: string
+            type?: string
+            user?: { id: string; firstName: string; lastName: string }
+            label?: string
+          }) => {
+            // Handle legacy approval steps (just role)
+            if (s.role && !s.type) {
+              return { type: 'USER_GROUP' as const, role: s.role }
+            }
+            // Handle new approval step structure
+            return s as ApprovalStep
+          },
+        ) || [],
       visibleToRoles: t.visibleToRoles || [],
       active: !!t.active,
     }
@@ -619,7 +601,18 @@ const titleError = computed(() =>
 const fieldsError = computed(() => form.value.fields.length === 0)
 
 const approvalStepsError = computed(
-  () => !form.value.approvalSteps.some((s) => String(s.role || '').trim()),
+  () =>
+    !form.value.approvalSteps.some((s) => {
+      switch (s.type) {
+        case 'USER_GROUP':
+        case 'DYNAMIC_USER':
+          return String(s.role || '').trim()
+        case 'FIXED_USER':
+          return s.user && s.user.id
+        default:
+          return false
+      }
+    }),
 )
 
 const visibleRolesError = computed(() => form.value.visibleToRoles.length === 0)

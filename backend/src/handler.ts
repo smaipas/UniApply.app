@@ -1232,10 +1232,45 @@ async function submitApplication(event: APIGatewayProxyEventV2, id: string) {
     return response(404, { message: "Form template not found" });
   }
 
-  // Create approval steps for submission
-  const approvalSteps = [
+  // Create approval steps for submission based on form template
+  const approvalSteps = form.approvalSteps?.map((step: any, index: number) => {
+    const baseStep = {
+      status: "PENDING_APPROVAL",
+      createdAt: nowIso(),
+    };
+
+    switch (step.type) {
+      case "USER_GROUP":
+        return {
+          ...baseStep,
+          type: "USER_GROUP",
+          role: step.role,
+        };
+      case "FIXED_USER":
+        return {
+          ...baseStep,
+          type: "FIXED_USER",
+          user: step.user,
+        };
+      case "DYNAMIC_USER":
+        return {
+          ...baseStep,
+          type: "DYNAMIC_USER",
+          role: step.role,
+          label: step.label,
+        };
+      default:
+        // Fallback for legacy approval steps
+        return {
+          ...baseStep,
+          type: "USER_GROUP",
+          role: step.role || "ADMIN",
+        };
+    }
+  }) || [
     {
-      role: "ADMIN", // This should come from the form template or be configurable
+      type: "USER_GROUP",
+      role: "ADMIN",
       status: "PENDING_APPROVAL",
       createdAt: nowIso(),
     },
@@ -1340,7 +1375,30 @@ async function updateApplicationStatus(
     return response(403, { message: "Forbidden" });
 
   const pendingStep = steps[firstPendingIdx];
-  if ((pendingStep?.role || "").toUpperCase() !== roleName.toUpperCase()) {
+
+  // Check if the current user can approve this step based on the step type
+  let canApprove = false;
+
+  switch (pendingStep?.type) {
+    case "USER_GROUP":
+      canApprove =
+        (pendingStep?.role || "").toUpperCase() === roleName.toUpperCase();
+      break;
+    case "FIXED_USER":
+      canApprove = pendingStep?.user?.id === viewerSub;
+      break;
+    case "DYNAMIC_USER":
+      canApprove =
+        (pendingStep?.role || "").toUpperCase() === roleName.toUpperCase();
+      break;
+    default:
+      // Fallback for legacy approval steps
+      canApprove =
+        (pendingStep?.role || "").toUpperCase() === roleName.toUpperCase();
+      break;
+  }
+
+  if (!canApprove) {
     return response(403, { message: "Forbidden" });
   }
 
@@ -1442,23 +1500,76 @@ async function tryNotifyApprovers(
   formTitle: string
 ) {
   try {
-    const roleName = approvalStep?.role;
-    if (!roleName) return;
+    let emails: string[] = [];
 
-    // Find all users with this role
-    const usersRes = await ddb.send(
-      new ScanCommand({
-        TableName: USERS_TABLE,
-        FilterExpression: "#role = :role",
-        ExpressionAttributeNames: { "#role": "role" },
-        ExpressionAttributeValues: marshall({ ":role": roleName }),
-      })
-    );
+    switch (approvalStep?.type) {
+      case "USER_GROUP":
+        const roleName = approvalStep?.role;
+        if (!roleName) return;
 
-    const users = (usersRes.Items || []).map((item: any) => unmarshall(item));
-    const emails = users
-      .filter((user: any) => user.email && user.active !== false)
-      .map((user: any) => user.email);
+        // Find all users with this role
+        const usersRes = await ddb.send(
+          new ScanCommand({
+            TableName: USERS_TABLE,
+            FilterExpression: "#role = :role",
+            ExpressionAttributeNames: { "#role": "role" },
+            ExpressionAttributeValues: marshall({ ":role": roleName }),
+          })
+        );
+
+        const users = (usersRes.Items || []).map((item: any) =>
+          unmarshall(item)
+        );
+        emails = users
+          .filter((user: any) => user.email && user.active !== false)
+          .map((user: any) => user.email);
+        break;
+
+      case "FIXED_USER":
+        const userId = approvalStep?.user?.id;
+        if (!userId) return;
+
+        // Get the specific user
+        const userRes = await ddb.send(
+          new GetItemCommand({
+            TableName: USERS_TABLE,
+            Key: marshall({ id: userId }),
+          })
+        );
+
+        const user = userRes.Item ? unmarshall(userRes.Item) : null;
+        if (user?.email && user?.active !== false) {
+          emails = [user.email];
+        }
+        break;
+
+      case "DYNAMIC_USER":
+        // For dynamic users, we can't notify them at submission time
+        // as they haven't been specified yet. This will be handled during application creation.
+        return;
+
+      default:
+        // Fallback for legacy approval steps
+        const legacyRoleName = approvalStep?.role;
+        if (!legacyRoleName) return;
+
+        const legacyUsersRes = await ddb.send(
+          new ScanCommand({
+            TableName: USERS_TABLE,
+            FilterExpression: "#role = :role",
+            ExpressionAttributeNames: { "#role": "role" },
+            ExpressionAttributeValues: marshall({ ":role": legacyRoleName }),
+          })
+        );
+
+        const legacyUsers = (legacyUsersRes.Items || []).map((item: any) =>
+          unmarshall(item)
+        );
+        emails = legacyUsers
+          .filter((user: any) => user.email && user.active !== false)
+          .map((user: any) => user.email);
+        break;
+    }
 
     if (emails.length === 0) return;
 
@@ -1598,6 +1709,212 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
         : items.map((r: any) => ({ roleName: r.roleName }));
       return response(200, sanitized);
     }
+
+    // User search for approval steps
+    if (method === "GET" && path === "/users/search") {
+      const viewerSub = requesterSub(event);
+      if (!viewerSub) return response(403, { message: "Forbidden" });
+
+      // Check if user has permission to search users
+      const viewerRes = await ddb.send(
+        new GetItemCommand({
+          TableName: USERS_TABLE,
+          Key: marshall({ id: viewerSub }),
+        })
+      );
+      const viewer = viewerRes.Item
+        ? (unmarshall(viewerRes.Item) as any)
+        : null;
+      const viewerRole = viewer?.role as string | undefined;
+
+      if (viewerRole) {
+        const roleRes = await ddb.send(
+          new GetItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Key: marshall({ roleName: viewerRole }),
+          })
+        );
+        const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+        if (!role?.access?.users?.readAll) {
+          return response(403, { message: "Forbidden" });
+        }
+      }
+
+      const query = event.queryStringParameters?.q || "";
+      const roleFilter = event.queryStringParameters?.role || "";
+
+      if (!query || query.length < 2) {
+        return response(400, {
+          message: "Query must be at least 2 characters",
+        });
+      }
+
+      // Search users by name or email (case insensitive)
+      const usersRes = await ddb.send(
+        new ScanCommand({
+          TableName: USERS_TABLE,
+        })
+      );
+
+      const users = (usersRes.Items || [])
+        .map((item: any) => unmarshall(item))
+        .filter((user: any) => user.active !== false)
+        .filter((user: any) => {
+          // Filter by role if specified
+          if (roleFilter && user.role !== roleFilter) {
+            return false;
+          }
+
+          const queryLower = query.toLowerCase();
+          const firstNameLower = (user.firstName || "").toLowerCase();
+          const lastNameLower = (user.lastName || "").toLowerCase();
+          const emailLower = (user.email || "").toLowerCase();
+
+          return (
+            firstNameLower.includes(queryLower) ||
+            lastNameLower.includes(queryLower) ||
+            emailLower.includes(queryLower)
+          );
+        })
+        .slice(0, 10) // Limit to 10 results
+        .map((user: any) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+        }));
+
+      return response(200, users);
+    }
+
+    // Application approval step user search
+    if (
+      method === "GET" &&
+      path.startsWith("/applications/") &&
+      path.includes("/approval-users")
+    ) {
+      const viewerSub = requesterSub(event);
+      if (!viewerSub) return response(403, { message: "Forbidden" });
+
+      // Extract formId and stepIndex from path
+      const pathParts = path.split("/");
+      const formId = pathParts[2]; // /applications/{formId}/approval-users
+      const stepIndex = parseInt(event.queryStringParameters?.stepIndex || "0");
+      const query = event.queryStringParameters?.q || "";
+
+      if (!formId) {
+        return response(400, { message: "Form ID is required" });
+      }
+
+      if (!query || query.length < 2) {
+        return response(400, {
+          message: "Query must be at least 2 characters",
+        });
+      }
+
+      // Get the form template to check approval steps
+      const formRes = await ddb.send(
+        new GetItemCommand({
+          TableName: FORMS_TABLE,
+          Key: marshall({ id: formId }),
+        })
+      );
+
+      if (!formRes.Item) {
+        return response(404, { message: "Form template not found" });
+      }
+
+      const form = unmarshall(formRes.Item) as any;
+      const approvalSteps = form.approvalSteps || [];
+
+      if (stepIndex < 0 || stepIndex >= approvalSteps.length) {
+        return response(400, { message: "Invalid step index" });
+      }
+
+      const step = approvalSteps[stepIndex];
+
+      // Only allow search for DYNAMIC_USER steps
+      if (step.type !== "DYNAMIC_USER") {
+        return response(400, { message: "Step is not a dynamic user step" });
+      }
+
+      const requiredRole = step.role;
+      if (!requiredRole) {
+        return response(400, { message: "Step does not have a required role" });
+      }
+
+      // Check if user has permission to create applications from this form
+      const viewerRes = await ddb.send(
+        new GetItemCommand({
+          TableName: USERS_TABLE,
+          Key: marshall({ id: viewerSub }),
+        })
+      );
+      const viewer = viewerRes.Item
+        ? (unmarshall(viewerRes.Item) as any)
+        : null;
+      const viewerRole = viewer?.role as string | undefined;
+
+      if (viewerRole) {
+        const roleRes = await ddb.send(
+          new GetItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Key: marshall({ roleName: viewerRole }),
+          })
+        );
+        const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+
+        // Check if user can create applications from this form
+        const canCreateApplications = role?.access?.applications?.create;
+        const canReadAllApplications = role?.access?.applications?.readAll;
+
+        if (!canCreateApplications && !canReadAllApplications) {
+          return response(403, { message: "Forbidden" });
+        }
+
+        // Check if form is visible to user's role
+        const visibleToRoles = form.visibleToRoles || [];
+        if (!visibleToRoles.includes(viewerRole)) {
+          return response(403, { message: "Forbidden" });
+        }
+      }
+
+      // Search users with the required role
+      const usersRes = await ddb.send(
+        new ScanCommand({
+          TableName: USERS_TABLE,
+        })
+      );
+
+      const users = (usersRes.Items || [])
+        .map((item: any) => unmarshall(item))
+        .filter((user: any) => user.active !== false)
+        .filter((user: any) => user.role === requiredRole)
+        .filter((user: any) => {
+          const queryLower = query.toLowerCase();
+          const firstNameLower = (user.firstName || "").toLowerCase();
+          const lastNameLower = (user.lastName || "").toLowerCase();
+          const emailLower = (user.email || "").toLowerCase();
+
+          return (
+            firstNameLower.includes(queryLower) ||
+            lastNameLower.includes(queryLower) ||
+            emailLower.includes(queryLower)
+          );
+        })
+        .slice(0, 10) // Limit to 10 results
+        .map((user: any) => ({
+          id: user.id,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          role: user.role,
+        }));
+
+      return response(200, users);
+    }
+
     {
       const roleName = getPathParam(path, "/roles/");
       if (roleName && method === "GET") {

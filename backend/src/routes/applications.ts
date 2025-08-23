@@ -27,15 +27,61 @@ const ListQuerySchema = z.object({
 const nowIso = () => new Date().toISOString();
 
 function normalizeSteps(input: unknown[]): Application["approvalSteps"] {
-  return (input || []).map((s: any) => ({
-    role: String(s.role),
-    status:
-      s?.status === "APPROVED" || s?.status === "REJECTED"
-        ? s.status
-        : "PENDING_APPROVAL",
-    statusText: typeof s?.statusText === "string" ? s.statusText : "",
-    // updatedAt is optional and will be set when a decision is made
-  }));
+  return (input || []).map((s: any) => {
+    const baseStep = {
+      status:
+        s?.status === "APPROVED" || s?.status === "REJECTED"
+          ? s.status
+          : "PENDING_APPROVAL",
+      statusText: typeof s?.statusText === "string" ? s.statusText : "",
+      updatedAt: s?.updatedAt,
+      updatedById: s?.updatedById,
+      updatedByFullName: s?.updatedByFullName,
+    };
+
+    // Handle new approval step types
+    if (s?.type) {
+      switch (s.type) {
+        case "USER_GROUP":
+          return {
+            ...baseStep,
+            type: "USER_GROUP" as const,
+            role: String(s.role),
+          };
+        case "FIXED_USER":
+          return {
+            ...baseStep,
+            type: "FIXED_USER" as const,
+            user: {
+              id: String(s.user?.id),
+              firstName: String(s.user?.firstName),
+              lastName: String(s.user?.lastName),
+            },
+          };
+        case "DYNAMIC_USER":
+          return {
+            ...baseStep,
+            type: "DYNAMIC_USER" as const,
+            role: String(s.role),
+            label: String(s.label),
+          };
+        default:
+          // Fallback for unknown types
+          return {
+            ...baseStep,
+            type: "USER_GROUP" as const,
+            role: String(s.role || "ADMIN"),
+          };
+      }
+    }
+
+    // Fallback for legacy approval steps (no type field)
+    return {
+      ...baseStep,
+      type: "USER_GROUP" as const,
+      role: String(s.role || "ADMIN"),
+    };
+  });
 }
 
 function diff<T extends Record<string, unknown>>(before: T, after: T) {
@@ -109,6 +155,8 @@ router.post("/", async (req, res) => {
     id: uuid(), // <-- always server-generated (fixes d.id error)
     userId: d.userId,
     formId: d.formId,
+    formTitle: d.formTitle,
+    formVersion: d.formVersion || 1,
     fields: d.fields || {},
     approvalSteps: d.approvalSteps,
     status: "DRAFT",

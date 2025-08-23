@@ -31,6 +31,7 @@ router.post("/", async (req, res) => {
     })),
     visibleToRoles: d.visibleToRoles || [],
     active: d.active ?? true,
+    version: d.version || 1,
     createdAt: now,
     updatedAt: now,
   };

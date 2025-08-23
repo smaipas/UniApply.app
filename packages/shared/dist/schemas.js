@@ -192,15 +192,52 @@ export const FormFieldSchema = z
     }
 })
     .strict();
+// ========= Approval Steps =========
+// New approval step types for enhanced flexibility
+export const ApprovalStepType = z.enum([
+    "USER_GROUP",
+    "FIXED_USER",
+    "DYNAMIC_USER",
+]);
+// User information for fixed user approval steps
+export const UserInfoSchema = z
+    .object({
+    id: z.string().min(1).max(64),
+    firstName: z.string().min(1).max(64),
+    lastName: z.string().min(1).max(64),
+})
+    .strict();
+// Template approval step schema (for form templates)
+export const TemplateApprovalStepSchema = z.discriminatedUnion("type", [
+    // User group approval (existing functionality)
+    z
+        .object({
+        type: z.literal("USER_GROUP"),
+        role: z.string().min(2).max(64),
+    })
+        .strict(),
+    // Fixed user approval (specific user)
+    z
+        .object({
+        type: z.literal("FIXED_USER"),
+        user: UserInfoSchema,
+    })
+        .strict(),
+    // Dynamic user approval (user-specified during application creation)
+    z
+        .object({
+        type: z.literal("DYNAMIC_USER"),
+        role: z.string().min(2).max(64),
+        label: z.string().min(2).max(128),
+    })
+        .strict(),
+]);
 export const FormTemplateCreateSchema = z
     .object({
     title: z.string().min(2).max(64),
     description: z.string().min(2).max(1024).optional(),
     fields: z.array(FormFieldSchema).min(1).max(200),
-    approvalSteps: z
-        .array(z.object({ role: z.string().min(2).max(64) }).strict())
-        .min(1)
-        .max(10),
+    approvalSteps: z.array(TemplateApprovalStepSchema).min(1).max(10),
     visibleToRoles: z.array(z.string()).min(1).max(50),
     active: z.boolean().default(true),
 })
@@ -214,15 +251,7 @@ export const FormTemplateModelSchema = z
     description: z.string().min(2).max(1024).optional(),
     // We keep fields loosely typed to allow backend/frontend to evolve independently
     fields: z.array(z.any()),
-    approvalSteps: z
-        .array(z
-        .object({
-        role: z.string().min(2).max(64),
-        stepOrder: z.number().int().min(1),
-    })
-        .strict())
-        .min(1)
-        .max(10),
+    approvalSteps: z.array(TemplateApprovalStepSchema).min(1).max(10),
     visibleToRoles: z.array(z.string()).min(1).max(50),
     active: z.boolean(),
     version: z.number().int().min(1),
@@ -231,15 +260,18 @@ export const FormTemplateModelSchema = z
 })
     .strict();
 // ========= Applications =========
-// Application step now allows updatedAt (optional) so your route can set it.
+// Application step schema (for actual applications)
 export const ApplicationStepSchema = z
     .object({
-    role: z.string().min(2).max(64),
+    type: ApprovalStepType,
+    role: z.string().min(2).max(64).optional(), // Required for USER_GROUP and DYNAMIC_USER
+    user: UserInfoSchema.optional(), // Required for FIXED_USER
+    label: z.string().min(2).max(128).optional(), // Required for DYNAMIC_USER
     status: z.enum(["APPROVED", "REJECTED", "PENDING_APPROVAL"]),
     statusText: z.string().max(1024).optional(),
-    updatedAt: z.string().optional(), // <-- added
-    updatedById: z.string().min(1).max(64).optional(), // <-- user ID who made the decision
-    updatedByFullName: z.string().min(1).max(128).optional(), // <-- full name of user who made the decision
+    updatedAt: z.string().optional(),
+    updatedById: z.string().min(1).max(64).optional(),
+    updatedByFullName: z.string().min(1).max(128).optional(),
 })
     .strict();
 // Create / Update DTOs stay the same (they’ll accept steps with/without updatedAt)
@@ -248,6 +280,7 @@ export const ApplicationCreateSchema = z
     userId: z.string().min(1).max(64),
     formId: z.string().min(1).max(64),
     formTitle: z.string().min(1).max(256),
+    formVersion: z.number().int().min(1).optional(),
     fields: z.record(z.string(), z.any()),
     approvalSteps: z.array(ApplicationStepSchema).max(10),
     status: z

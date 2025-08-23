@@ -60,6 +60,7 @@ router.post("/", async (req, res) => {
   };
   const item: RoleModel = {
     roleName: d.roleName!,
+    roleLabel: d.roleLabel || d.roleName!,
     access: { ...defaults, ...(d.access || {}) },
     createdAt: now,
     updatedAt: now,
