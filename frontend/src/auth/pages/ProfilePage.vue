@@ -95,7 +95,7 @@ async function saveProfile(data: any) {
       ...data,
       // Remove empty address fields
       address: Object.fromEntries(
-        Object.entries(data.address).filter(([_, value]) => value && value.trim()),
+        Object.entries(data.address).filter(([, value]) => value && value.trim()),
       ),
     }
 
@@ -128,9 +128,5 @@ function handleCancel() {
   // Navigate to the previous route if available, otherwise go to dashboard
   const previousRoute = (route.query.redirect as string) || '/dashboard'
   router.push(previousRoute)
-}
-
-function resetForm() {
-  loadProfile()
 }
 </script>

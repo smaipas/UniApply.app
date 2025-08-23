@@ -1309,7 +1309,7 @@ async function confirmAction() {
   }
 
   try {
-    const payload: any = { status }
+    const payload: { status: string; comment?: string } = { status }
     if (commentText.value.trim()) {
       payload.comment = commentText.value.trim()
     }

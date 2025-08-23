@@ -75,7 +75,7 @@ const props = defineProps<{
   skeletonRows?: number
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   rowClick: [row: Record<string, any>]
 }>()
 

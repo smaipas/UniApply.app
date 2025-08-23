@@ -333,8 +333,8 @@ const saveRole = async () => {
   if (!activeRole.value) return
   saving.value = true
   try {
-    // Extract only the fields that can be updated (exclude createdAt, updatedAt)
-    const { createdAt, updatedAt, ...updatableFields } = activeRole.value
+    // Extract only the fields that can be updated
+    const updatableFields = activeRole.value
     await axios.put(`/roles/${activeRole.value.roleName}`, updatableFields)
     toastStore.show({
       type: 'success',
