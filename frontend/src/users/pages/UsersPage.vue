@@ -36,18 +36,43 @@
             <template #trigger="{ toggle }">
               <UiButton flat size="md" :icon="mdiDotsVertical" @click="toggle" />
             </template>
-            <UiDropdownItem
-              :label="row.active ? 'Deactivate' : 'Activate'"
-              :icon="row.active ? mdiAccountOff : mdiAccountCheck"
-              :variant="row.active ? 'warning' : 'default'"
-              @click="showToggleStatusModal(row as UserRow)"
-            />
-            <UiDropdownItem
-              label="Delete"
-              :icon="mdiDelete"
-              variant="danger"
-              @click="showDeleteUserModal(row as UserRow)"
-            />
+            <template #default="{ close }">
+              <UiDropdownItem
+                label="Change user group"
+                :icon="mdiAccountGroup"
+                class="cursor-pointer"
+                @click="
+                  () => {
+                    openChangeRoleModal(row as UserRow)
+                    close()
+                  }
+                "
+              />
+              <UiDropdownItem
+                :label="row.active ? 'Deactivate' : 'Activate'"
+                :icon="row.active ? mdiAccountOff : mdiAccountCheck"
+                :variant="row.active ? 'warning' : 'default'"
+                class="cursor-pointer"
+                @click="
+                  () => {
+                    showToggleStatusModal(row as UserRow)
+                    close()
+                  }
+                "
+              />
+              <UiDropdownItem
+                label="Delete"
+                :icon="mdiDelete"
+                variant="danger"
+                class="cursor-pointer"
+                @click="
+                  () => {
+                    showDeleteUserModal(row as UserRow)
+                    close()
+                  }
+                "
+              />
+            </template>
           </UiDropdown>
         </template>
       </UiTable>
@@ -133,16 +158,64 @@
         </div>
       </template>
     </UiModal>
+
+    <!-- Change User Group Modal -->
+    <UiModal v-model="showChangeRoleModal" title="Change User Group" size="sm">
+      <div class="space-y-4">
+        <p class="text-gray-700">
+          Change the user group for <span class="font-semibold">{{ selectedUser?.email }}</span>
+        </p>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Current User Group</label>
+          <div class="text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md">
+            {{ selectedUser?.role || 'No group assigned' }}
+          </div>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">New User Group</label>
+          <UiSelect
+            v-model="newRole"
+            :options="roleOptions"
+            placeholder="Select a user group"
+            class="w-full"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end space-x-3">
+          <UiButton flat @click="showChangeRoleModal = false">Cancel</UiButton>
+          <UiButton :loading="changeRoleLoading" :disabled="!newRole" @click="changeUserRole">
+            Change User Group
+          </UiButton>
+        </div>
+      </template>
+    </UiModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
-import { mdiDotsVertical, mdiAccountOff, mdiAccountCheck, mdiDelete } from '@mdi/js'
-import { UiTable, UiButton, UiModal, UiChip, UiDropdown, UiDropdownItem } from '@/common/components'
+import { onMounted, ref, computed, watch } from 'vue'
+import {
+  mdiDotsVertical,
+  mdiAccountOff,
+  mdiAccountCheck,
+  mdiDelete,
+  mdiAccountGroup,
+} from '@mdi/js'
+import {
+  UiTable,
+  UiButton,
+  UiModal,
+  UiChip,
+  UiDropdown,
+  UiDropdownItem,
+  UiSelect,
+} from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
 import { usePermissions } from '@/common/utils/permissions'
 import { formatDateTime } from '@/common/utils/date'
+import { useRolesStore } from '@/common/store/roles'
+import { useAuthStore } from '@/auth/store'
 import api from '@/app/axios'
 
 type UserRow = {
@@ -159,7 +232,7 @@ const columns = [
   { key: 'email', label: 'Email' },
   { key: 'firstName', label: 'First Name' },
   { key: 'lastName', label: 'Last Name' },
-  { key: 'role', label: 'Role' },
+  { key: 'role', label: 'User Group' },
   { key: 'active', label: 'Status' },
   { key: 'createdAt', label: 'Created' },
   { key: 'actions', label: '' }, // Empty label for actions column
@@ -168,16 +241,29 @@ const columns = [
 const rows = ref<UserRow[]>([])
 const showToggleModal = ref(false)
 const showDeleteModal = ref(false)
+const showChangeRoleModal = ref(false)
 const selectedUser = ref<UserRow | null>(null)
 const toggleLoading = ref(false)
 const deleteLoading = ref(false)
+const changeRoleLoading = ref(false)
+const newRole = ref('')
 const toastStore = useToastStore()
+const authStore = useAuthStore()
+const rolesStore = useRolesStore()
 const { getUserPermissions } = usePermissions()
 
 // Check if user can view users
 const canViewUsers = computed(() => {
   const permissions = getUserPermissions()
   return permissions.users.readAll
+})
+
+// Role options for the dropdown
+const roleOptions = computed(() => {
+  return rolesStore.roles.map((role) => ({
+    value: role.roleName,
+    label: role.roleName,
+  }))
 })
 
 async function fetchUsers() {
@@ -204,6 +290,12 @@ function showToggleStatusModal(user: UserRow) {
 function showDeleteUserModal(user: UserRow) {
   selectedUser.value = user
   showDeleteModal.value = true
+}
+
+function openChangeRoleModal(user: UserRow) {
+  selectedUser.value = user
+  newRole.value = ''
+  showChangeRoleModal.value = true
 }
 
 async function toggleUserStatus() {
@@ -272,5 +364,54 @@ async function deleteUser() {
   }
 }
 
-onMounted(fetchUsers)
+async function changeUserRole() {
+  if (!selectedUser.value || !newRole.value) return
+
+  changeRoleLoading.value = true
+  try {
+    await api.put(`/users/${selectedUser.value.id}`, {
+      role: newRole.value,
+    })
+
+    // Update the user in the local state
+    const userIndex = rows.value.findIndex((u) => u.id === selectedUser.value?.id)
+    if (userIndex !== -1) {
+      rows.value[userIndex].role = newRole.value
+    }
+
+    toastStore.show({
+      tone: 'success',
+      title: 'Success',
+      message: 'User group updated successfully',
+    })
+
+    showChangeRoleModal.value = false
+    selectedUser.value = null
+    newRole.value = ''
+  } catch (error: any) {
+    console.error('Failed to change user role:', error)
+    toastStore.show({
+      tone: 'error',
+      title: 'Error',
+      message: error.response?.data?.message || 'Failed to update user group',
+    })
+  } finally {
+    changeRoleLoading.value = false
+  }
+}
+
+// Watch for authentication and roles to be loaded
+watch(
+  [() => authStore.profile?.role, () => rolesStore.roles.length],
+  ([userRole, rolesCount]) => {
+    if (userRole && rolesCount > 0) {
+      fetchUsers()
+    }
+  },
+  { immediate: true },
+)
+
+onMounted(async () => {
+  await rolesStore.ensureLoaded()
+})
 </script>
