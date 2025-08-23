@@ -75,16 +75,28 @@
               Here's what's happening with your applications today.
             </p>
           </div>
-          <div class="hidden lg:block">
-            <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-              <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                />
-              </svg>
+          <div class="flex items-center gap-4">
+            <UiButton
+              v-if="!permissions.applications.readAll"
+              @click="showTemplateSelector = true"
+              variant="outline"
+              size="lg"
+              class="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:border-white/50"
+            >
+              <UiIcon :path="mdiPlus" class="mr-2" />
+              New Application
+            </UiButton>
+            <div class="hidden lg:block">
+              <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
+                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -161,27 +173,33 @@
         </p>
       </div>
     </div>
+
+    <!-- Form Template Selector Modal -->
+    <FormTemplateSelector v-model="showTemplateSelector" />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, watch } from 'vue'
+import { onMounted, computed, watch, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/dashboard/store'
 import { useAuthStore } from '@/auth/store'
 import { usePermissions } from '@/common/utils/permissions'
 import { useRolesStore } from '@/common/store/roles'
-import { UiButton } from '@/common/components'
+import { UiButton, UiIcon, FormTemplateSelector } from '@/common/components'
 import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/utils/profile'
 import DashboardStatCard from '@/dashboard/components/DashboardStatCard.vue'
 import DashboardApplicationsWidget from '@/dashboard/components/DashboardApplicationsWidget.vue'
 import DashboardAuditLogsWidget from '@/dashboard/components/DashboardAuditLogsWidget.vue'
+import { mdiPlus } from '@mdi/js'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useDashboardStore()
 const rolesStore = useRolesStore()
 const { getUserPermissions } = usePermissions()
+
+const showTemplateSelector = ref(false)
 
 const profileStatus = computed(() => checkProfileCompletion(authStore.profile))
 const profileCompletionMessage = computed(() => getProfileCompletionMessage(profileStatus.value))
