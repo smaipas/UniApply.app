@@ -1142,6 +1142,11 @@ async function updateApplication(event: APIGatewayProxyEventV2, id: string) {
     ? (unmarshall(res.Attributes) as any)
     : { id, ...prev, ...patch };
 
+  // Check if DYNAMIC_USER steps were assigned users and notify them
+  if (dto.approvalSteps && Array.isArray(dto.approvalSteps)) {
+    await tryNotifyDynamicUsers(next, prev);
+  }
+
   await writeAudit(
     "APPLICATION",
     id,
@@ -1311,6 +1316,9 @@ async function submitApplication(event: APIGatewayProxyEventV2, id: string) {
     await tryNotifyApprovers(id, approvalSteps[0], form.title);
   }
 
+  // Also notify the applicant that their application was submitted
+  await tryNotifyApplicant(id, viewerSub, form.title, "SUBMITTED");
+
   // Log audit
   await writeAudit("APPLICATION", id, viewerSub, "SUBMIT", {
     status: "PENDING_APPROVAL",
@@ -1468,13 +1476,18 @@ async function tryNotifyApplicantDecision(
     const user = u.Item ? (unmarshall(u.Item) as any) : null;
     if (!user?.email) return;
 
-    const subject = `Your application ${applicationId} was ${status}`;
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const appName = process.env.APP_NAME || "UniApply";
+    const subject = `Your application was ${status}`;
     const body = `Hello ${user.firstName ?? ""},
 
-Your application (${applicationId}) has been ${status.toLowerCase()}
+Your application has been ${status.toLowerCase()}
+
+You can view the status of your application by clicking the link below:
+${frontendUrl}/applications/${applicationId}
 
 Regards,
-UniApply`;
+${appName}`;
 
     await ses.send(
       new SendEmailCommand({
@@ -1500,12 +1513,22 @@ async function tryNotifyApprovers(
   formTitle: string
 ) {
   try {
+    console.log(
+      `Attempting to notify approvers for application ${applicationId}, step:`,
+      approvalStep
+    );
+
     let emails: string[] = [];
 
     switch (approvalStep?.type) {
       case "USER_GROUP":
         const roleName = approvalStep?.role;
-        if (!roleName) return;
+        if (!roleName) {
+          console.log("No role name found for USER_GROUP step");
+          return;
+        }
+
+        console.log(`Searching for users with role: ${roleName}`);
 
         // Find all users with this role
         const usersRes = await ddb.send(
@@ -1520,6 +1543,11 @@ async function tryNotifyApprovers(
         const users = (usersRes.Items || []).map((item: any) =>
           unmarshall(item)
         );
+        console.log(
+          `Found ${users.length} users with role ${roleName}:`,
+          users.map((u) => ({ id: u.id, email: u.email, active: u.active }))
+        );
+
         emails = users
           .filter((user: any) => user.email && user.active !== false)
           .map((user: any) => user.email);
@@ -1527,7 +1555,12 @@ async function tryNotifyApprovers(
 
       case "FIXED_USER":
         const userId = approvalStep?.user?.id;
-        if (!userId) return;
+        if (!userId) {
+          console.log("No user ID found for FIXED_USER step");
+          return;
+        }
+
+        console.log(`Getting user details for ID: ${userId}`);
 
         // Get the specific user
         const userRes = await ddb.send(
@@ -1540,18 +1573,29 @@ async function tryNotifyApprovers(
         const user = userRes.Item ? unmarshall(userRes.Item) : null;
         if (user?.email && user?.active !== false) {
           emails = [user.email];
+          console.log(`Found fixed user: ${user.email}`);
+        } else {
+          console.log(`User not found or inactive: ${userId}`);
         }
         break;
 
       case "DYNAMIC_USER":
         // For dynamic users, we can't notify them at submission time
         // as they haven't been specified yet. This will be handled during application creation.
+        console.log(
+          "DYNAMIC_USER step - skipping notification at submission time"
+        );
         return;
 
       default:
         // Fallback for legacy approval steps
         const legacyRoleName = approvalStep?.role;
-        if (!legacyRoleName) return;
+        if (!legacyRoleName) {
+          console.log("No role name found for legacy step");
+          return;
+        }
+
+        console.log(`Searching for users with legacy role: ${legacyRoleName}`);
 
         const legacyUsersRes = await ddb.send(
           new ScanCommand({
@@ -1571,19 +1615,30 @@ async function tryNotifyApprovers(
         break;
     }
 
-    if (emails.length === 0) return;
+    console.log(`Emails to notify: ${emails.length}`, emails);
 
+    if (emails.length === 0) {
+      console.log("No valid emails found for notification");
+      return;
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const appName = process.env.APP_NAME || "UniApply";
     const subject = `New application requires approval: ${formTitle}`;
     const body = `Hello,
 
-A new application (${applicationId}) for "${formTitle}" requires your approval.
+A new application for "${formTitle}" requires your approval.
 
-Please log in to the system to review and approve/reject this application.
+Please click the link below to review and approve/reject this application:
+${frontendUrl}/applications/${applicationId}
 
 Regards,
-UniApply`;
+${appName}`;
 
-    await ses.send(
+    console.log(`Sending email to ${emails.length} recipients:`, emails);
+    console.log(`From: ${SES_SENDER_EMAIL}`);
+
+    const result = await ses.send(
       new SendEmailCommand({
         FromEmailAddress: SES_SENDER_EMAIL,
         Destination: { ToAddresses: emails },
@@ -1595,8 +1650,174 @@ UniApply`;
         },
       })
     );
-  } catch (e) {
+
+    console.log("Email sent successfully:", result);
+  } catch (e: any) {
     console.error("notify approvers error", e);
+    console.error("Error details:", {
+      message: e?.message,
+      code: e?.code,
+      statusCode: e?.statusCode,
+      requestId: e?.requestId,
+    });
+  }
+}
+
+// Notify applicant about application status changes
+async function tryNotifyApplicant(
+  applicationId: string,
+  applicantId: string,
+  formTitle: string,
+  status: string
+) {
+  try {
+    console.log(
+      `Attempting to notify applicant ${applicantId} about application ${applicationId} status: ${status}`
+    );
+
+    // Get applicant details
+    const userRes = await ddb.send(
+      new GetItemCommand({
+        TableName: USERS_TABLE,
+        Key: marshall({ id: applicantId }),
+      })
+    );
+
+    const user = userRes.Item ? unmarshall(userRes.Item) : null;
+    if (!user?.email || user?.active === false) {
+      console.log(`Applicant not found or inactive: ${applicantId}`);
+      return;
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const appName = process.env.APP_NAME || "UniApply";
+    const subject = `Your application status update: ${formTitle}`;
+    const body = `Hello ${user.firstName || "there"},
+
+Your application for "${formTitle}" has been ${status.toLowerCase()}.
+
+You can view the status of your application by clicking the link below:
+${frontendUrl}/applications/${applicationId}
+
+Regards,
+${appName}`;
+
+    console.log(`Sending status update email to applicant: ${user.email}`);
+
+    const result = await ses.send(
+      new SendEmailCommand({
+        FromEmailAddress: SES_SENDER_EMAIL,
+        Destination: { ToAddresses: [user.email] },
+        Content: {
+          Simple: {
+            Subject: { Data: subject },
+            Body: { Text: { Data: body } },
+          },
+        },
+      })
+    );
+
+    console.log("Applicant notification sent successfully:", result);
+  } catch (e: any) {
+    console.error("notify applicant error", e);
+    console.error("Error details:", {
+      message: e?.message,
+      code: e?.code,
+      statusCode: e?.statusCode,
+      requestId: e?.requestId,
+    });
+  }
+}
+
+// Notify dynamic users when they are assigned to approval steps
+async function tryNotifyDynamicUsers(newApp: any, oldApp: any) {
+  try {
+    console.log("Checking for dynamic user assignments...");
+
+    if (!newApp.approvalSteps || !oldApp.approvalSteps) {
+      console.log("No approval steps to compare");
+      return;
+    }
+
+    const newSteps = Array.isArray(newApp.approvalSteps)
+      ? newApp.approvalSteps
+      : [];
+    const oldSteps = Array.isArray(oldApp.approvalSteps)
+      ? oldApp.approvalSteps
+      : [];
+
+    for (let i = 0; i < newSteps.length; i++) {
+      const newStep = newSteps[i];
+      const oldStep = oldSteps[i];
+
+      // Check if this is a DYNAMIC_USER step that just got assigned a user
+      if (
+        newStep?.type === "DYNAMIC_USER" &&
+        newStep?.user?.id &&
+        (!oldStep?.user?.id || oldStep?.user?.id !== newStep?.user?.id)
+      ) {
+        console.log(
+          `DYNAMIC_USER step ${i} was assigned user: ${newStep.user.id}`
+        );
+
+        // Get the assigned user's email
+        const userRes = await ddb.send(
+          new GetItemCommand({
+            TableName: USERS_TABLE,
+            Key: marshall({ id: newStep.user.id }),
+          })
+        );
+
+        const user = userRes.Item ? unmarshall(userRes.Item) : null;
+        if (!user?.email || user?.active === false) {
+          console.log(
+            `Assigned user not found or inactive: ${newStep.user.id}`
+          );
+          continue;
+        }
+
+        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const appName = process.env.APP_NAME || "UniApply";
+        const subject = `You have been assigned to approve an application: ${newApp.formTitle}`;
+        const body = `Hello ${user.firstName || "there"},
+
+You have been assigned to approve an application for "${newApp.formTitle}".
+
+Please click the link below to review and approve/reject this application:
+${frontendUrl}/applications/${newApp.id}
+
+Regards,
+${appName}`;
+
+        console.log(`Sending assignment notification to: ${user.email}`);
+
+        const result = await ses.send(
+          new SendEmailCommand({
+            FromEmailAddress: SES_SENDER_EMAIL,
+            Destination: { ToAddresses: [user.email] },
+            Content: {
+              Simple: {
+                Subject: { Data: subject },
+                Body: { Text: { Data: body } },
+              },
+            },
+          })
+        );
+
+        console.log(
+          "Dynamic user assignment notification sent successfully:",
+          result
+        );
+      }
+    }
+  } catch (e: any) {
+    console.error("notify dynamic users error", e);
+    console.error("Error details:", {
+      message: e?.message,
+      code: e?.code,
+      statusCode: e?.statusCode,
+      requestId: e?.requestId,
+    });
   }
 }
 
@@ -2528,13 +2749,19 @@ export const notifyStatusChange: APIGatewayProxyHandlerV2 = async (event) => {
       return response(404, { message: "Applicant email not found" });
 
     const finalStatus = status ?? application.status ?? "UPDATED";
-    const subject = `Your application ${applicationId} status update`;
+    const formTitle = application.formTitle || "Application";
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const appName = process.env.APP_NAME || "UniApply";
+    const subject = `Your application status update: ${formTitle}`;
     const bodyText = `Hello ${user.firstName ?? ""},
 
-Your application (${applicationId}) status is now: ${finalStatus}.
+Your application for "${formTitle}" status is now: ${finalStatus}.
+
+You can view the status of your application by clicking the link below:
+${frontendUrl}/applications/${applicationId}
 
 Regards,
-UniApply`;
+${appName}`;
 
     await ses.send(
       new SendEmailCommand({

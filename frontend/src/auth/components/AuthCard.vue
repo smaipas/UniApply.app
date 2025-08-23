@@ -4,7 +4,9 @@
       <!-- Logo header (shown by default, can be hidden via prop) -->
       <div v-if="showLogo" class="mb-6 flex items-center justify-center gap-2">
         <UiLogo :size="logoSize" />
-        <span v-if="showBrandText" class="text-lg font-semibold text-gray-900"> UniApply </span>
+        <span v-if="showBrandText" class="text-lg font-semibold text-gray-900">
+          {{ config.appName }}
+        </span>
       </div>
 
       <!-- Optional custom header slot (overrides logo row if used) -->
@@ -18,6 +20,7 @@
 
 <script setup lang="ts">
 import { UiLogo } from '@/common/components'
+import { config } from '@/common/utils/config'
 
 withDefaults(
   defineProps<{

@@ -47,7 +47,9 @@ provider:
     UPLOADS_BUCKET: { Ref: UploadsBucket }
     USER_POOL_ID: { Ref: CognitoUserPool }
     USER_POOL_CLIENT_ID: { Ref: CognitoUserPoolClient }
-    SES_SENDER_EMAIL: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.com'}
+    SES_SENDER_EMAIL: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}
+    APP_NAME: ${env:APP_NAME, 'UniApply'}
 
   iam:
     role:
@@ -502,7 +504,7 @@ resources:
     SesEmailIdentity:
       Type: AWS::SES::EmailIdentity
       Properties:
-        EmailIdentity: ${env:SES_SENDER_EMAIL}
+        EmailIdentity: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}
 
   Outputs:
     WebBucketName:

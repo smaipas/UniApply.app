@@ -229,7 +229,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755944571636-2025-08-23T10:22:51.636Z/uniapply-app-api.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755949936223-2025-08-23T11:52:16.223Z/uniapply-app-api.zip"
         },
         "Handler": "src/handler.main",
         "Runtime": "nodejs20.x",
@@ -274,6 +274,8 @@
               "Ref": "CognitoUserPoolClient"
             },
             "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "FRONTEND_URL": "http://localhost:5173",
+            "APP_NAME": "UniApply",
             "NODE_OPTIONS": "--enable-source-maps"
           }
         },
@@ -293,7 +295,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755944571636-2025-08-23T10:22:51.636Z/uniapply-app-presignUpload.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755949936223-2025-08-23T11:52:16.223Z/uniapply-app-presignUpload.zip"
         },
         "Handler": "src/handler.presignUpload",
         "Runtime": "nodejs20.x",
@@ -338,6 +340,8 @@
               "Ref": "CognitoUserPoolClient"
             },
             "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "FRONTEND_URL": "http://localhost:5173",
+            "APP_NAME": "UniApply",
             "NODE_OPTIONS": "--enable-source-maps"
           }
         },
@@ -357,7 +361,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755944571636-2025-08-23T10:22:51.636Z/uniapply-app-notifyStatusChange.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755949936223-2025-08-23T11:52:16.223Z/uniapply-app-notifyStatusChange.zip"
         },
         "Handler": "src/handler.notifyStatusChange",
         "Runtime": "nodejs20.x",
@@ -399,6 +403,8 @@
               "Ref": "CognitoUserPoolClient"
             },
             "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "FRONTEND_URL": "http://localhost:5173",
+            "APP_NAME": "UniApply",
             "NODE_OPTIONS": "--enable-source-maps"
           }
         },
@@ -418,7 +424,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755944571636-2025-08-23T10:22:51.636Z/uniapply-app-postConfirmation.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755949936223-2025-08-23T11:52:16.223Z/uniapply-app-postConfirmation.zip"
         },
         "Handler": "src/handler.postConfirmation",
         "Runtime": "nodejs20.x",
@@ -463,6 +469,8 @@
               "Ref": "CognitoUserPoolClient"
             },
             "SES_SENDER_EMAIL": "no-reply@uniapply.app",
+            "FRONTEND_URL": "http://localhost:5173",
+            "APP_NAME": "UniApply",
             "NODE_OPTIONS": "--enable-source-maps"
           }
         },
@@ -477,44 +485,44 @@
         "PostConfirmationLogGroup"
       ]
     },
-    "PresignUploadLambdaVersionEg1wfkKKuw14xMjcZjSkPJMsHuKTp22db2sHDb9JU04": {
-      "Type": "AWS::Lambda::Version",
-      "DeletionPolicy": "Retain",
-      "Properties": {
-        "FunctionName": {
-          "Ref": "PresignUploadLambdaFunction"
-        },
-        "CodeSha256": "dJm6uWY3xNQd4t16bhlWPIQ4gYXYXdWknYdNGtd1JnY="
-      }
-    },
-    "PostConfirmationLambdaVersionAVlssHaShxd4CofO5AcNLm6CLXsYc5N50zcgnlpv9PA": {
+    "PostConfirmationLambdaVersionAVnrfnNm3toyV53sH2vI3Ac07VTmRTzssQP68M5Cks": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "PostConfirmationLambdaFunction"
         },
-        "CodeSha256": "TUB8kAwh4+8ZkabIBPfmDWXTeKMovrLiniJU523HPhw="
+        "CodeSha256": "p6gdXfs6FJOuhi/0jvCzPlJ72Xz9FZS7C52XSsX+fE8="
       }
     },
-    "NotifyStatusChangeLambdaVersionMX7DFbiImmFdmFljsMHFaNCnWtUoPQXlnRkIIE6kPg8": {
+    "PresignUploadLambdaVersionQJErBAcE2qtZiI0WpBDAjQRbhhmEIrBhNmsNhSJlqI": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
-          "Ref": "NotifyStatusChangeLambdaFunction"
+          "Ref": "PresignUploadLambdaFunction"
         },
-        "CodeSha256": "VsgJXI4AxumhUgQ+yAu5Anf7qf8Iwp1tXyZsxOn0LnU="
+        "CodeSha256": "IfCULPlRxQFNLFx97nRojdQGiidPqsK/bNsltFNo70A="
       }
     },
-    "ApiLambdaVersionAQHWsDT8ICSriCPVld7S83aJNCBFKfBCysC42RR6Rto": {
+    "ApiLambdaVersionV5xEtibOOA5bDKGLV65Nh2qLMdaYM8R0vX3LVtiFQY": {
       "Type": "AWS::Lambda::Version",
       "DeletionPolicy": "Retain",
       "Properties": {
         "FunctionName": {
           "Ref": "ApiLambdaFunction"
         },
-        "CodeSha256": "qelxiphrruFbKoVy3D6iQVbod2k0IVHYUov+X5+6/1Y="
+        "CodeSha256": "iCz3L8OI2dfMs7dfHzMf4P+VNyhyLrY5wegWvAjT1PY="
+      }
+    },
+    "NotifyStatusChangeLambdaVersionjGeVi9Lce41egcA4ycHdlIhAQ6T5utoBKIAnVZ4tk": {
+      "Type": "AWS::Lambda::Version",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "FunctionName": {
+          "Ref": "NotifyStatusChangeLambdaFunction"
+        },
+        "CodeSha256": "c4w7Y1QBym8XI1RoE0DA7lgMjlJ6iyI8gBga1ksBD/I="
       }
     },
     "PostConfirmationCustomCognitoUserPool1": {
@@ -637,7 +645,7 @@
       "Properties": {
         "Code": {
           "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-          "S3Key": "serverless/uniapply-app/dev/1755944571636-2025-08-23T10:22:51.636Z/custom-resources.zip"
+          "S3Key": "serverless/uniapply-app/dev/1755949936223-2025-08-23T11:52:16.223Z/custom-resources.zip"
         },
         "FunctionName": "uniapply-app-dev-custom-resource-existing-cup",
         "Handler": "cognito-user-pool/handler.handler",
@@ -1591,40 +1599,40 @@
         "Name": "sls-uniapply-app-dev-ServerlessDeploymentBucketName"
       }
     },
-    "PresignUploadLambdaFunctionQualifiedArn": {
-      "Description": "Current Lambda function version",
-      "Value": {
-        "Ref": "PresignUploadLambdaVersionEg1wfkKKuw14xMjcZjSkPJMsHuKTp22db2sHDb9JU04"
-      },
-      "Export": {
-        "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
-      }
-    },
     "PostConfirmationLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "PostConfirmationLambdaVersionAVlssHaShxd4CofO5AcNLm6CLXsYc5N50zcgnlpv9PA"
+        "Ref": "PostConfirmationLambdaVersionAVnrfnNm3toyV53sH2vI3Ac07VTmRTzssQP68M5Cks"
       },
       "Export": {
         "Name": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
       }
     },
-    "NotifyStatusChangeLambdaFunctionQualifiedArn": {
+    "PresignUploadLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "NotifyStatusChangeLambdaVersionMX7DFbiImmFdmFljsMHFaNCnWtUoPQXlnRkIIE6kPg8"
+        "Ref": "PresignUploadLambdaVersionQJErBAcE2qtZiI0WpBDAjQRbhhmEIrBhNmsNhSJlqI"
       },
       "Export": {
-        "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
+        "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
       }
     },
     "ApiLambdaFunctionQualifiedArn": {
       "Description": "Current Lambda function version",
       "Value": {
-        "Ref": "ApiLambdaVersionAQHWsDT8ICSriCPVld7S83aJNCBFKfBCysC42RR6Rto"
+        "Ref": "ApiLambdaVersionV5xEtibOOA5bDKGLV65Nh2qLMdaYM8R0vX3LVtiFQY"
       },
       "Export": {
         "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
+      }
+    },
+    "NotifyStatusChangeLambdaFunctionQualifiedArn": {
+      "Description": "Current Lambda function version",
+      "Value": {
+        "Ref": "NotifyStatusChangeLambdaVersionjGeVi9Lce41egcA4ycHdlIhAQ6T5utoBKIAnVZ4tk"
+      },
+      "Export": {
+        "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
       }
     },
     "HttpApiId": {

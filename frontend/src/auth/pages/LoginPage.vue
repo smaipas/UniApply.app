@@ -76,7 +76,11 @@ async function submit() {
   loading.value = true
   try {
     await auth.login(state.email, state.password)
-    router.push(auth.redirectAfterLogin ?? '/dashboard')
+
+    // Redirect to stored path or dashboard
+    const redirectPath = auth.redirectAfterLogin || '/dashboard'
+    router.push(redirectPath)
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     error.value = e?.message || 'Login failed'

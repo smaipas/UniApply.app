@@ -11,6 +11,7 @@
 
 <script setup lang="ts">
 import logoUrl from '@/common/assets/images/uniapply-logo.svg'
+import { config } from '@/common/utils/config'
 
 withDefaults(
   defineProps<{
@@ -20,7 +21,7 @@ withDefaults(
   }>(),
   {
     size: 24,
-    alt: 'UniApply',
+    alt: config.appName,
     src: logoUrl,
   },
 )

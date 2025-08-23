@@ -57,7 +57,7 @@
 
     <!-- Footer -->
     <div class="px-5 py-4 text-[11px] text-white/60 border-t border-white/10">
-      © {{ new Date().getFullYear() }} UniApply
+      © {{ new Date().getFullYear() }} {{ config.appName }}
     </div>
   </nav>
 </template>
@@ -67,6 +67,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UiIcon, UiLogo } from '@/common/components'
 import { usePermissions } from '@/common/utils/permissions'
+import { config } from '@/common/utils/config'
 import {
   mdiViewDashboard,
   mdiFileDocumentEdit,
@@ -141,7 +142,7 @@ const visibleSystemItems = computed(() => {
 
 const emit = defineEmits<{ (e: 'navigate'): void }>()
 
-const pageTitle = computed(() => (route.meta?.title as string) || 'UniApply')
+const pageTitle = computed(() => (route.meta?.title as string) || config.appName)
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function go(to: any) {
