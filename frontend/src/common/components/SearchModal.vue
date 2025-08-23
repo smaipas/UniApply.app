@@ -1,5 +1,5 @@
 <template>
-  <UiModal v-model="isOpen" title="Search" size="xl">
+  <UiModal v-model="isOpen" title="Search" size="xl" :close-on-overlay="true">
     <div class="space-y-4">
       <!-- Search Input -->
       <div class="relative">

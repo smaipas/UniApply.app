@@ -71,13 +71,10 @@
       </div>
 
       <div>
-        <label for="dateOfBirth" class="block text-sm font-medium text-gray-700 mb-1">
-          Date of Birth
-        </label>
-        <UiInput
+        <UiDateInput
           id="dateOfBirth"
           v-model="formData.dateOfBirth"
-          type="date"
+          label="Date of Birth"
           :error="errorMessageHandler(v$.dateOfBirth)"
           :disabled="disabled"
           @blur="v$.dateOfBirth.$touch"
@@ -286,7 +283,7 @@ import {
   maxLength,
   helpers,
 } from '@vuelidate/validators'
-import { UiButton, UiInput, UiSelect, UiCountrySelect } from '@/common/components'
+import { UiButton, UiInput, UiSelect, UiCountrySelect, UiDateInput } from '@/common/components'
 import { errorMessageHandler } from '@/common/utils/validation'
 
 interface Address {

@@ -369,11 +369,11 @@
             />
 
             <!-- Date Input -->
-            <UiInput
+            <UiDateInput
               v-else-if="field.inputType === 'DATE'"
               :id="field.name"
               v-model="formData[field.name]"
-              type="date"
+              :label="field.description"
               :disabled="isReadOnly"
               :required="isFieldRequired(field)"
             />
@@ -571,7 +571,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { mdiPrinter, mdiContentSave, mdiSend, mdiTimerSand, mdiCheck, mdiCancel } from '@mdi/js'
-import { UiButton, UiInput, UiCheckbox, StatusChip, UiIcon, UiModal } from '@/common/components'
+import {
+  UiButton,
+  UiInput,
+  UiCheckbox,
+  StatusChip,
+  UiIcon,
+  UiModal,
+  UiDateInput,
+} from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
 import { usePermissions } from '@/common/utils/permissions'

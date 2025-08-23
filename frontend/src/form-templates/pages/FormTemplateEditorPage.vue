@@ -157,17 +157,15 @@
             </div>
 
             <div v-else-if="f.inputType === 'DATE'" class="grid grid-cols-1 md:grid-cols-2 gap-2">
-              <UiInput
+              <UiDateInput
                 label="From date"
-                type="date"
                 :model-value="getDateMin(f)"
-                @update:modelValue="(v) => setMin(f, v || null)"
+                @update:modelValue="(v: string) => setMin(f, v || null)"
               />
-              <UiInput
+              <UiDateInput
                 label="To date"
-                type="date"
                 :model-value="getDateMax(f)"
-                @update:modelValue="(v) => setMax(f, v || null)"
+                @update:modelValue="(v: string) => setMax(f, v || null)"
               />
             </div>
           </div>
@@ -256,7 +254,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UiButton } from '@/common/components'
-import { UiInput, UiCard, UiLoadingOverlay } from '@/common/components'
+import { UiInput, UiCard, UiLoadingOverlay, UiDateInput } from '@/common/components'
 import api from '@/app/axios'
 import { mdiArrowLeft, mdiFloppy, mdiClose, mdiPlus } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'

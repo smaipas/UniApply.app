@@ -41,20 +41,14 @@
             <UiSelect v-model="filters.action" :options="actionOptions" placeholder="All actions" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date From</label>
-            <input
+            <UiDateInput
               v-model="filters.dateFrom"
-              type="date"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              label="Date From"
+              placeholder="Select start date"
             />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Date To</label>
-            <input
-              v-model="filters.dateTo"
-              type="date"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
+            <UiDateInput v-model="filters.dateTo" label="Date To" placeholder="Select end date" />
           </div>
           <div class="flex items-end">
             <UiButton flat @click="clearFilters" class="w-full">Clear Filters</UiButton>
@@ -165,7 +159,7 @@ import { format } from 'date-fns'
 import { useAuthStore } from '@/auth/store'
 import { useToastStore } from '@/common/store/toast'
 import { usePermissions } from '@/common/utils/permissions'
-import { UiButton, UiChip, UiModal, UiSelect, UiTable } from '@/common/components'
+import { UiButton, UiChip, UiModal, UiSelect, UiTable, UiDateInput } from '@/common/components'
 import axios from '@/app/axios'
 
 // Types

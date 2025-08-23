@@ -3,8 +3,9 @@
     <transition name="fade" appear>
       <div
         v-if="modelValue"
-        class="fixed inset-0 z-[1100] bg-black/40"
-        @click="closeOnOverlay ? close() : null"
+        class="fixed inset-0 z-[1100] bg-black/40 cursor-pointer"
+        style="pointer-events: auto; position: fixed; top: 0; left: 0; right: 0; bottom: 0"
+        title="Click to close modal"
       />
     </transition>
 
@@ -14,10 +15,12 @@
         class="fixed inset-0 z-[1101] flex items-center justify-center p-4 md:p-4"
       >
         <div
+          ref="modalRef"
           class="w-full h-full md:h-auto md:rounded-xl bg-white shadow-xl md:max-h-[90vh] flex flex-col"
           :class="sizes[size]"
           role="dialog"
           aria-modal="true"
+          style="pointer-events: auto"
           @click.stop
         >
           <div
@@ -47,7 +50,8 @@
 </template>
 
 <script setup lang="ts">
-import { watch, onUnmounted } from 'vue'
+import { watch, onUnmounted, ref } from 'vue'
+import { onClickOutside } from '@vueuse/core'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
 
@@ -65,9 +69,18 @@ const props = withDefaults(
 )
 const emit = defineEmits<{ (e: 'update:modelValue', v: boolean): void }>()
 
+const modalRef = ref<HTMLElement>()
+
 function close() {
   emit('update:modelValue', false)
 }
+
+// Handle click outside using VueUse
+onClickOutside(modalRef, () => {
+  if (props.closeOnOverlay) {
+    close()
+  }
+})
 
 // Handle escape key
 function handleKeydown(event: KeyboardEvent) {

@@ -37,11 +37,11 @@ export function getStepDisplayText(step: ApprovalStep): string {
 
   switch (step.type) {
     case 'USER_GROUP':
-      return `${typeInfo?.label}: ${step.role}`
+      return `${step.role}`
     case 'FIXED_USER':
-      return `${typeInfo?.label}: ${step.user?.firstName} ${step.user?.lastName}`
+      return `${step.user?.firstName} ${step.user?.lastName}`
     case 'DYNAMIC_USER':
-      return `${typeInfo?.label}: ${step.label} (${step.role})`
+      return `${step.label} (${step.role})`
     default:
       return step.role || 'Unknown'
   }
