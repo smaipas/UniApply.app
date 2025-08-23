@@ -12,7 +12,22 @@
           <UiIcon :path="mdiMenu" />
         </button>
 
-        <UiInput type="search" placeholder="Search…" :icon="mdiMagnify" />
+        <div class="relative">
+          <input
+            type="text"
+            placeholder="Search"
+            class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            @click="openSearch"
+            @keydown="handleKeydown"
+            readonly
+          />
+          <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
+            <UiIcon :path="mdiMagnify" class="w-4 h-4 text-gray-400" />
+          </div>
+          <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
+            <kbd class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{{ osKey }}</kbd>
+          </div>
+        </div>
       </div>
 
       <div class="flex items-center gap-2">
@@ -81,16 +96,20 @@
         </div>
       </template>
     </UiModal>
+
+    <!-- Search Modal -->
+    <SearchModal />
   </header>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { mdiMenu, mdiMagnify, mdiAccount, mdiLogout } from '@mdi/js'
 import { UiIcon, UiModal, UiButton } from '@/common/components'
+import SearchModal from './SearchModal.vue'
 import { useAuthStore } from '@/auth/store'
+import { useSearchStore } from '@/common/store/search'
 import { useRouter } from 'vue-router'
-import { UiInput } from '@/common/components'
 
 withDefaults(defineProps<{ title?: string; showMenuButton?: boolean }>(), {
   showMenuButton: true,
@@ -98,9 +117,20 @@ withDefaults(defineProps<{ title?: string; showMenuButton?: boolean }>(), {
 const emit = defineEmits<{ (e: 'toggle-sidebar'): void }>()
 
 const auth = useAuthStore()
+const searchStore = useSearchStore()
 const router = useRouter()
 const showDropdown = ref(false)
 const showLogoutModal = ref(false)
+
+// OS detection for keyboard shortcuts
+const osKey = computed(() => {
+  const platform = navigator.platform.toLowerCase()
+  if (platform.includes('mac')) {
+    return '⌘.'
+  } else {
+    return 'Ctrl+.'
+  }
+})
 
 // Computed properties for user info
 const fullName = computed(() => {
@@ -135,4 +165,33 @@ function confirmLogout() {
   auth.logout()
   router.push({ name: 'login' })
 }
+
+function openSearch() {
+  searchStore.openSearch()
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  // Ctrl+. (period) to open search
+  if (event.ctrlKey && event.key === '.') {
+    event.preventDefault()
+    openSearch()
+  }
+}
+
+// Global keyboard listener
+function handleGlobalKeydown(event: KeyboardEvent) {
+  // Ctrl+. (period) to open search from anywhere
+  if (event.ctrlKey && event.key === '.' && !searchStore.isOpen) {
+    event.preventDefault()
+    openSearch()
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('keydown', handleGlobalKeydown)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleGlobalKeydown)
+})
 </script>

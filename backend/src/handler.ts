@@ -2462,6 +2462,11 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
         return await submitApplication(event, match[1]);
       }
     }
+    // Global search endpoint
+    if (method === "GET" && path === "/search") {
+      return await globalSearch(event);
+    }
+
     // Applications list with optional status filter
     if (method === "GET" && path === "/applications") {
       const viewerSub = requesterSub(event);
@@ -2839,3 +2844,204 @@ export const postConfirmation: PostConfirmationTriggerHandler = async (
   }
   return event;
 };
+
+async function globalSearch(event: APIGatewayProxyEventV2) {
+  const viewerSub = requesterSub(event);
+  if (!viewerSub) return response(403, { message: "Forbidden" });
+
+  const qs = (event.queryStringParameters || {}) as Record<string, string>;
+  const query = qs.q?.trim();
+
+  if (!query || query.length < 2) {
+    return response(200, { results: [] });
+  }
+
+  // Load viewer role and permissions
+  const viewerRes = await ddb.send(
+    new GetItemCommand({
+      TableName: USERS_TABLE,
+      Key: marshall({ id: viewerSub }),
+    })
+  );
+  const viewer = viewerRes.Item ? (unmarshall(viewerRes.Item) as any) : null;
+  const roleName = viewer?.role as string | undefined;
+
+  if (!roleName) return response(403, { message: "Forbidden" });
+
+  const roleRes = await ddb.send(
+    new GetItemCommand({
+      TableName: process.env.ROLES_TABLE!,
+      Key: marshall({ roleName }),
+    })
+  );
+  const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
+  const permissions = role?.access || {};
+
+  console.log("Search debug:", {
+    viewerSub,
+    roleName,
+    permissions,
+    query,
+  });
+
+  const results: any[] = [];
+  const searchQuery = query.toLowerCase();
+
+  // Search applications - users should always be able to search their own applications
+  console.log("Applications search check:", {
+    hasReadAll: permissions.applications?.readAll,
+    hasReadOwn: permissions.applications?.readOwn,
+    shouldSearch:
+      permissions.applications?.readAll || permissions.applications?.readOwn,
+  });
+
+  // Always allow users to search applications - either all (if readAll) or their own (if readOwn or no explicit permissions)
+  if (
+    permissions.applications?.readAll ||
+    permissions.applications?.readOwn ||
+    true
+  ) {
+    const appsRes = await ddb.send(
+      new ScanCommand({ TableName: APPLICATIONS_TABLE })
+    );
+    const applications = (appsRes.Items || []).map((item: any) =>
+      unmarshall(item)
+    );
+
+    console.log("Found applications:", applications.length);
+
+    const filteredApps = applications.filter((app: any) => {
+      // If user doesn't have readAll, they can only see their own applications
+      if (!permissions.applications?.readAll) {
+        if (app.userId !== viewerSub) {
+          console.log(
+            `Filtering out app ${app.id} - userId: ${app.userId}, viewerSub: ${viewerSub}`
+          );
+          return false;
+        }
+      }
+
+      const matchesSearch =
+        app.formTitle?.toLowerCase().includes(searchQuery) ||
+        app.id?.toLowerCase().includes(searchQuery) ||
+        app.status?.toLowerCase().includes(searchQuery);
+
+      console.log(
+        `App ${app.id} matches search "${searchQuery}":`,
+        matchesSearch,
+        {
+          formTitle: app.formTitle,
+          status: app.status,
+          userId: app.userId,
+        }
+      );
+
+      return matchesSearch;
+    });
+
+    console.log("Filtered applications:", filteredApps.length);
+
+    results.push(
+      ...filteredApps.slice(0, 5).map((app: any) => ({
+        id: app.id,
+        type: "application",
+        title: app.formTitle,
+        subtitle: `Status: ${app.status}`,
+        description: `Application ID: ${app.id}`,
+        url: `/applications/${app.id}`,
+        metadata: { status: app.status, createdAt: app.createdAt },
+      }))
+    );
+  }
+
+  // Search users (only if user has readAll access)
+  if (permissions.users?.readAll) {
+    const usersRes = await ddb.send(
+      new ScanCommand({ TableName: USERS_TABLE })
+    );
+    const users = (usersRes.Items || []).map((item: any) => unmarshall(item));
+
+    const filteredUsers = users.filter((user: any) => {
+      return (
+        user.email?.toLowerCase().includes(searchQuery) ||
+        user.firstName?.toLowerCase().includes(searchQuery) ||
+        user.lastName?.toLowerCase().includes(searchQuery) ||
+        user.role?.toLowerCase().includes(searchQuery)
+      );
+    });
+
+    results.push(
+      ...filteredUsers.slice(0, 5).map((user: any) => ({
+        id: user.id,
+        type: "user",
+        title:
+          `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        subtitle: user.email,
+        description: `Role: ${user.role}`,
+        url: `/users`,
+        metadata: { role: user.role, active: user.active },
+      }))
+    );
+  }
+
+  // Search form templates
+  if (permissions.formTemplates?.readAll) {
+    const formsRes = await ddb.send(
+      new ScanCommand({ TableName: FORMS_TABLE })
+    );
+    const forms = (formsRes.Items || []).map((item: any) => unmarshall(item));
+
+    const filteredForms = forms.filter((form: any) => {
+      return (
+        form.title?.toLowerCase().includes(searchQuery) ||
+        form.description?.toLowerCase().includes(searchQuery)
+      );
+    });
+
+    results.push(
+      ...filteredForms.slice(0, 5).map((form: any) => ({
+        id: form.id,
+        type: "form",
+        title: form.title,
+        subtitle: form.description,
+        description: `Version: ${form.version}`,
+        url: `/form-templates/${form.id}`,
+        metadata: { version: form.version, active: form.active },
+      }))
+    );
+  }
+
+  // Search audit logs (only if user has read access)
+  if (permissions.auditLogs?.read) {
+    const auditRes = await ddb.send(
+      new ScanCommand({ TableName: AUDIT_TABLE })
+    );
+    const audits = (auditRes.Items || []).map((item: any) => unmarshall(item));
+
+    const filteredAudits = audits.filter((audit: any) => {
+      return (
+        audit.action?.toLowerCase().includes(searchQuery) ||
+        audit.resourceType?.toLowerCase().includes(searchQuery) ||
+        audit.userId?.toLowerCase().includes(searchQuery)
+      );
+    });
+
+    results.push(
+      ...filteredAudits.slice(0, 5).map((audit: any) => ({
+        id: audit.id,
+        type: "audit",
+        title: `${audit.action} ${audit.resourceType}`,
+        subtitle: `User: ${audit.userId}`,
+        description: audit.details,
+        url: `/settings/logs`,
+        metadata: {
+          action: audit.action,
+          resourceType: audit.resourceType,
+          timestamp: audit.timestamp,
+        },
+      }))
+    );
+  }
+
+  return response(200, { results });
+}
