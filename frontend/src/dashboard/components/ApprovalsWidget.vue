@@ -7,7 +7,7 @@
       >
     </div>
     <div v-if="!items.length" class="py-8 text-center text-sm text-gray-500">
-      No pending approvals 🎉
+      No pending approvals
     </div>
     <table v-else class="w-full text-sm">
       <thead>

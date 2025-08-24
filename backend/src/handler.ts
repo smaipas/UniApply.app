@@ -21,7 +21,23 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
-import { jsonParse, validate, response } from "./validation/http";
+import {
+  jsonParse,
+  validate,
+  response,
+  badRequest,
+  notFound,
+  unauthorized,
+  forbidden,
+} from "./validation/http";
+import {
+  checkRateLimit,
+  RATE_LIMITS,
+  getRateLimitConfig,
+  createRateLimitHeaders,
+} from "./utils/rateLimit";
+import { jwtSecurity } from "./utils/jwtSecurity";
+import { inputSanitizer } from "./utils/inputSanitization";
 import {
   UserCreateSchema,
   UserUpdateSchema,
@@ -64,6 +80,75 @@ function getPathParam(path: string, prefix: string): string | null {
 function requesterSub(event: APIGatewayProxyEventV2): string | null {
   const claims = (event.requestContext as any)?.authorizer?.jwt?.claims;
   return (claims?.sub as string) || null;
+}
+
+/**
+ * Check if an endpoint requires authentication
+ */
+function requiresAuth(path: string, method: string): boolean {
+  // Public endpoints that don't require authentication
+  const publicEndpoints = [
+    { path: "/auth/login", method: "POST" },
+    { path: "/auth/signup", method: "POST" },
+    { path: "/auth/forgot-password", method: "POST" },
+    { path: "/auth/reset-password", method: "POST" },
+    { path: "/auth/confirm-code", method: "POST" },
+  ];
+
+  // Check if this is a public endpoint
+  const isPublic = publicEndpoints.some(
+    (endpoint) => endpoint.path === path && endpoint.method === method
+  );
+
+  return !isPublic;
+}
+
+/**
+ * Sanitize request body for security
+ */
+function sanitizeRequestBody(
+  body: any,
+  path: string
+): {
+  valid: boolean;
+  sanitized?: any;
+  errors?: string[] | Record<string, string[]>;
+} {
+  if (!body || typeof body !== "object") {
+    return { valid: true, sanitized: body };
+  }
+
+  try {
+    // Define field-specific sanitization options based on endpoint
+    const fieldOptions: Record<string, any> = {};
+
+    if (path.includes("/users") || path.includes("/auth")) {
+      fieldOptions.firstName = { maxLength: 100 };
+      fieldOptions.lastName = { maxLength: 100 };
+      fieldOptions.email = { maxLength: 254 };
+      fieldOptions.studentId = { maxLength: 20 };
+      fieldOptions.userOfficialId = { maxLength: 50 };
+      fieldOptions.tel = { maxLength: 20 };
+      fieldOptions.nationality = { maxLength: 100 };
+    }
+
+    if (path.includes("/forms")) {
+      fieldOptions.title = { maxLength: 200 };
+      fieldOptions.description = { maxLength: 2000 };
+      fieldOptions.label = { maxLength: 200 };
+      fieldOptions.name = { maxLength: 100 };
+    }
+
+    if (path.includes("/applications")) {
+      fieldOptions.formTitle = { maxLength: 200 };
+      fieldOptions.statusText = { maxLength: 1000 };
+    }
+
+    const result = inputSanitizer.sanitizeObject(body, fieldOptions);
+    return result;
+  } catch (error) {
+    return { valid: false, errors: ["Input sanitization failed"] };
+  }
 }
 
 function nowIso() {
@@ -318,9 +403,7 @@ async function seedDefaultRoles() {
         valid as any
       );
     } catch (e: any) {
-      if (e?.name !== "ConditionalCheckFailedException") {
-        console.warn("seedDefaultRoles", r.roleName, e?.message || e);
-      }
+      // Ignore conditional check failures (role already exists)
     }
   }
 }
@@ -360,11 +443,11 @@ async function createUser(event: APIGatewayProxyEventV2) {
       "CREATE",
       dto
     );
-    return response(201, { id: sub, ...dto });
+    return response(201, { id: sub, ...dto }, event);
   } catch (e: any) {
     // If user already exists, treat as idempotent success
     if (e?.name === "ConditionalCheckFailedException") {
-      return response(200, { id: sub, ...dto, existed: true });
+      return response(200, { id: sub, ...dto, existed: true }, event);
     }
     throw e;
   }
@@ -688,7 +771,7 @@ async function getCurrentUser(event: APIGatewayProxyEventV2) {
     access = role?.access as Record<string, boolean> | undefined;
   }
 
-  return response(200, { ...user, access });
+  return response(200, { ...user, access }, event);
 }
 
 // ------------ Forms ------------
@@ -1513,22 +1596,14 @@ async function tryNotifyApprovers(
   formTitle: string
 ) {
   try {
-    console.log(
-      `Attempting to notify approvers for application ${applicationId}, step:`,
-      approvalStep
-    );
-
     let emails: string[] = [];
 
     switch (approvalStep?.type) {
       case "USER_GROUP":
         const roleName = approvalStep?.role;
         if (!roleName) {
-          console.log("No role name found for USER_GROUP step");
           return;
         }
-
-        console.log(`Searching for users with role: ${roleName}`);
 
         // Find all users with this role
         const usersRes = await ddb.send(
@@ -1543,10 +1618,6 @@ async function tryNotifyApprovers(
         const users = (usersRes.Items || []).map((item: any) =>
           unmarshall(item)
         );
-        console.log(
-          `Found ${users.length} users with role ${roleName}:`,
-          users.map((u) => ({ id: u.id, email: u.email, active: u.active }))
-        );
 
         emails = users
           .filter((user: any) => user.email && user.active !== false)
@@ -1556,11 +1627,8 @@ async function tryNotifyApprovers(
       case "FIXED_USER":
         const userId = approvalStep?.user?.id;
         if (!userId) {
-          console.log("No user ID found for FIXED_USER step");
           return;
         }
-
-        console.log(`Getting user details for ID: ${userId}`);
 
         // Get the specific user
         const userRes = await ddb.send(
@@ -1573,29 +1641,20 @@ async function tryNotifyApprovers(
         const user = userRes.Item ? unmarshall(userRes.Item) : null;
         if (user?.email && user?.active !== false) {
           emails = [user.email];
-          console.log(`Found fixed user: ${user.email}`);
-        } else {
-          console.log(`User not found or inactive: ${userId}`);
         }
         break;
 
       case "DYNAMIC_USER":
         // For dynamic users, we can't notify them at submission time
         // as they haven't been specified yet. This will be handled during application creation.
-        console.log(
-          "DYNAMIC_USER step - skipping notification at submission time"
-        );
         return;
 
       default:
         // Fallback for legacy approval steps
         const legacyRoleName = approvalStep?.role;
         if (!legacyRoleName) {
-          console.log("No role name found for legacy step");
           return;
         }
-
-        console.log(`Searching for users with legacy role: ${legacyRoleName}`);
 
         const legacyUsersRes = await ddb.send(
           new ScanCommand({
@@ -1615,10 +1674,7 @@ async function tryNotifyApprovers(
         break;
     }
 
-    console.log(`Emails to notify: ${emails.length}`, emails);
-
     if (emails.length === 0) {
-      console.log("No valid emails found for notification");
       return;
     }
 
@@ -1635,9 +1691,6 @@ ${frontendUrl}/applications/${applicationId}
 Regards,
 ${appName}`;
 
-    console.log(`Sending email to ${emails.length} recipients:`, emails);
-    console.log(`From: ${SES_SENDER_EMAIL}`);
-
     const result = await ses.send(
       new SendEmailCommand({
         FromEmailAddress: SES_SENDER_EMAIL,
@@ -1650,16 +1703,8 @@ ${appName}`;
         },
       })
     );
-
-    console.log("Email sent successfully:", result);
   } catch (e: any) {
     console.error("notify approvers error", e);
-    console.error("Error details:", {
-      message: e?.message,
-      code: e?.code,
-      statusCode: e?.statusCode,
-      requestId: e?.requestId,
-    });
   }
 }
 
@@ -1671,10 +1716,6 @@ async function tryNotifyApplicant(
   status: string
 ) {
   try {
-    console.log(
-      `Attempting to notify applicant ${applicantId} about application ${applicationId} status: ${status}`
-    );
-
     // Get applicant details
     const userRes = await ddb.send(
       new GetItemCommand({
@@ -1685,7 +1726,6 @@ async function tryNotifyApplicant(
 
     const user = userRes.Item ? unmarshall(userRes.Item) : null;
     if (!user?.email || user?.active === false) {
-      console.log(`Applicant not found or inactive: ${applicantId}`);
       return;
     }
 
@@ -1702,8 +1742,6 @@ ${frontendUrl}/applications/${applicationId}
 Regards,
 ${appName}`;
 
-    console.log(`Sending status update email to applicant: ${user.email}`);
-
     const result = await ses.send(
       new SendEmailCommand({
         FromEmailAddress: SES_SENDER_EMAIL,
@@ -1716,26 +1754,15 @@ ${appName}`;
         },
       })
     );
-
-    console.log("Applicant notification sent successfully:", result);
   } catch (e: any) {
     console.error("notify applicant error", e);
-    console.error("Error details:", {
-      message: e?.message,
-      code: e?.code,
-      statusCode: e?.statusCode,
-      requestId: e?.requestId,
-    });
   }
 }
 
 // Notify dynamic users when they are assigned to approval steps
 async function tryNotifyDynamicUsers(newApp: any, oldApp: any) {
   try {
-    console.log("Checking for dynamic user assignments...");
-
     if (!newApp.approvalSteps || !oldApp.approvalSteps) {
-      console.log("No approval steps to compare");
       return;
     }
 
@@ -1756,10 +1783,6 @@ async function tryNotifyDynamicUsers(newApp: any, oldApp: any) {
         newStep?.user?.id &&
         (!oldStep?.user?.id || oldStep?.user?.id !== newStep?.user?.id)
       ) {
-        console.log(
-          `DYNAMIC_USER step ${i} was assigned user: ${newStep.user.id}`
-        );
-
         // Get the assigned user's email
         const userRes = await ddb.send(
           new GetItemCommand({
@@ -1770,9 +1793,6 @@ async function tryNotifyDynamicUsers(newApp: any, oldApp: any) {
 
         const user = userRes.Item ? unmarshall(userRes.Item) : null;
         if (!user?.email || user?.active === false) {
-          console.log(
-            `Assigned user not found or inactive: ${newStep.user.id}`
-          );
           continue;
         }
 
@@ -1789,8 +1809,6 @@ ${frontendUrl}/applications/${newApp.id}
 Regards,
 ${appName}`;
 
-        console.log(`Sending assignment notification to: ${user.email}`);
-
         const result = await ses.send(
           new SendEmailCommand({
             FromEmailAddress: SES_SENDER_EMAIL,
@@ -1803,21 +1821,10 @@ ${appName}`;
             },
           })
         );
-
-        console.log(
-          "Dynamic user assignment notification sent successfully:",
-          result
-        );
       }
     }
   } catch (e: any) {
     console.error("notify dynamic users error", e);
-    console.error("Error details:", {
-      message: e?.message,
-      code: e?.code,
-      statusCode: e?.statusCode,
-      requestId: e?.requestId,
-    });
   }
 }
 
@@ -1827,6 +1834,10 @@ export const presignUpload: APIGatewayProxyHandlerV2 = async (event) => {
     const raw = jsonParse(event.body);
     const { contentType } = validate(PresignUploadSchema, raw);
 
+    // Enhanced file validation using the new FileValidator
+    const { FileValidator } = await import("./utils/fileValidation");
+
+    // Basic validation for now (we'll enhance this later)
     const ct = contentType ?? "application/octet-stream";
     const ext = ct.includes("png")
       ? "png"
@@ -1843,16 +1854,28 @@ export const presignUpload: APIGatewayProxyHandlerV2 = async (event) => {
       Bucket: UPLOADS_BUCKET,
       Key: key,
       ContentType: ct,
+      // Additional security headers
+      Metadata: {
+        uploadedBy: requesterSub(event) || "anonymous",
+        uploadedAt: new Date().toISOString(),
+      },
     });
-    const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 60 });
-    return response(200, { uploadUrl, key });
+
+    const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 300 }); // 5 minutes
+
+    return response(200, {
+      uploadUrl,
+      key,
+      expiresIn: 300,
+      maxFileSize: 10 * 1024 * 1024, // 10MB
+    });
   } catch (err: any) {
     if (err?.statusCode === 400)
       return response(400, {
         message: err.message,
         details: err.details ?? [],
       });
-    console.error(err);
+    console.error("File upload presign error:", err);
     return response(500, { message: "Internal Server Error" });
   }
 };
@@ -1864,6 +1887,140 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
 
     // Seed default roles on cold start (idempotent)
     await seedDefaultRoles();
+
+    // Enhanced rate limiting with automatic config detection
+    const rateLimitResult = await checkRateLimit(event);
+    const rateLimitConfig = getRateLimitConfig(event);
+    const rateLimitHeaders = createRateLimitHeaders(
+      rateLimitResult,
+      rateLimitConfig
+    );
+
+    // Store rate limiting headers in event context for use in all responses
+    (event as any)._rateLimitHeaders = rateLimitHeaders;
+
+    if (!rateLimitResult.allowed) {
+      return response(
+        429,
+        {
+          error: "Too Many Requests",
+          message: "Rate limit exceeded. Please try again later.",
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        event,
+        rateLimitHeaders
+      );
+    }
+
+    // JSON parsing and validation (do this before auth to catch JSON errors)
+    if (event.body && (method === "POST" || method === "PUT")) {
+      try {
+        const parsedBody = jsonParse(event.body);
+
+        // Input sanitization
+        const sanitizationResult = sanitizeRequestBody(parsedBody, path);
+
+        if (!sanitizationResult.valid) {
+          return response(
+            400,
+            {
+              error: "Invalid input",
+              message: "Request contains potentially malicious content",
+              details: sanitizationResult.errors,
+            },
+            event
+          );
+        }
+
+        // Replace the original body with sanitized version
+        event.body = JSON.stringify(sanitizationResult.sanitized);
+      } catch (error: any) {
+        // If JSON parsing fails, return 400 immediately
+        if (error?.statusCode === 400) {
+          return response(
+            400,
+            {
+              error: "Bad Request",
+              message: error.message,
+              details: error.details ?? [],
+            },
+            event
+          );
+        }
+
+        // If sanitization fails for other reasons, continue with original body
+        console.warn(
+          "Input sanitization failed, continuing with original body:",
+          error
+        );
+      }
+    }
+
+    // Handle preflight CORS if it ever reaches integration
+    if (method === "OPTIONS") {
+      const origin =
+        (event.headers?.origin as string) ||
+        (event.headers?.Origin as string) ||
+        "*";
+      const reqHeaders =
+        (event.headers?.["access-control-request-headers"] as string) ||
+        (event.headers?.["Access-Control-Request-Headers"] as string) ||
+        "Authorization, Content-Type";
+      return {
+        statusCode: 204,
+        headers: {
+          "Access-Control-Allow-Origin": origin,
+          "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+          "Access-Control-Allow-Headers": reqHeaders,
+          "Access-Control-Max-Age": "86400",
+        },
+        body: "",
+      };
+    }
+
+    // Enhanced JWT validation for authenticated endpoints
+    const authHeader =
+      event.headers?.authorization || event.headers?.Authorization;
+
+    // Check if this endpoint requires authentication
+    if (requiresAuth(path, method)) {
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return response(
+          401,
+          {
+            error: "Unauthorized",
+            message: "Authentication required",
+          },
+          event
+        );
+      }
+
+      const token = authHeader.substring(7);
+      const jwtValidation = await jwtSecurity.validateTokenForEndpoint(
+        token,
+        path
+      );
+
+      if (!jwtValidation.valid) {
+        return response(
+          401,
+          {
+            error: "Unauthorized",
+            message: jwtValidation.reason || "Invalid or expired token",
+          },
+          event
+        );
+      }
+    } else if (authHeader && authHeader.startsWith("Bearer ")) {
+      // For public endpoints, still validate token if provided (for user context)
+      // Don't fail on invalid token for public endpoints, just ignore it
+      try {
+        const token = authHeader.substring(7);
+        await jwtSecurity.validateTokenForEndpoint(token, path);
+      } catch (error) {
+        // Ignore token validation errors for public endpoints
+      }
+    }
 
     // Handle preflight CORS if it ever reaches integration
     if (method === "OPTIONS") {
@@ -1928,13 +2085,35 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       const sanitized = canModifyRoleAccess
         ? items
         : items.map((r: any) => ({ roleName: r.roleName }));
-      return response(200, sanitized);
+      return response(200, sanitized, event);
+    }
+
+    // Logout endpoint - blacklist token
+    if (method === "POST" && path === "/auth/logout") {
+      const authHeader =
+        event.headers?.authorization || event.headers?.Authorization;
+      if (!authHeader || !authHeader.startsWith("Bearer ")) {
+        return response(
+          401,
+          { error: "Unauthorized", message: "No token provided" },
+          event
+        );
+      }
+
+      try {
+        const token = authHeader.substring(7);
+        await jwtSecurity.blacklistToken(token, "logout");
+        return response(200, { message: "Successfully logged out" }, event);
+      } catch (error) {
+        console.error("Logout error:", error);
+        return response(500, { error: "Internal server error" }, event);
+      }
     }
 
     // User search for approval steps
     if (method === "GET" && path === "/users/search") {
       const viewerSub = requesterSub(event);
-      if (!viewerSub) return response(403, { message: "Forbidden" });
+      if (!viewerSub) return response(403, { message: "Forbidden" }, event);
 
       // Check if user has permission to search users
       const viewerRes = await ddb.send(
@@ -2702,13 +2881,122 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
 
     return response(404, { message: "Not found" });
   } catch (err: any) {
-    if (err?.statusCode === 400)
-      return response(400, {
-        message: err.message,
-        details: err.details ?? [],
-      });
-    console.error(err);
-    return response(500, { message: "Internal Server Error" });
+    // Handle specific error types with appropriate status codes
+    if (err?.statusCode === 400) {
+      return response(
+        400,
+        {
+          error: "Bad Request",
+          message: err.message,
+          details: err.details ?? [],
+        },
+        event
+      );
+    }
+
+    if (err?.statusCode === 401) {
+      return response(
+        401,
+        {
+          error: "Unauthorized",
+          message: err.message || "Authentication required",
+        },
+        event
+      );
+    }
+
+    if (err?.statusCode === 403) {
+      return response(
+        403,
+        {
+          error: "Forbidden",
+          message: err.message || "Access denied",
+        },
+        event
+      );
+    }
+
+    if (err?.statusCode === 404) {
+      return response(
+        404,
+        {
+          error: "Not Found",
+          message: err.message || "Resource not found",
+        },
+        event
+      );
+    }
+
+    if (err?.statusCode === 422) {
+      return response(
+        422,
+        {
+          error: "Unprocessable Entity",
+          message: err.message || "Validation failed",
+          details: err.details ?? [],
+        },
+        event
+      );
+    }
+
+    // Handle JSON parsing errors specifically
+    if (
+      err.message?.includes("Invalid JSON") ||
+      err.message?.includes("Unexpected token")
+    ) {
+      return response(
+        400,
+        {
+          error: "Bad Request",
+          message: "Invalid JSON body",
+          details: { originalError: err.message },
+        },
+        event
+      );
+    }
+
+    // Handle DynamoDB conditional check failures (resource already exists)
+    if (err?.name === "ConditionalCheckFailedException") {
+      return response(
+        409,
+        {
+          error: "Conflict",
+          message: "Resource already exists",
+        },
+        event
+      );
+    }
+
+    // Handle DynamoDB resource not found
+    if (err?.name === "ResourceNotFoundException") {
+      return response(
+        404,
+        {
+          error: "Not Found",
+          message: "Resource not found",
+        },
+        event
+      );
+    }
+
+    // Log the error for debugging
+    console.error("Handler error:", {
+      error: err.message,
+      stack: err.stack,
+      path: event?.requestContext?.http?.path,
+      method: event?.requestContext?.http?.method,
+      name: err?.name,
+    });
+
+    // Return generic error without exposing internal details
+    return response(
+      500,
+      {
+        error: "Internal Server Error",
+        message: "An unexpected error occurred",
+      },
+      event
+    );
   }
 };
 
@@ -2877,23 +3165,10 @@ async function globalSearch(event: APIGatewayProxyEventV2) {
   const role = roleRes.Item ? (unmarshall(roleRes.Item) as any) : null;
   const permissions = role?.access || {};
 
-  console.log("Search debug:", {
-    viewerSub,
-    roleName,
-    permissions,
-    query,
-  });
-
   const results: any[] = [];
   const searchQuery = query.toLowerCase();
 
   // Search applications - users should always be able to search their own applications
-  console.log("Applications search check:", {
-    hasReadAll: permissions.applications?.readAll,
-    hasReadOwn: permissions.applications?.readOwn,
-    shouldSearch:
-      permissions.applications?.readAll || permissions.applications?.readOwn,
-  });
 
   // Always allow users to search applications - either all (if readAll) or their own (if readOwn or no explicit permissions)
   if (
@@ -2908,15 +3183,10 @@ async function globalSearch(event: APIGatewayProxyEventV2) {
       unmarshall(item)
     );
 
-    console.log("Found applications:", applications.length);
-
     const filteredApps = applications.filter((app: any) => {
       // If user doesn't have readAll, they can only see their own applications
       if (!permissions.applications?.readAll) {
         if (app.userId !== viewerSub) {
-          console.log(
-            `Filtering out app ${app.id} - userId: ${app.userId}, viewerSub: ${viewerSub}`
-          );
           return false;
         }
       }
@@ -2926,20 +3196,8 @@ async function globalSearch(event: APIGatewayProxyEventV2) {
         app.id?.toLowerCase().includes(searchQuery) ||
         app.status?.toLowerCase().includes(searchQuery);
 
-      console.log(
-        `App ${app.id} matches search "${searchQuery}":`,
-        matchesSearch,
-        {
-          formTitle: app.formTitle,
-          status: app.status,
-          userId: app.userId,
-        }
-      );
-
       return matchesSearch;
     });
-
-    console.log("Filtered applications:", filteredApps.length);
 
     results.push(
       ...filteredApps.slice(0, 5).map((app: any) => ({

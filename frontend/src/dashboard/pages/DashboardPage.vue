@@ -65,7 +65,7 @@
     <!-- Dashboard content -->
     <div v-else class="space-y-8">
       <!-- Welcome Header -->
-      <div class="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xs p-8 text-white">
+      <div class="bg-gradient-to-r from-sky-900 to-cyan-700 rounded-xs p-8 text-white">
         <div class="flex items-center justify-between">
           <div>
             <h1 class="text-3xl font-bold mb-2">
@@ -108,7 +108,7 @@
         <div class="grid gap-6" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))">
           <DashboardStatCard
             v-for="stat in statsToShow"
-            :key="stat.label"
+            :key="`stat-${stat.label}-${stat.value}`"
             :label="stat.label"
             :value="stat.value"
             :icon="stat.icon"
@@ -123,6 +123,7 @@
         <!-- Recent Applications Widget -->
         <div v-if="showRecentApplications" class="lg:col-span-2">
           <DashboardApplicationsWidget
+            :key="`recent-${store.data.recentApplications.length}-${store.loading}`"
             title="Recent Applications"
             :items="store.data.recentApplications"
             :loading="store.loading"
@@ -134,6 +135,7 @@
         <!-- Pending Approvals Widget -->
         <div v-if="showPendingApprovals" class="lg:col-span-1">
           <DashboardApplicationsWidget
+            :key="`pending-${store.data.pendingApprovals.length}-${store.loading}`"
             title="Pending Approval"
             :items="store.data.pendingApprovals"
             :loading="store.loading"
@@ -145,7 +147,11 @@
 
       <!-- Audit Logs Widget - Full Width -->
       <div v-if="showAuditLogs" class="w-full">
-        <DashboardAuditLogsWidget :items="store.data.auditLogs" :loading="store.loading" />
+        <DashboardAuditLogsWidget
+          :key="`audit-${store.data.auditLogs.length}-${store.loading}`"
+          :items="store.data.auditLogs"
+          :loading="store.loading"
+        />
       </div>
 
       <!-- Empty State -->
@@ -180,13 +186,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, watch, ref } from 'vue'
+import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/dashboard/store'
 import { useAuthStore } from '@/auth/store'
 import { usePermissions } from '@/common/utils/permissions'
-import { useRolesStore } from '@/common/store/roles'
-import { UiButton, UiIcon, FormTemplateSelector } from '@/common/components'
+import { UiButton, UiIcon } from '@/common/components'
+import FormTemplateSelector from '@/form-templates/components/FormTemplateSelector.vue'
 import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/utils/profile'
 import DashboardStatCard from '@/dashboard/components/DashboardStatCard.vue'
 import DashboardApplicationsWidget from '@/dashboard/components/DashboardApplicationsWidget.vue'
@@ -196,7 +202,6 @@ import { mdiPlus } from '@mdi/js'
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useDashboardStore()
-const rolesStore = useRolesStore()
 const { getUserPermissions } = usePermissions()
 
 const showTemplateSelector = ref(false)
@@ -204,7 +209,6 @@ const showTemplateSelector = ref(false)
 const profileStatus = computed(() => checkProfileCompletion(authStore.profile))
 const profileCompletionMessage = computed(() => getProfileCompletionMessage(profileStatus.value))
 
-// Permission-based computed properties
 const permissions = computed(() => getUserPermissions())
 
 const statsToShow = computed(() => {
@@ -236,7 +240,9 @@ const showRecentApplications = computed(() => {
   if (permissions.value.applications.readAll) {
     return true // Admins always see this widget
   }
-  return store.data.recentApplications.length > 0 || store.loading
+  const shouldShow = store.data.recentApplications.length > 0 || store.loading
+
+  return shouldShow
 })
 
 const showPendingApprovals = computed(() => {
@@ -244,66 +250,37 @@ const showPendingApprovals = computed(() => {
   if (permissions.value.applications.readAll) {
     return true // Admins always see this widget
   }
-  return store.data.pendingApprovals.length > 0 || store.loading
+  const shouldShow = store.data.pendingApprovals.length > 0 || store.loading
+
+  return shouldShow
 })
 
 const showAuditLogs = computed(() => {
-  return permissions.value.auditLogs.read && (store.data.auditLogs.length > 0 || store.loading)
+  const shouldShow =
+    permissions.value.auditLogs.read && (store.data.auditLogs.length > 0 || store.loading)
+
+  return shouldShow
 })
 
 const hasAnyWidgets = computed(() => {
-  return (
+  const hasWidgets =
     statsToShow.value.length > 0 ||
     showRecentApplications.value ||
     showPendingApprovals.value ||
     showAuditLogs.value
-  )
+
+  return hasWidgets
 })
 
 function goToProfile() {
   router.push('/profile')
 }
 
-// Load dashboard data when profile becomes available
 async function loadDashboardData() {
-  if (authStore.user?.sub && authStore.isAuthenticated && rolesStore.roles.length > 0) {
-    const userPermissions = getUserPermissions()
-    await store.load(authStore.user.sub, userPermissions)
-  }
+  store.load()
 }
 
 onMounted(() => {
   loadDashboardData()
 })
-
-// Watch for profile changes and reload dashboard data
-watch(
-  () => authStore.user?.sub,
-  (newUserId) => {
-    if (newUserId) {
-      loadDashboardData()
-    }
-  },
-  { immediate: true },
-)
-
-// Watch for authentication state changes
-watch(
-  () => authStore.isAuthenticated,
-  (isAuthenticated) => {
-    if (isAuthenticated && authStore.user?.sub) {
-      loadDashboardData()
-    }
-  },
-)
-
-// Watch for roles being loaded
-watch(
-  () => rolesStore.roles.length,
-  (rolesCount) => {
-    if (rolesCount > 0 && authStore.user?.sub && authStore.isAuthenticated) {
-      loadDashboardData()
-    }
-  },
-)
 </script>

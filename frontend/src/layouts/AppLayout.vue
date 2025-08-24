@@ -24,36 +24,22 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 
 import { AppTopbar, AppSidebar } from '@/common/components'
 import { UiLoadingOverlay } from '@/common/components'
 import { useRolesStore } from '@/common/store/roles'
 import { useAuthStore } from '@/auth/store'
 
-const sidebarOpen = ref(false)
-const isLoadingInitialData = ref(false)
-
 const rolesStore = useRolesStore()
 const authStore = useAuthStore()
 
-// Check if we need to load initial data
-const needsInitialData = computed(() => {
-  return (
-    authStore.isAuthenticated &&
-    (!authStore.profile || !rolesStore.loaded) &&
-    !isLoadingInitialData.value
-  )
-})
+const sidebarOpen = ref(false)
+const isLoadingInitialData = ref(false)
 
-// Load user profile and roles data
 async function loadInitialData() {
-  if (!needsInitialData.value) return
-
   isLoadingInitialData.value = true
-
   try {
-    // Load both profile and roles in parallel
     await Promise.all([authStore.loadProfile(), rolesStore.ensureLoaded()])
   } catch (error) {
     console.error('Failed to load initial data:', error)
@@ -62,11 +48,6 @@ async function loadInitialData() {
   }
 }
 
-onMounted(() => {
-  loadInitialData()
-})
-
-// Watch for authentication changes and load data when user becomes authenticated
 watch(
   () => authStore.isAuthenticated,
   (isAuthenticated) => {
@@ -74,5 +55,6 @@ watch(
       loadInitialData()
     }
   },
+  { immediate: true },
 )
 </script>

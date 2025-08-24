@@ -10,23 +10,31 @@ provider:
 
   httpApi:
     cors:
-      allowedOrigins: ["*"]
+      allowedOrigins:
+        - ${env:FRONTEND_URL, 'http://localhost:5173'}
+        - ${env:PRODUCTION_URL, 'https://uniapply.app'}
+        - ${env:STAGING_URL, 'https://staging.uniapply.app'}
       allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]
-      allowedHeaders: ["*"]
-      allowCredentials: false
+      allowedHeaders:
+        - "Authorization"
+        - "Content-Type"
+        - "X-Requested-With"
+        - "X-API-Key"
+        - "X-Content-Type-Options"
+        - "X-Frame-Options"
+        - "X-XSS-Protection"
+        - "Strict-Transport-Security"
+        - "Content-Security-Policy"
+        - "Referrer-Policy"
+        - "Permissions-Policy"
+        - "X-Permitted-Cross-Domain-Policies"
+        - "x-ratelimit-limit"
+        - "x-ratelimit-remaining"
+        - "x-ratelimit-reset"
+        - "retry-after"
+
+      allowCredentials: true
       maxAge: 86400
-    authorizers:
-      cognitoJwt:
-        identitySource: $request.header.Authorization
-        issuerUrl:
-          Fn::Join:
-            - ""
-            - - "https://cognito-idp."
-              - ${self:provider.region}
-              - ".amazonaws.com/"
-              - { Ref: CognitoUserPool }
-        audience:
-          - { Ref: CognitoUserPoolClient }
 
   logRetentionInDays: 30
   tracing:
@@ -43,6 +51,9 @@ provider:
     APPLICATIONS_TABLE: ${self:service}-applications-${sls:stage}
     ROLES_TABLE: ${self:service}-roles-${sls:stage}
     AUDIT_TABLE: ${self:service}-audit-${sls:stage}
+    RATE_LIMIT_TABLE: ${self:service}-rate-limits-${sls:stage}
+    TOKEN_BLACKLIST_TABLE: ${self:service}-token-blacklist-${sls:stage}
+    SECURITY_EVENTS_TABLE: ${self:service}-security-events-${sls:stage}
     WEB_BUCKET: { Ref: WebBucket }
     UPLOADS_BUCKET: { Ref: UploadsBucket }
     USER_POOL_ID: { Ref: CognitoUserPool }
@@ -71,6 +82,9 @@ provider:
             - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.ROLES_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.AUDIT_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.RATE_LIMIT_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.TOKEN_BLACKLIST_TABLE}
+            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.SECURITY_EVENTS_TABLE}
             - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}/index/*
             - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}/index/*
         - Effect: Allow
@@ -119,6 +133,21 @@ package:
   individually: true
 
 custom:
+  httpApi:
+    responseData:
+      headers:
+        X-Content-Type-Options: nosniff
+        X-Frame-Options: DENY
+        X-XSS-Protection: "1; mode=block"
+        Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+        Content-Security-Policy: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';"
+        Referrer-Policy: "strict-origin-when-cross-origin"
+        Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+        X-Permitted-Cross-Domain-Policies: "none"
+        Cache-Control: "no-store, no-cache, must-revalidate, private"
+        Pragma: "no-cache"
+        Expires: "0"
+        Access-Control-Expose-Headers: "x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset, retry-after"
 
 build:
   esbuild:
@@ -137,22 +166,38 @@ functions:
     timeout: 15
     architecture: arm64
     events:
+      # Auth endpoints (public)
+      - httpApi:
+          path: /auth/login
+          method: POST
+      - httpApi:
+          path: /auth/signup
+          method: POST
+      - httpApi:
+          path: /auth/forgot-password
+          method: POST
+      - httpApi:
+          path: /auth/reset-password
+          method: POST
+      - httpApi:
+          path: /auth/confirm-code
+          method: POST
+      # GET requests with caching
       - httpApi:
           path: /{proxy+}
           method: GET
-          authorizer: cognitoJwt
+      # POST requests (no caching)
       - httpApi:
           path: /{proxy+}
           method: POST
-          authorizer: cognitoJwt
+      # PUT requests (no caching)
       - httpApi:
           path: /{proxy+}
           method: PUT
-          authorizer: cognitoJwt
+      # DELETE requests (no caching)
       - httpApi:
           path: /{proxy+}
           method: DELETE
-          authorizer: cognitoJwt
 
   presignUpload:
     handler: src/handler.presignUpload
@@ -163,7 +208,6 @@ functions:
       - httpApi:
           path: /files/presign
           method: POST
-          authorizer: cognitoJwt
 
   notifyStatusChange:
     handler: src/handler.notifyStatusChange
@@ -267,6 +311,44 @@ resources:
         BillingMode: PAY_PER_REQUEST
         SSESpecification: { SSEEnabled: true }
         PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    RateLimitTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.RATE_LIMIT_TABLE}
+        AttributeDefinitions: [{ AttributeName: key, AttributeType: S }]
+        KeySchema: [{ AttributeName: key, KeyType: HASH }]
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
+      DeletionPolicy: Retain
+      UpdateReplacePolicy: Retain
+
+    SecurityEventsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.SECURITY_EVENTS_TABLE}
+        AttributeDefinitions:
+          - { AttributeName: id, AttributeType: S }
+          - { AttributeName: sourceIP, AttributeType: S }
+          - { AttributeName: timestamp, AttributeType: S }
+        KeySchema: [{ AttributeName: id, KeyType: HASH }]
+        BillingMode: PAY_PER_REQUEST
+        SSESpecification: { SSEEnabled: true }
+        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }
+        GlobalSecondaryIndexes:
+          - IndexName: sourceIP-timestamp-index
+            KeySchema:
+              - { AttributeName: sourceIP, KeyType: HASH }
+              - { AttributeName: timestamp, KeyType: RANGE }
+            Projection: { ProjectionType: ALL }
+        TimeToLiveSpecification:
+          AttributeName: ttl
+          Enabled: true
       DeletionPolicy: Retain
       UpdateReplacePolicy: Retain
 
@@ -473,11 +555,23 @@ resources:
         UsernameAttributes: [email]
         Policies:
           PasswordPolicy:
-            MinimumLength: 8
+            MinimumLength: 12
             RequireLowercase: true
             RequireNumbers: true
-            RequireSymbols: false
+            RequireSymbols: true
             RequireUppercase: true
+            TemporaryPasswordValidityDays: 7
+        MfaConfiguration: "OPTIONAL"
+        AccountRecoverySetting:
+          RecoveryMechanisms:
+            - Name: "verified_email"
+              Priority: 1
+        VerificationMessageTemplate:
+          DefaultEmailOption: "CONFIRM_WITH_CODE"
+        EmailConfiguration:
+          EmailSendingAccount: "COGNITO_DEFAULT"
+        AdminCreateUserConfig:
+          AllowAdminCreateUserOnly: false
 
     CognitoUserPoolClient:
       Type: AWS::Cognito::UserPoolClient
@@ -500,6 +594,13 @@ resources:
         LogoutURLs:
           - ${param:appBaseUrl}
           - ${param:localDevUrl}
+        TokenValidityUnits:
+          AccessToken: hours
+          IdToken: hours
+          RefreshToken: days
+        AccessTokenValidity: 1
+        IdTokenValidity: 1
+        RefreshTokenValidity: 30
 
     SesEmailIdentity:
       Type: AWS::SES::EmailIdentity

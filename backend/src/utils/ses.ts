@@ -1,6 +1,6 @@
-import { SESClient, SendEmailCommand } from "@aws-sdk/client-ses";
+import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
-const ses = new SESClient({});
+const ses = new SESv2Client({ region: process.env.REGION });
 
 export async function sendEmail({
   to,
@@ -13,9 +13,14 @@ export async function sendEmail({
 }) {
   await ses.send(
     new SendEmailCommand({
-      Source: process.env.SES_SENDER_EMAIL!,
+      FromEmailAddress: process.env.SES_SENDER_EMAIL!,
       Destination: { ToAddresses: [to] },
-      Message: { Subject: { Data: subject }, Body: { Html: { Data: body } } },
+      Content: {
+        Simple: {
+          Subject: { Data: subject },
+          Body: { Html: { Data: body } },
+        },
+      },
     })
   );
 }

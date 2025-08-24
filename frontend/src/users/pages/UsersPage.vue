@@ -218,6 +218,12 @@ import { useRolesStore } from '@/common/store/roles'
 import { useAuthStore } from '@/auth/store'
 import api from '@/app/axios'
 
+// Backend error response type
+interface ApiErrorResponse {
+  message: string
+  errors?: unknown
+}
+
 type UserRow = {
   id: string
   email: string
@@ -319,12 +325,16 @@ async function toggleUserStatus() {
 
     showToggleModal.value = false
     selectedUser.value = null
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to toggle user status:', error)
+    const errorMessage =
+      error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: ApiErrorResponse } }).response?.data?.message
+        : 'Failed to update user status'
     toastStore.show({
       tone: 'error',
       title: 'Error',
-      message: error.response?.data?.message || 'Failed to update user status',
+      message: errorMessage,
     })
   } finally {
     toggleLoading.value = false
@@ -352,12 +362,16 @@ async function deleteUser() {
 
     showDeleteModal.value = false
     selectedUser.value = null
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to delete user:', error)
+    const errorMessage =
+      error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: ApiErrorResponse } }).response?.data?.message
+        : 'Failed to delete user'
     toastStore.show({
       tone: 'error',
       title: 'Error',
-      message: error.response?.data?.message || 'Failed to delete user',
+      message: errorMessage,
     })
   } finally {
     deleteLoading.value = false
@@ -388,12 +402,16 @@ async function changeUserRole() {
     showChangeRoleModal.value = false
     selectedUser.value = null
     newRole.value = ''
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Failed to change user role:', error)
+    const errorMessage =
+      error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: ApiErrorResponse } }).response?.data?.message
+        : 'Failed to update user group'
     toastStore.show({
       tone: 'error',
       title: 'Error',
-      message: error.response?.data?.message || 'Failed to update user group',
+      message: errorMessage,
     })
   } finally {
     changeRoleLoading.value = false

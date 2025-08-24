@@ -12,9 +12,7 @@ const ROLES_TABLE = process.env.ROLES_TABLE || `uniapply-app-roles-${STAGE}`;
 
 const ddb = new DynamoDBClient({ region: REGION });
 
-console.log(`Using region: ${REGION}`);
-console.log(`Using stage: ${STAGE}`);
-console.log(`Using roles table: ${ROLES_TABLE}`);
+// Configuration loaded
 
 /**
  * Update role permissions in DynamoDB
@@ -23,8 +21,6 @@ console.log(`Using roles table: ${ROLES_TABLE}`);
  */
 async function updateRolePermissions(roleName, permissions) {
   try {
-    console.log(`Fetching current ${roleName} role...`);
-
     // Get current role
     const getRes = await ddb.send(
       new GetItemCommand({
@@ -39,7 +35,6 @@ async function updateRolePermissions(roleName, permissions) {
     }
 
     const role = unmarshall(getRes.Item);
-    console.log(`Current ${roleName} role:`, role);
 
     // Initialize access object if it doesn't exist
     if (!role.access) {
@@ -52,18 +47,14 @@ async function updateRolePermissions(roleName, permissions) {
       if (role.access[permission] !== value) {
         role.access[permission] = value;
         hasChanges = true;
-        console.log(`  → Setting ${permission}: ${value}`);
       }
     }
 
     if (!hasChanges) {
-      console.log(`✅ ${roleName} role already has the required permissions`);
       return true;
     }
 
     role.updatedAt = new Date().toISOString();
-
-    console.log(`Updated ${roleName} role:`, role);
 
     // Save the updated role
     await ddb.send(
@@ -73,25 +64,20 @@ async function updateRolePermissions(roleName, permissions) {
       })
     );
 
-    console.log(`✅ ${roleName} role updated successfully`);
     return true;
   } catch (error) {
-    console.error(`❌ Error updating ${roleName} role:`, error);
+    console.error(`Error updating ${roleName} role:`, error);
     return false;
   }
 }
 
 // Migration: Add canModifyFormTemplates permission to ADMIN role
 async function migrateAdminRole() {
-  console.log("🚀 Starting ADMIN role migration...");
   const success = await updateRolePermissions("ADMIN", {
     canModifyFormTemplates: true,
   });
 
-  if (success) {
-    console.log("✅ Migration completed successfully");
-  } else {
-    console.log("❌ Migration failed");
+  if (!success) {
     process.exit(1);
   }
 }

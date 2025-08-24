@@ -627,6 +627,7 @@ interface Application {
   formId: string
   userId: string
   status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED'
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   fields: Record<string, any>
   approvalSteps?: Array<{
     type: 'USER_GROUP' | 'FIXED_USER' | 'DYNAMIC_USER'
@@ -663,6 +664,7 @@ const pendingAction = ref<'approve' | 'reject' | null>(null)
 const showSubmissionModal = ref(false)
 const template = ref<FormTemplate | null>(null)
 const application = ref<Application | null>(null)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const formData = ref<Record<string, any>>({})
 const fieldErrors = ref<Record<string, string>>({})
 const applicationFormRef = ref<HTMLElement | null>(null)
@@ -702,14 +704,12 @@ const canReject = computed(() => {
 const profileStatus = computed(() => checkProfileCompletion(authStore.profile))
 const profileCompletionMessage = computed(() => getProfileCompletionMessage(profileStatus.value))
 
-// Dynamic approval steps from template
 const dynamicApprovalSteps = computed(() => {
   if (!template.value?.approvalSteps) return []
   return template.value.approvalSteps.filter((step) => step.type === 'DYNAMIC_USER')
 })
 
 onMounted(async () => {
-  // Roles are now loaded by the layout component
   await loadData()
 })
 
@@ -833,8 +833,6 @@ function validateForm(): boolean {
       fieldErrors.value[field.name] = `${field.label} is required`
       isValid = false
     }
-
-    // Add more validation rules here as needed
   })
 
   return isValid

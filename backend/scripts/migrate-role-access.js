@@ -28,7 +28,6 @@ function migrateAccessStructure(oldAccess) {
 
   // Ensure oldAccess is an object with expected properties
   if (typeof oldAccess !== "object") {
-    console.log(`⚠️  Invalid access structure: ${typeof oldAccess}`);
     return null;
   }
 
@@ -73,11 +72,6 @@ function migrateAccessStructure(oldAccess) {
 }
 
 async function migrateRoles() {
-  console.log("🚀 Starting role access structure migration...");
-  console.log(`📋 Table: ${ROLES_TABLE}`);
-  console.log(`🌍 Region: ${REGION}`);
-  console.log(`📊 Stage: ${STAGE}`);
-
   try {
     // Scan all roles
     const scanResult = await ddb.send(
@@ -87,11 +81,8 @@ async function migrateRoles() {
     );
 
     if (!scanResult.Items || scanResult.Items.length === 0) {
-      console.log("✅ No roles found to migrate");
       return;
     }
-
-    console.log(`📝 Found ${scanResult.Items.length} roles to process`);
 
     let migratedCount = 0;
     let skippedCount = 0;
@@ -101,25 +92,18 @@ async function migrateRoles() {
       try {
         role = unmarshall(item);
       } catch (error) {
-        console.log(`⚠️  Skipping item: Failed to unmarshall role data`);
         continue;
       }
       const oldAccess = role.access;
       const newAccess = migrateAccessStructure(oldAccess);
 
       if (!newAccess) {
-        console.log(
-          `⚠️  Skipping role ${role.roleName}: No access structure found`
-        );
         skippedCount++;
         continue;
       }
 
       // Check if migration is needed
       if (oldAccess.applications || oldAccess.formTemplates) {
-        console.log(
-          `⏭️  Skipping role ${role.roleName}: Already in new format`
-        );
         skippedCount++;
         continue;
       }
@@ -138,20 +122,10 @@ async function migrateRoles() {
         })
       );
 
-      console.log(`✅ Migrated role: ${role.roleName}`);
-      console.log(`   Old: ${Object.keys(oldAccess).join(", ")}`);
-      console.log(
-        `   New: applications, formTemplates, users, auditLogs, systemSettings, roles`
-      );
       migratedCount++;
     }
-
-    console.log("\n📊 Migration Summary:");
-    console.log(`✅ Successfully migrated: ${migratedCount} roles`);
-    console.log(`⏭️  Skipped (already migrated): ${skippedCount} roles`);
-    console.log(`📝 Total processed: ${migratedCount + skippedCount} roles`);
   } catch (error) {
-    console.error("❌ Migration failed:", error);
+    console.error("Migration failed:", error);
     process.exit(1);
   }
 }
@@ -159,10 +133,9 @@ async function migrateRoles() {
 // Run migration
 migrateRoles()
   .then(() => {
-    console.log("🎉 Migration completed successfully!");
     process.exit(0);
   })
   .catch((error) => {
-    console.error("💥 Migration failed:", error);
+    console.error("Migration failed:", error);
     process.exit(1);
   });

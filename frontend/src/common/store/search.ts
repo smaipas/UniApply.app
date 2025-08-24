@@ -44,14 +44,7 @@ export const useSearchStore = defineStore('search', () => {
   })
 
   async function search(searchQuery: string) {
-    console.log('Frontend search debug:', {
-      query: searchQuery,
-      hasSearchableContent: hasSearchableContent.value,
-      permissions: getUserPermissions(),
-    })
-
     if (!searchQuery.trim() || !hasSearchableContent.value) {
-      console.log('Search aborted - no query or no searchable content')
       results.value = []
       return
     }

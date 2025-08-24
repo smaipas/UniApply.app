@@ -75,9 +75,7 @@
           id="dateOfBirth"
           v-model="formData.dateOfBirth"
           label="Date of Birth"
-          :error="errorMessageHandler(v$.dateOfBirth)"
           :disabled="disabled"
-          @blur="v$.dateOfBirth.$touch"
         />
       </div>
 
@@ -88,9 +86,7 @@
           v-model="formData.gender"
           :options="genderOptions"
           placeholder="Select gender"
-          :error="errorMessageHandler(v$.gender)"
           :disabled="disabled"
-          @blur="v$.gender.$touch"
         />
       </div>
 
@@ -102,9 +98,7 @@
           id="nationality"
           v-model="formData.nationality"
           placeholder="Search for your nationality..."
-          :error="errorMessageHandler(v$.nationality)"
           :disabled="disabled"
-          @blur="v$.nationality.$touch"
         />
       </div>
     </div>
@@ -223,9 +217,7 @@
             id="province"
             v-model="formData.address.province"
             placeholder="Enter province or state"
-            :error="errorMessageHandler(v$.address.province)"
             :disabled="disabled"
-            @blur="v$.address.province.$touch"
           />
         </div>
       </div>
@@ -283,6 +275,7 @@ import {
   maxLength,
   helpers,
 } from '@vuelidate/validators'
+import { debounce } from 'lodash-es'
 import { UiButton, UiInput, UiSelect, UiCountrySelect, UiDateInput } from '@/common/components'
 import { errorMessageHandler } from '@/common/utils/validation'
 
@@ -306,7 +299,7 @@ interface FormData {
   userOfficialId: string
   userOfficialType: string
   address: Address
-  nationality?: string
+  nationality: string
 }
 
 interface FormErrors {
@@ -359,7 +352,14 @@ const formData = ref<FormData>({
   studentId: '',
   userOfficialId: '',
   userOfficialType: '',
-  address: {},
+  address: {
+    street: '',
+    number: '',
+    city: '',
+    province: '',
+    zipCode: '',
+    country: '',
+  },
   nationality: '',
 })
 
@@ -385,12 +385,6 @@ const rules = computed(() => ({
       'Please enter a valid phone number in international format (e.g., +35712345678)',
       helpers.regex(/^\+?[1-9]\d{1,14}$/),
     ),
-  },
-  dateOfBirth: {
-    // Optional field, no validation needed
-  },
-  gender: {
-    // Optional field, no validation needed
   },
   studentId: {
     required: helpers.withMessage('Student ID is required', required),
@@ -420,9 +414,6 @@ const rules = computed(() => ({
     },
     city: {
       required: helpers.withMessage('City is required', required),
-    },
-    province: {
-      // Optional field, no validation needed
     },
     zipCode: {
       required: helpers.withMessage('ZIP/Postal code is required', required),
@@ -490,25 +481,21 @@ watch(
 )
 
 // Emit changes back to parent with debouncing to prevent rapid updates
-let emitTimeout: NodeJS.Timeout | null = null
+const debouncedEmit = debounce((newValue: FormData) => {
+  emit('update:modelValue', newValue)
+}, 100)
+
 watch(
   formData,
   (newValue) => {
-    if (emitTimeout) {
-      clearTimeout(emitTimeout)
-    }
-    emitTimeout = setTimeout(() => {
-      emit('update:modelValue', newValue)
-    }, 100)
+    debouncedEmit(newValue)
   },
   { deep: true },
 )
 
-// Cleanup timeout on component unmount
+// Cleanup debounced function on component unmount
 onUnmounted(() => {
-  if (emitTimeout) {
-    clearTimeout(emitTimeout)
-  }
+  debouncedEmit.cancel()
 })
 
 async function handleSubmit() {
@@ -533,7 +520,14 @@ defineExpose({
       studentId: '',
       userOfficialId: '',
       userOfficialType: '',
-      address: {},
+      address: {
+        street: '',
+        number: '',
+        city: '',
+        province: '',
+        zipCode: '',
+        country: '',
+      },
       nationality: '',
     }
     v$.value.$reset()

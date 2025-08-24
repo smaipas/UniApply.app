@@ -30,7 +30,8 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { UiTable, UiButton, StatusChip, FormTemplateSelector } from '@/common/components'
+import { UiTable, UiButton, StatusChip } from '@/common/components'
+import FormTemplateSelector from '@/form-templates/components/FormTemplateSelector.vue'
 import { formatDateTime } from '@/common/utils/date'
 import api from '@/app/axios'
 import { mdiPlus } from '@mdi/js'

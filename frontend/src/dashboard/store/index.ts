@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import api from '@/app/axios'
 import type { Application } from '@uniapply/shared'
 import type { UserPermissions } from '@/common/utils/permissions'
+import { usePermissions } from '@/common/utils/permissions'
+import { useAuthStore } from '@/auth/store'
 
 type Stat = {
   label: string
@@ -59,8 +61,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = null
   }
 
-  async function load(userId?: string, permissions?: UserPermissions) {
-    if (!userId || !permissions) {
+  async function load() {
+    const authStore = useAuthStore()
+    const { getUserPermissions } = usePermissions()
+
+    const permissions = computed(() => getUserPermissions())
+    const userId = authStore.user?.sub
+    if (!userId || !permissions.value) {
       return
     }
 
@@ -85,25 +92,28 @@ export const useDashboardStore = defineStore('dashboard', () => {
         (b.updatedAt || '').localeCompare(a.updatedAt || ''),
       )
 
-      if (permissions.applications.readAll) {
+      if (permissions.value.applications.readAll) {
         // Admin view - show all data
-        data.value.userStats = []
-        data.value.adminStats = [
-          {
-            label: 'Approved This Month',
-            value: approved.length,
-            icon: 'mdiCheckCircleOutline',
-            variant: 'success',
-          },
-          {
-            label: 'Rejected This Month',
-            value: rejected.length,
-            icon: 'mdiCloseCircleOutline',
-            variant: 'danger',
-          },
-        ]
-        data.value.recentApplications = all.slice(0, 5)
-        data.value.pendingApprovals = pending.slice(0, 5)
+        data.value = {
+          ...data.value,
+          userStats: [],
+          adminStats: [
+            {
+              label: 'Approved This Month',
+              value: approved.length,
+              icon: 'mdiCheckCircleOutline',
+              variant: 'success',
+            },
+            {
+              label: 'Rejected This Month',
+              value: rejected.length,
+              icon: 'mdiCloseCircleOutline',
+              variant: 'danger',
+            },
+          ],
+          recentApplications: all.slice(0, 5),
+          pendingApprovals: pending.slice(0, 5),
+        }
       } else {
         // User view - show only user's data
         const userDraft = draft.filter((a) => a.userId === userId)
@@ -112,57 +122,71 @@ export const useDashboardStore = defineStore('dashboard', () => {
         const userApproved = approved.filter((a) => a.userId === userId)
         const userRejected = rejected.filter((a) => a.userId === userId)
 
-        data.value.userStats = [
-          {
-            label: 'My Drafts',
-            value: userDraft.length,
-            icon: 'mdiFileDocumentOutline',
-            variant: 'primary',
-          },
-          {
-            label: 'Pending',
-            value: userPending.length,
-            icon: 'mdiClockOutline',
-            variant: 'warning',
-          },
-          {
-            label: 'Approved',
-            value: userApproved.length,
-            icon: 'mdiCheckCircleOutline',
-            variant: 'success',
-          },
-          {
-            label: 'Rejected',
-            value: userRejected.length,
-            icon: 'mdiCloseCircleOutline',
-            variant: 'danger',
-          },
-        ]
-        data.value.adminStats = []
-        data.value.recentApplications = userAll.slice(0, 5)
-        data.value.pendingApprovals = userPending.slice(0, 5)
+        data.value = {
+          ...data.value,
+          userStats: [
+            {
+              label: 'My Drafts',
+              value: userDraft.length,
+              icon: 'mdiFileDocumentOutline',
+              variant: 'primary',
+            },
+            {
+              label: 'Pending',
+              value: userPending.length,
+              icon: 'mdiClockOutline',
+              variant: 'warning',
+            },
+            {
+              label: 'Approved',
+              value: userApproved.length,
+              icon: 'mdiCheckCircleOutline',
+              variant: 'success',
+            },
+            {
+              label: 'Rejected',
+              value: userRejected.length,
+              icon: 'mdiCloseCircleOutline',
+              variant: 'danger',
+            },
+          ],
+          adminStats: [],
+          recentApplications: userAll.slice(0, 5),
+          pendingApprovals: userPending.slice(0, 5),
+        }
       }
 
       // Load additional data based on permissions
       const additionalPromises: Promise<any>[] = []
 
       // Load audit logs if user has permission
-      if (permissions.auditLogs.read) {
+      if (permissions.value.auditLogs.read) {
         additionalPromises.push(
           api
             .get('/audit-logs', { params: { limit: 5 } })
-            .then((res) => res.data.items || [])
-            .catch(() => []),
+            .then((res) => {
+              return res.data.items || []
+            })
+            .catch((error) => {
+              console.error('Failed to load audit logs:', error)
+              return []
+            }),
         )
       }
 
       // Load active users count if user has permission
-      if (permissions.users.readAll) {
+      if (permissions.value.users.readAll) {
         additionalPromises.push(
           api
             .get('/users')
-            .then((res) => res.data.filter((user: any) => user.active).length)
-            .catch(() => 0),
+            .then((res) => {
+              const activeCount = res.data.filter((user: any) => user.active).length
+              return activeCount
+            })
+            .catch((error) => {
+              console.error('Failed to load users:', error)
+              return 0
+            }),
         )
       }
 
@@ -171,13 +195,21 @@ export const useDashboardStore = defineStore('dashboard', () => {
         const results = await Promise.all(additionalPromises)
         let resultIndex = 0
 
-        if (permissions.auditLogs.read) {
-          data.value.auditLogs = results[resultIndex] || []
+        const additionalData: Partial<DashboardData> = {}
+
+        if (permissions.value.auditLogs.read) {
+          additionalData.auditLogs = results[resultIndex] || []
           resultIndex++
         }
-        if (permissions.users.readAll) {
-          data.value.activeUsersCount = results[resultIndex] || 0
+        if (permissions.value.users.readAll) {
+          additionalData.activeUsersCount = results[resultIndex] || 0
           resultIndex++
+        }
+
+        // Update data reactively
+        data.value = {
+          ...data.value,
+          ...additionalData,
         }
       }
     } catch (e: any) {

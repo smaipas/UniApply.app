@@ -44,32 +44,20 @@
           >
             <div class="flex-1 min-w-0">
               <div class="flex items-center space-x-3">
-                <div class="flex-shrink-0">
-                  <div
-                    class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center"
-                  >
-                    <span class="text-blue-600 text-sm font-medium">
-                      {{ item.user?.firstName?.[0] || item.user?.lastName?.[0] || '?' }}
-                    </span>
-                  </div>
-                </div>
                 <div class="flex-1 min-w-0">
                   <p class="text-sm font-medium text-gray-900 truncate">
                     {{ item.formTitle }}
                   </p>
-                  <div class="flex items-center space-x-2 mt-1">
-                    <StatusChip :status="item.status" />
-                    <span class="text-xs text-gray-500">
-                      {{ formatDate(item.updatedAt || item.createdAt) }}
-                    </span>
+
+                  <div class="flex items-center space-x-2 mt-1 text-xs text-gray-500">
+                    Applied by {{ `${item.user?.firstName} ${item.user?.lastName}` }} -
+                    {{ formatDate(item.updatedAt || item.createdAt) }}
                   </div>
                 </div>
               </div>
             </div>
             <div class="flex-shrink-0 ml-4">
-              <div
-                class="w-2 h-2 rounded-full bg-gray-300 group-hover:bg-gray-400 transition-colors"
-              ></div>
+              <StatusChip :status="item.status" />
             </div>
           </div>
         </div>

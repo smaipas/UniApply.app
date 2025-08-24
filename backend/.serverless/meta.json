@@ -15,7 +15,9 @@
         "httpApi": {
           "cors": {
             "allowedOrigins": [
-              "*"
+              "http://localhost:5173",
+              "https://uniapply.app",
+              "https://staging.uniapply.app"
             ],
             "allowedMethods": [
               "GET",
@@ -25,33 +27,25 @@
               "OPTIONS"
             ],
             "allowedHeaders": [
-              "*"
+              "Authorization",
+              "Content-Type",
+              "X-Requested-With",
+              "X-API-Key",
+              "X-Content-Type-Options",
+              "X-Frame-Options",
+              "X-XSS-Protection",
+              "Strict-Transport-Security",
+              "Content-Security-Policy",
+              "Referrer-Policy",
+              "Permissions-Policy",
+              "X-Permitted-Cross-Domain-Policies",
+              "x-ratelimit-limit",
+              "x-ratelimit-remaining",
+              "x-ratelimit-reset",
+              "retry-after"
             ],
             "allowCredentials": "<REDACTED>",
             "maxAge": 86400
-          },
-          "authorizers": {
-            "cognitoJwt": {
-              "identitySource": "$request.header.Authorization",
-              "issuerUrl": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "https://cognito-idp.",
-                    "us-east-1",
-                    ".amazonaws.com/",
-                    {
-                      "Ref": "CognitoUserPool"
-                    }
-                  ]
-                ]
-              },
-              "audience": [
-                {
-                  "Ref": "CognitoUserPoolClient"
-                }
-              ]
-            }
           }
         },
         "logRetentionInDays": 30,
@@ -70,6 +64,9 @@
           "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
           "ROLES_TABLE": "uniapply-app-roles-dev",
           "AUDIT_TABLE": "uniapply-app-audit-dev",
+          "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+          "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+          "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
           "WEB_BUCKET": {
             "Ref": "WebBucket"
           },
@@ -108,6 +105,9 @@
                   "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev",
                   "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-roles-dev",
                   "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-audit-dev",
+                  "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-rate-limits-dev",
+                  "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-token-blacklist-dev",
+                  "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-security-events-dev",
                   "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev/index/*",
                   "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev/index/*"
                 ]
@@ -308,6 +308,9 @@
                             "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev",
                             "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-roles-dev",
                             "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-audit-dev",
+                            "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-rate-limits-dev",
+                            "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-token-blacklist-dev",
+                            "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-security-events-dev",
                             "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev/index/*",
                             "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev/index/*"
                           ]
@@ -430,7 +433,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                  "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-api.zip"
+                  "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-api.zip"
                 },
                 "Handler": "src/handler.main",
                 "Runtime": "nodejs20.x",
@@ -462,6 +465,9 @@
                     "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                     "ROLES_TABLE": "uniapply-app-roles-dev",
                     "AUDIT_TABLE": "uniapply-app-audit-dev",
+                    "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                    "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                    "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                     "WEB_BUCKET": {
                       "Ref": "WebBucket"
                     },
@@ -496,7 +502,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                  "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-presignUpload.zip"
+                  "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-presignUpload.zip"
                 },
                 "Handler": "src/handler.presignUpload",
                 "Runtime": "nodejs20.x",
@@ -528,6 +534,9 @@
                     "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                     "ROLES_TABLE": "uniapply-app-roles-dev",
                     "AUDIT_TABLE": "uniapply-app-audit-dev",
+                    "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                    "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                    "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                     "WEB_BUCKET": {
                       "Ref": "WebBucket"
                     },
@@ -562,7 +571,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                  "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-notifyStatusChange.zip"
+                  "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-notifyStatusChange.zip"
                 },
                 "Handler": "src/handler.notifyStatusChange",
                 "Runtime": "nodejs20.x",
@@ -591,6 +600,9 @@
                     "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                     "ROLES_TABLE": "uniapply-app-roles-dev",
                     "AUDIT_TABLE": "uniapply-app-audit-dev",
+                    "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                    "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                    "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                     "WEB_BUCKET": {
                       "Ref": "WebBucket"
                     },
@@ -625,7 +637,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                  "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-postConfirmation.zip"
+                  "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-postConfirmation.zip"
                 },
                 "Handler": "src/handler.postConfirmation",
                 "Runtime": "nodejs20.x",
@@ -657,6 +669,9 @@
                     "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                     "ROLES_TABLE": "uniapply-app-roles-dev",
                     "AUDIT_TABLE": "uniapply-app-audit-dev",
+                    "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                    "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                    "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                     "WEB_BUCKET": {
                       "Ref": "WebBucket"
                     },
@@ -686,44 +701,44 @@
                 "PostConfirmationLogGroup"
               ]
             },
-            "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ": {
-              "Type": "AWS::Lambda::Version",
-              "DeletionPolicy": "Retain",
-              "Properties": {
-                "FunctionName": {
-                  "Ref": "PostConfirmationLambdaFunction"
-                },
-                "CodeSha256": "daUaHH113WWhVHvEgSwDY9LcRyWgawr4PrjUN7o4MVg="
-              }
-            },
-            "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM": {
-              "Type": "AWS::Lambda::Version",
-              "DeletionPolicy": "Retain",
-              "Properties": {
-                "FunctionName": {
-                  "Ref": "ApiLambdaFunction"
-                },
-                "CodeSha256": "QIr1h5watLk3y0z4ueaD3arkzi/wfoWI56LO1Qk0qAo="
-              }
-            },
-            "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw": {
-              "Type": "AWS::Lambda::Version",
-              "DeletionPolicy": "Retain",
-              "Properties": {
-                "FunctionName": {
-                  "Ref": "PresignUploadLambdaFunction"
-                },
-                "CodeSha256": "qOeD8ma1RFZuasKvzpDpBxQiq47bl7pHtDdlE53o1z8="
-              }
-            },
-            "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo": {
+            "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4": {
               "Type": "AWS::Lambda::Version",
               "DeletionPolicy": "Retain",
               "Properties": {
                 "FunctionName": {
                   "Ref": "NotifyStatusChangeLambdaFunction"
                 },
-                "CodeSha256": "qOeD8ma1RFZuasKvzpDpBxQiq47bl7pHtDdlE53o1z8="
+                "CodeSha256": "Omo8Gn1QWI+ZMaS4JuR+jvVqfoTjLEOVijkwOyT1urQ="
+              }
+            },
+            "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "PostConfirmationLambdaFunction"
+                },
+                "CodeSha256": "mHjbe+y2qtWqOJ3kE5Wdcx0a6oZpO+EdJFGTEfyyYlw="
+              }
+            },
+            "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "ApiLambdaFunction"
+                },
+                "CodeSha256": "KbFllb5Olfe4Ncg2zCA9Ub47CjgDtelzxI6ciFdqegs="
+              }
+            },
+            "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU": {
+              "Type": "AWS::Lambda::Version",
+              "DeletionPolicy": "Retain",
+              "Properties": {
+                "FunctionName": {
+                  "Ref": "PresignUploadLambdaFunction"
+                },
+                "CodeSha256": "PcYQcD2Ttpsz2JYdvC0Qub3sIToIYVZSW/foL+lbH8g="
               }
             },
             "PostConfirmationCustomCognitoUserPool1": {
@@ -841,7 +856,7 @@
               "Properties": {
                 "Code": {
                   "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                  "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/custom-resources.zip"
+                  "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/custom-resources.zip"
                 },
                 "FunctionName": "uniapply-app-dev-custom-resource-existing-cup",
                 "Handler": "cognito-user-pool/handler.handler",
@@ -879,7 +894,22 @@
                 "CorsConfiguration": {
                   "AllowCredentials": "<REDACTED>",
                   "AllowHeaders": [
-                    "*"
+                    "Authorization",
+                    "Content-Type",
+                    "X-Requested-With",
+                    "X-API-Key",
+                    "X-Content-Type-Options",
+                    "X-Frame-Options",
+                    "X-XSS-Protection",
+                    "Strict-Transport-Security",
+                    "Content-Security-Policy",
+                    "Referrer-Policy",
+                    "Permissions-Policy",
+                    "X-Permitted-Cross-Domain-Policies",
+                    "x-ratelimit-limit",
+                    "x-ratelimit-remaining",
+                    "x-ratelimit-reset",
+                    "retry-after"
                   ],
                   "AllowMethods": [
                     "GET",
@@ -889,7 +919,9 @@
                     "OPTIONS"
                   ],
                   "AllowOrigins": [
-                    "*"
+                    "http://localhost:5173",
+                    "https://uniapply.app",
+                    "https://staging.uniapply.app"
                   ],
                   "MaxAge": 86400
                 }
@@ -909,39 +941,6 @@
                 "Tags": {
                   "Service": "uniapply-app",
                   "Stage": "dev"
-                }
-              }
-            },
-            "HttpApiAuthorizerCognitoJwt": {
-              "Type": "AWS::ApiGatewayV2::Authorizer",
-              "Properties": {
-                "ApiId": {
-                  "Ref": "HttpApi"
-                },
-                "Name": "cognitoJwt",
-                "IdentitySource": [
-                  "$request.header.Authorization"
-                ],
-                "AuthorizerType": "JWT",
-                "JwtConfiguration": {
-                  "Audience": [
-                    {
-                      "Ref": "CognitoUserPoolClient"
-                    }
-                  ],
-                  "Issuer": {
-                    "Fn::Join": [
-                      "",
-                      [
-                        "https://cognito-idp.",
-                        "us-east-1",
-                        ".amazonaws.com/",
-                        {
-                          "Ref": "CognitoUserPool"
-                        }
-                      ]
-                    ]
-                  }
                 }
               }
             },
@@ -999,6 +998,71 @@
                 "TimeoutInMillis": 30000
               }
             },
+            "HttpApiRoutePostAuthLogin": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST /auth/login",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationApi"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationApi"
+            },
+            "HttpApiRoutePostAuthSignup": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST /auth/signup",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationApi"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationApi"
+            },
+            "HttpApiRoutePostAuthForgotDashpassword": "<REDACTED>",
+            "HttpApiRoutePostAuthResetDashpassword": "<REDACTED>",
+            "HttpApiRoutePostAuthConfirmDashcode": {
+              "Type": "AWS::ApiGatewayV2::Route",
+              "Properties": {
+                "ApiId": {
+                  "Ref": "HttpApi"
+                },
+                "RouteKey": "POST /auth/confirm-code",
+                "Target": {
+                  "Fn::Join": [
+                    "/",
+                    [
+                      "integrations",
+                      {
+                        "Ref": "HttpApiIntegrationApi"
+                      }
+                    ]
+                  ]
+                }
+              },
+              "DependsOn": "HttpApiIntegrationApi"
+            },
             "HttpApiRouteGetProxyVar": {
               "Type": "AWS::ApiGatewayV2::Route",
               "Properties": {
@@ -1016,10 +1080,6 @@
                       }
                     ]
                   ]
-                },
-                "AuthorizationType": "JWT",
-                "AuthorizerId": {
-                  "Ref": "HttpApiAuthorizerCognitoJwt"
                 }
               },
               "DependsOn": "HttpApiIntegrationApi"
@@ -1041,10 +1101,6 @@
                       }
                     ]
                   ]
-                },
-                "AuthorizationType": "JWT",
-                "AuthorizerId": {
-                  "Ref": "HttpApiAuthorizerCognitoJwt"
                 }
               },
               "DependsOn": "HttpApiIntegrationApi"
@@ -1066,10 +1122,6 @@
                       }
                     ]
                   ]
-                },
-                "AuthorizationType": "JWT",
-                "AuthorizerId": {
-                  "Ref": "HttpApiAuthorizerCognitoJwt"
                 }
               },
               "DependsOn": "HttpApiIntegrationApi"
@@ -1091,10 +1143,6 @@
                       }
                     ]
                   ]
-                },
-                "AuthorizationType": "JWT",
-                "AuthorizerId": {
-                  "Ref": "HttpApiAuthorizerCognitoJwt"
                 }
               },
               "DependsOn": "HttpApiIntegrationApi"
@@ -1170,10 +1218,6 @@
                       }
                     ]
                   ]
-                },
-                "AuthorizationType": "JWT",
-                "AuthorizerId": {
-                  "Ref": "HttpApiAuthorizerCognitoJwt"
                 }
               },
               "DependsOn": "HttpApiIntegrationPresignUpload"
@@ -1360,6 +1404,91 @@
                 },
                 "PointInTimeRecoverySpecification": {
                   "PointInTimeRecoveryEnabled": true
+                }
+              },
+              "DeletionPolicy": "Retain",
+              "UpdateReplacePolicy": "Retain"
+            },
+            "RateLimitTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "uniapply-app-rate-limits-dev",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "key",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "key",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "BillingMode": "PAY_PER_REQUEST",
+                "SSESpecification": {
+                  "SSEEnabled": true
+                },
+                "TimeToLiveSpecification": {
+                  "AttributeName": "ttl",
+                  "Enabled": true
+                }
+              },
+              "DeletionPolicy": "Retain",
+              "UpdateReplacePolicy": "Retain"
+            },
+            "SecurityEventsTable": {
+              "Type": "AWS::DynamoDB::Table",
+              "Properties": {
+                "TableName": "uniapply-app-security-events-dev",
+                "AttributeDefinitions": [
+                  {
+                    "AttributeName": "id",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "sourceIP",
+                    "AttributeType": "S"
+                  },
+                  {
+                    "AttributeName": "timestamp",
+                    "AttributeType": "S"
+                  }
+                ],
+                "KeySchema": [
+                  {
+                    "AttributeName": "id",
+                    "KeyType": "HASH"
+                  }
+                ],
+                "BillingMode": "PAY_PER_REQUEST",
+                "SSESpecification": {
+                  "SSEEnabled": true
+                },
+                "PointInTimeRecoverySpecification": {
+                  "PointInTimeRecoveryEnabled": true
+                },
+                "GlobalSecondaryIndexes": [
+                  {
+                    "IndexName": "sourceIP-timestamp-index",
+                    "KeySchema": [
+                      {
+                        "AttributeName": "sourceIP",
+                        "KeyType": "HASH"
+                      },
+                      {
+                        "AttributeName": "timestamp",
+                        "KeyType": "RANGE"
+                      }
+                    ],
+                    "Projection": {
+                      "ProjectionType": "ALL"
+                    }
+                  }
+                ],
+                "TimeToLiveSpecification": {
+                  "AttributeName": "ttl",
+                  "Enabled": true
                 }
               },
               "DeletionPolicy": "Retain",
@@ -1737,6 +1866,24 @@
                 ],
                 "Policies": {
                   "PasswordPolicy": "<REDACTED>"
+                },
+                "MfaConfiguration": "OPTIONAL",
+                "AccountRecoverySetting": {
+                  "RecoveryMechanisms": [
+                    {
+                      "Name": "verified_email",
+                      "Priority": 1
+                    }
+                  ]
+                },
+                "VerificationMessageTemplate": {
+                  "DefaultEmailOption": "CONFIRM_WITH_CODE"
+                },
+                "EmailConfiguration": {
+                  "EmailSendingAccount": "COGNITO_DEFAULT"
+                },
+                "AdminCreateUserConfig": {
+                  "AllowAdminCreateUserOnly": false
                 }
               }
             },
@@ -1773,7 +1920,11 @@
                 "LogoutURLs": [
                   "http://localhost:5173",
                   "http://localhost:5173"
-                ]
+                ],
+                "TokenValidityUnits": "<REDACTED>",
+                "AccessTokenValidity": "<REDACTED>",
+                "IdTokenValidity": "<REDACTED>",
+                "RefreshTokenValidity": "<REDACTED>"
               }
             },
             "SesEmailIdentity": {
@@ -1790,10 +1941,19 @@
                 "Name": "sls-uniapply-app-dev-ServerlessDeploymentBucketName"
               }
             },
+            "NotifyStatusChangeLambdaFunctionQualifiedArn": {
+              "Description": "Current Lambda function version",
+              "Value": {
+                "Ref": "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4"
+              },
+              "Export": {
+                "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
+              }
+            },
             "PostConfirmationLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ"
+                "Ref": "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo"
               },
               "Export": {
                 "Name": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
@@ -1802,7 +1962,7 @@
             "ApiLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM"
+                "Ref": "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ"
               },
               "Export": {
                 "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
@@ -1811,19 +1971,10 @@
             "PresignUploadLambdaFunctionQualifiedArn": {
               "Description": "Current Lambda function version",
               "Value": {
-                "Ref": "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw"
+                "Ref": "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU"
               },
               "Export": {
                 "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
-              }
-            },
-            "NotifyStatusChangeLambdaFunctionQualifiedArn": {
-              "Description": "Current Lambda function version",
-              "Value": {
-                "Ref": "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo"
-              },
-              "Export": {
-                "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
               }
             },
             "HttpApiId": {
@@ -1922,7 +2073,27 @@
         "individually": true,
         "artifactsS3KeyDirname": "serverless/uniapply-app/dev/code-artifacts",
         "deploymentBucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-        "artifactDirectoryName": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z"
+        "artifactDirectoryName": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z"
+      },
+      "custom": {
+        "httpApi": {
+          "responseData": {
+            "headers": {
+              "X-Content-Type-Options": "nosniff",
+              "X-Frame-Options": "DENY",
+              "X-XSS-Protection": "1; mode=block",
+              "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+              "Content-Security-Policy": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+              "Referrer-Policy": "strict-origin-when-cross-origin",
+              "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()",
+              "X-Permitted-Cross-Domain-Policies": "none",
+              "Cache-Control": "no-store, no-cache, must-revalidate, private",
+              "Pragma": "no-cache",
+              "Expires": "0",
+              "Access-Control-Expose-Headers": "x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset, retry-after"
+            }
+          }
+        }
       },
       "build": {
         "esbuild": {
@@ -1946,9 +2117,48 @@
           "events": [
             {
               "httpApi": {
+                "path": "/auth/login",
+                "method": "POST"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "/auth/login"
+            },
+            {
+              "httpApi": {
+                "path": "/auth/signup",
+                "method": "POST"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "/auth/signup"
+            },
+            {
+              "httpApi": {
+                "path": "/auth/forgot-password",
+                "method": "POST"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "/auth/forgot-password"
+            },
+            {
+              "httpApi": {
+                "path": "/auth/reset-password",
+                "method": "POST"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "/auth/reset-password"
+            },
+            {
+              "httpApi": {
+                "path": "/auth/confirm-code",
+                "method": "POST"
+              },
+              "resolvedMethod": "POST",
+              "resolvedPath": "/auth/confirm-code"
+            },
+            {
+              "httpApi": {
                 "path": "/{proxy+}",
-                "method": "GET",
-                "authorizer": "cognitoJwt"
+                "method": "GET"
               },
               "resolvedMethod": "GET",
               "resolvedPath": "/{proxy+}"
@@ -1956,8 +2166,7 @@
             {
               "httpApi": {
                 "path": "/{proxy+}",
-                "method": "POST",
-                "authorizer": "cognitoJwt"
+                "method": "POST"
               },
               "resolvedMethod": "POST",
               "resolvedPath": "/{proxy+}"
@@ -1965,8 +2174,7 @@
             {
               "httpApi": {
                 "path": "/{proxy+}",
-                "method": "PUT",
-                "authorizer": "cognitoJwt"
+                "method": "PUT"
               },
               "resolvedMethod": "PUT",
               "resolvedPath": "/{proxy+}"
@@ -1974,8 +2182,7 @@
             {
               "httpApi": {
                 "path": "/{proxy+}",
-                "method": "DELETE",
-                "authorizer": "cognitoJwt"
+                "method": "DELETE"
               },
               "resolvedMethod": "DELETE",
               "resolvedPath": "/{proxy+}"
@@ -1991,7 +2198,7 @@
           "memory": 512,
           "runtime": "nodejs20.x",
           "vpc": {},
-          "versionLogicalId": "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM"
+          "versionLogicalId": "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ"
         },
         "presignUpload": {
           "handler": "src/handler.presignUpload",
@@ -2002,8 +2209,7 @@
             {
               "httpApi": {
                 "path": "/files/presign",
-                "method": "POST",
-                "authorizer": "cognitoJwt"
+                "method": "POST"
               },
               "resolvedMethod": "POST",
               "resolvedPath": "/files/presign"
@@ -2019,7 +2225,7 @@
           "memory": 256,
           "runtime": "nodejs20.x",
           "vpc": {},
-          "versionLogicalId": "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw"
+          "versionLogicalId": "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU"
         },
         "notifyStatusChange": {
           "handler": "src/handler.notifyStatusChange",
@@ -2035,7 +2241,7 @@
           "timeout": 6,
           "runtime": "nodejs20.x",
           "vpc": {},
-          "versionLogicalId": "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo"
+          "versionLogicalId": "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4"
         },
         "postConfirmation": {
           "handler": "src/handler.postConfirmation",
@@ -2061,7 +2267,7 @@
           "memory": 256,
           "runtime": "nodejs20.x",
           "vpc": {},
-          "versionLogicalId": "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ"
+          "versionLogicalId": "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo"
         }
       },
       "resources": {
@@ -2275,6 +2481,91 @@
             "DeletionPolicy": "Retain",
             "UpdateReplacePolicy": "Retain"
           },
+          "RateLimitTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "uniapply-app-rate-limits-dev",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "key",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "key",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST",
+              "SSESpecification": {
+                "SSEEnabled": true
+              },
+              "TimeToLiveSpecification": {
+                "AttributeName": "ttl",
+                "Enabled": true
+              }
+            },
+            "DeletionPolicy": "Retain",
+            "UpdateReplacePolicy": "Retain"
+          },
+          "SecurityEventsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "uniapply-app-security-events-dev",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "sourceIP",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "timestamp",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST",
+              "SSESpecification": {
+                "SSEEnabled": true
+              },
+              "PointInTimeRecoverySpecification": {
+                "PointInTimeRecoveryEnabled": true
+              },
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "sourceIP-timestamp-index",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "sourceIP",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "timestamp",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ],
+              "TimeToLiveSpecification": {
+                "AttributeName": "ttl",
+                "Enabled": true
+              }
+            },
+            "DeletionPolicy": "Retain",
+            "UpdateReplacePolicy": "Retain"
+          },
           "WebBucket": {
             "Type": "AWS::S3::Bucket",
             "Properties": {
@@ -2647,6 +2938,24 @@
               ],
               "Policies": {
                 "PasswordPolicy": "<REDACTED>"
+              },
+              "MfaConfiguration": "OPTIONAL",
+              "AccountRecoverySetting": {
+                "RecoveryMechanisms": [
+                  {
+                    "Name": "verified_email",
+                    "Priority": 1
+                  }
+                ]
+              },
+              "VerificationMessageTemplate": {
+                "DefaultEmailOption": "CONFIRM_WITH_CODE"
+              },
+              "EmailConfiguration": {
+                "EmailSendingAccount": "COGNITO_DEFAULT"
+              },
+              "AdminCreateUserConfig": {
+                "AllowAdminCreateUserOnly": false
               }
             }
           },
@@ -2683,7 +2992,11 @@
               "LogoutURLs": [
                 "http://localhost:5173",
                 "http://localhost:5173"
-              ]
+              ],
+              "TokenValidityUnits": "<REDACTED>",
+              "AccessTokenValidity": "<REDACTED>",
+              "IdTokenValidity": "<REDACTED>",
+              "RefreshTokenValidity": "<REDACTED>"
             }
           },
           "SesEmailIdentity": {
@@ -2717,8 +3030,7 @@
             "Value": ""
           }
         }
-      },
-      "custom": null
+      }
     },
     "provider": {
       "name": "aws",
@@ -2728,7 +3040,9 @@
       "httpApi": {
         "cors": {
           "allowedOrigins": [
-            "*"
+            "http://localhost:5173",
+            "https://uniapply.app",
+            "https://staging.uniapply.app"
           ],
           "allowedMethods": [
             "GET",
@@ -2738,33 +3052,25 @@
             "OPTIONS"
           ],
           "allowedHeaders": [
-            "*"
+            "Authorization",
+            "Content-Type",
+            "X-Requested-With",
+            "X-API-Key",
+            "X-Content-Type-Options",
+            "X-Frame-Options",
+            "X-XSS-Protection",
+            "Strict-Transport-Security",
+            "Content-Security-Policy",
+            "Referrer-Policy",
+            "Permissions-Policy",
+            "X-Permitted-Cross-Domain-Policies",
+            "x-ratelimit-limit",
+            "x-ratelimit-remaining",
+            "x-ratelimit-reset",
+            "retry-after"
           ],
           "allowCredentials": "<REDACTED>",
           "maxAge": 86400
-        },
-        "authorizers": {
-          "cognitoJwt": {
-            "identitySource": "$request.header.Authorization",
-            "issuerUrl": {
-              "Fn::Join": [
-                "",
-                [
-                  "https://cognito-idp.",
-                  "us-east-1",
-                  ".amazonaws.com/",
-                  {
-                    "Ref": "CognitoUserPool"
-                  }
-                ]
-              ]
-            },
-            "audience": [
-              {
-                "Ref": "CognitoUserPoolClient"
-              }
-            ]
-          }
         }
       },
       "logRetentionInDays": 30,
@@ -2783,6 +3089,9 @@
         "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
         "ROLES_TABLE": "uniapply-app-roles-dev",
         "AUDIT_TABLE": "uniapply-app-audit-dev",
+        "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+        "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+        "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
         "WEB_BUCKET": {
           "Ref": "WebBucket"
         },
@@ -2821,6 +3130,9 @@
                 "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev",
                 "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-roles-dev",
                 "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-audit-dev",
+                "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-rate-limits-dev",
+                "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-token-blacklist-dev",
+                "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-security-events-dev",
                 "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev/index/*",
                 "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev/index/*"
               ]
@@ -3021,6 +3333,9 @@
                           "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev",
                           "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-roles-dev",
                           "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-audit-dev",
+                          "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-rate-limits-dev",
+                          "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-token-blacklist-dev",
+                          "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-security-events-dev",
                           "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev/index/*",
                           "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev/index/*"
                         ]
@@ -3143,7 +3458,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-api.zip"
+                "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-api.zip"
               },
               "Handler": "src/handler.main",
               "Runtime": "nodejs20.x",
@@ -3175,6 +3490,9 @@
                   "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                   "ROLES_TABLE": "uniapply-app-roles-dev",
                   "AUDIT_TABLE": "uniapply-app-audit-dev",
+                  "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                  "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                  "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                   "WEB_BUCKET": {
                     "Ref": "WebBucket"
                   },
@@ -3209,7 +3527,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-presignUpload.zip"
+                "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-presignUpload.zip"
               },
               "Handler": "src/handler.presignUpload",
               "Runtime": "nodejs20.x",
@@ -3241,6 +3559,9 @@
                   "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                   "ROLES_TABLE": "uniapply-app-roles-dev",
                   "AUDIT_TABLE": "uniapply-app-audit-dev",
+                  "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                  "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                  "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                   "WEB_BUCKET": {
                     "Ref": "WebBucket"
                   },
@@ -3275,7 +3596,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-notifyStatusChange.zip"
+                "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-notifyStatusChange.zip"
               },
               "Handler": "src/handler.notifyStatusChange",
               "Runtime": "nodejs20.x",
@@ -3304,6 +3625,9 @@
                   "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                   "ROLES_TABLE": "uniapply-app-roles-dev",
                   "AUDIT_TABLE": "uniapply-app-audit-dev",
+                  "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                  "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                  "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                   "WEB_BUCKET": {
                     "Ref": "WebBucket"
                   },
@@ -3338,7 +3662,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-postConfirmation.zip"
+                "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-postConfirmation.zip"
               },
               "Handler": "src/handler.postConfirmation",
               "Runtime": "nodejs20.x",
@@ -3370,6 +3694,9 @@
                   "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                   "ROLES_TABLE": "uniapply-app-roles-dev",
                   "AUDIT_TABLE": "uniapply-app-audit-dev",
+                  "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                  "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                  "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                   "WEB_BUCKET": {
                     "Ref": "WebBucket"
                   },
@@ -3399,44 +3726,44 @@
               "PostConfirmationLogGroup"
             ]
           },
-          "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "PostConfirmationLambdaFunction"
-              },
-              "CodeSha256": "daUaHH113WWhVHvEgSwDY9LcRyWgawr4PrjUN7o4MVg="
-            }
-          },
-          "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "ApiLambdaFunction"
-              },
-              "CodeSha256": "QIr1h5watLk3y0z4ueaD3arkzi/wfoWI56LO1Qk0qAo="
-            }
-          },
-          "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw": {
-            "Type": "AWS::Lambda::Version",
-            "DeletionPolicy": "Retain",
-            "Properties": {
-              "FunctionName": {
-                "Ref": "PresignUploadLambdaFunction"
-              },
-              "CodeSha256": "qOeD8ma1RFZuasKvzpDpBxQiq47bl7pHtDdlE53o1z8="
-            }
-          },
-          "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo": {
+          "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "NotifyStatusChangeLambdaFunction"
               },
-              "CodeSha256": "qOeD8ma1RFZuasKvzpDpBxQiq47bl7pHtDdlE53o1z8="
+              "CodeSha256": "Omo8Gn1QWI+ZMaS4JuR+jvVqfoTjLEOVijkwOyT1urQ="
+            }
+          },
+          "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "PostConfirmationLambdaFunction"
+              },
+              "CodeSha256": "mHjbe+y2qtWqOJ3kE5Wdcx0a6oZpO+EdJFGTEfyyYlw="
+            }
+          },
+          "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "ApiLambdaFunction"
+              },
+              "CodeSha256": "KbFllb5Olfe4Ncg2zCA9Ub47CjgDtelzxI6ciFdqegs="
+            }
+          },
+          "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU": {
+            "Type": "AWS::Lambda::Version",
+            "DeletionPolicy": "Retain",
+            "Properties": {
+              "FunctionName": {
+                "Ref": "PresignUploadLambdaFunction"
+              },
+              "CodeSha256": "PcYQcD2Ttpsz2JYdvC0Qub3sIToIYVZSW/foL+lbH8g="
             }
           },
           "PostConfirmationCustomCognitoUserPool1": {
@@ -3554,7 +3881,7 @@
             "Properties": {
               "Code": {
                 "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-                "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/custom-resources.zip"
+                "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/custom-resources.zip"
               },
               "FunctionName": "uniapply-app-dev-custom-resource-existing-cup",
               "Handler": "cognito-user-pool/handler.handler",
@@ -3592,7 +3919,22 @@
               "CorsConfiguration": {
                 "AllowCredentials": "<REDACTED>",
                 "AllowHeaders": [
-                  "*"
+                  "Authorization",
+                  "Content-Type",
+                  "X-Requested-With",
+                  "X-API-Key",
+                  "X-Content-Type-Options",
+                  "X-Frame-Options",
+                  "X-XSS-Protection",
+                  "Strict-Transport-Security",
+                  "Content-Security-Policy",
+                  "Referrer-Policy",
+                  "Permissions-Policy",
+                  "X-Permitted-Cross-Domain-Policies",
+                  "x-ratelimit-limit",
+                  "x-ratelimit-remaining",
+                  "x-ratelimit-reset",
+                  "retry-after"
                 ],
                 "AllowMethods": [
                   "GET",
@@ -3602,7 +3944,9 @@
                   "OPTIONS"
                 ],
                 "AllowOrigins": [
-                  "*"
+                  "http://localhost:5173",
+                  "https://uniapply.app",
+                  "https://staging.uniapply.app"
                 ],
                 "MaxAge": 86400
               }
@@ -3622,39 +3966,6 @@
               "Tags": {
                 "Service": "uniapply-app",
                 "Stage": "dev"
-              }
-            }
-          },
-          "HttpApiAuthorizerCognitoJwt": {
-            "Type": "AWS::ApiGatewayV2::Authorizer",
-            "Properties": {
-              "ApiId": {
-                "Ref": "HttpApi"
-              },
-              "Name": "cognitoJwt",
-              "IdentitySource": [
-                "$request.header.Authorization"
-              ],
-              "AuthorizerType": "JWT",
-              "JwtConfiguration": {
-                "Audience": [
-                  {
-                    "Ref": "CognitoUserPoolClient"
-                  }
-                ],
-                "Issuer": {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "https://cognito-idp.",
-                      "us-east-1",
-                      ".amazonaws.com/",
-                      {
-                        "Ref": "CognitoUserPool"
-                      }
-                    ]
-                  ]
-                }
               }
             }
           },
@@ -3712,6 +4023,71 @@
               "TimeoutInMillis": 30000
             }
           },
+          "HttpApiRoutePostAuthLogin": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST /auth/login",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationApi"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationApi"
+          },
+          "HttpApiRoutePostAuthSignup": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST /auth/signup",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationApi"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationApi"
+          },
+          "HttpApiRoutePostAuthForgotDashpassword": "<REDACTED>",
+          "HttpApiRoutePostAuthResetDashpassword": "<REDACTED>",
+          "HttpApiRoutePostAuthConfirmDashcode": {
+            "Type": "AWS::ApiGatewayV2::Route",
+            "Properties": {
+              "ApiId": {
+                "Ref": "HttpApi"
+              },
+              "RouteKey": "POST /auth/confirm-code",
+              "Target": {
+                "Fn::Join": [
+                  "/",
+                  [
+                    "integrations",
+                    {
+                      "Ref": "HttpApiIntegrationApi"
+                    }
+                  ]
+                ]
+              }
+            },
+            "DependsOn": "HttpApiIntegrationApi"
+          },
           "HttpApiRouteGetProxyVar": {
             "Type": "AWS::ApiGatewayV2::Route",
             "Properties": {
@@ -3729,10 +4105,6 @@
                     }
                   ]
                 ]
-              },
-              "AuthorizationType": "JWT",
-              "AuthorizerId": {
-                "Ref": "HttpApiAuthorizerCognitoJwt"
               }
             },
             "DependsOn": "HttpApiIntegrationApi"
@@ -3754,10 +4126,6 @@
                     }
                   ]
                 ]
-              },
-              "AuthorizationType": "JWT",
-              "AuthorizerId": {
-                "Ref": "HttpApiAuthorizerCognitoJwt"
               }
             },
             "DependsOn": "HttpApiIntegrationApi"
@@ -3779,10 +4147,6 @@
                     }
                   ]
                 ]
-              },
-              "AuthorizationType": "JWT",
-              "AuthorizerId": {
-                "Ref": "HttpApiAuthorizerCognitoJwt"
               }
             },
             "DependsOn": "HttpApiIntegrationApi"
@@ -3804,10 +4168,6 @@
                     }
                   ]
                 ]
-              },
-              "AuthorizationType": "JWT",
-              "AuthorizerId": {
-                "Ref": "HttpApiAuthorizerCognitoJwt"
               }
             },
             "DependsOn": "HttpApiIntegrationApi"
@@ -3883,10 +4243,6 @@
                     }
                   ]
                 ]
-              },
-              "AuthorizationType": "JWT",
-              "AuthorizerId": {
-                "Ref": "HttpApiAuthorizerCognitoJwt"
               }
             },
             "DependsOn": "HttpApiIntegrationPresignUpload"
@@ -4073,6 +4429,91 @@
               },
               "PointInTimeRecoverySpecification": {
                 "PointInTimeRecoveryEnabled": true
+              }
+            },
+            "DeletionPolicy": "Retain",
+            "UpdateReplacePolicy": "Retain"
+          },
+          "RateLimitTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "uniapply-app-rate-limits-dev",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "key",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "key",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST",
+              "SSESpecification": {
+                "SSEEnabled": true
+              },
+              "TimeToLiveSpecification": {
+                "AttributeName": "ttl",
+                "Enabled": true
+              }
+            },
+            "DeletionPolicy": "Retain",
+            "UpdateReplacePolicy": "Retain"
+          },
+          "SecurityEventsTable": {
+            "Type": "AWS::DynamoDB::Table",
+            "Properties": {
+              "TableName": "uniapply-app-security-events-dev",
+              "AttributeDefinitions": [
+                {
+                  "AttributeName": "id",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "sourceIP",
+                  "AttributeType": "S"
+                },
+                {
+                  "AttributeName": "timestamp",
+                  "AttributeType": "S"
+                }
+              ],
+              "KeySchema": [
+                {
+                  "AttributeName": "id",
+                  "KeyType": "HASH"
+                }
+              ],
+              "BillingMode": "PAY_PER_REQUEST",
+              "SSESpecification": {
+                "SSEEnabled": true
+              },
+              "PointInTimeRecoverySpecification": {
+                "PointInTimeRecoveryEnabled": true
+              },
+              "GlobalSecondaryIndexes": [
+                {
+                  "IndexName": "sourceIP-timestamp-index",
+                  "KeySchema": [
+                    {
+                      "AttributeName": "sourceIP",
+                      "KeyType": "HASH"
+                    },
+                    {
+                      "AttributeName": "timestamp",
+                      "KeyType": "RANGE"
+                    }
+                  ],
+                  "Projection": {
+                    "ProjectionType": "ALL"
+                  }
+                }
+              ],
+              "TimeToLiveSpecification": {
+                "AttributeName": "ttl",
+                "Enabled": true
               }
             },
             "DeletionPolicy": "Retain",
@@ -4450,6 +4891,24 @@
               ],
               "Policies": {
                 "PasswordPolicy": "<REDACTED>"
+              },
+              "MfaConfiguration": "OPTIONAL",
+              "AccountRecoverySetting": {
+                "RecoveryMechanisms": [
+                  {
+                    "Name": "verified_email",
+                    "Priority": 1
+                  }
+                ]
+              },
+              "VerificationMessageTemplate": {
+                "DefaultEmailOption": "CONFIRM_WITH_CODE"
+              },
+              "EmailConfiguration": {
+                "EmailSendingAccount": "COGNITO_DEFAULT"
+              },
+              "AdminCreateUserConfig": {
+                "AllowAdminCreateUserOnly": false
               }
             }
           },
@@ -4486,7 +4945,11 @@
               "LogoutURLs": [
                 "http://localhost:5173",
                 "http://localhost:5173"
-              ]
+              ],
+              "TokenValidityUnits": "<REDACTED>",
+              "AccessTokenValidity": "<REDACTED>",
+              "IdTokenValidity": "<REDACTED>",
+              "RefreshTokenValidity": "<REDACTED>"
             }
           },
           "SesEmailIdentity": {
@@ -4503,10 +4966,19 @@
               "Name": "sls-uniapply-app-dev-ServerlessDeploymentBucketName"
             }
           },
+          "NotifyStatusChangeLambdaFunctionQualifiedArn": {
+            "Description": "Current Lambda function version",
+            "Value": {
+              "Ref": "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4"
+            },
+            "Export": {
+              "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
+            }
+          },
           "PostConfirmationLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ"
+              "Ref": "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo"
             },
             "Export": {
               "Name": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
@@ -4515,7 +4987,7 @@
           "ApiLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM"
+              "Ref": "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ"
             },
             "Export": {
               "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
@@ -4524,19 +4996,10 @@
           "PresignUploadLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw"
+              "Ref": "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU"
             },
             "Export": {
               "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
-            }
-          },
-          "NotifyStatusChangeLambdaFunctionQualifiedArn": {
-            "Description": "Current Lambda function version",
-            "Value": {
-              "Ref": "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo"
-            },
-            "Export": {
-              "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
             }
           },
           "HttpApiId": {
@@ -4630,7 +5093,7 @@
       "serviceProvider": null,
       "instanceParameters": null
     },
-    "serviceRawFile": "service: uniapply-app\nframeworkVersion: \"4\"\nuseDotenv: true\n\nprovider:\n  name: aws\n  runtime: nodejs20.x\n  region: us-east-1\n  stage: ${opt:stage, 'dev'}\n\n  httpApi:\n    cors:\n      allowedOrigins: [\"*\"]\n      allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]\n      allowedHeaders: [\"*\"]\n      allowCredentials: false\n      maxAge: 86400\n    authorizers:\n      cognitoJwt:\n        identitySource: $request.header.Authorization\n        issuerUrl:\n          Fn::Join:\n            - \"\"\n            - - \"https://cognito-idp.\"\n              - ${self:provider.region}\n              - \".amazonaws.com/\"\n              - { Ref: CognitoUserPool }\n        audience:\n          - { Ref: CognitoUserPoolClient }\n\n  logRetentionInDays: 30\n  tracing:\n    lambda: true\n  tags:\n    Service: ${self:service}\n    Stage: ${sls:stage}\n\n  environment:\n    REGION: ${self:provider.region}\n    STAGE: ${sls:stage}\n    USERS_TABLE: ${self:service}-users-${sls:stage}\n    FORMS_TABLE: ${self:service}-forms-${sls:stage}\n    APPLICATIONS_TABLE: ${self:service}-applications-${sls:stage}\n    ROLES_TABLE: ${self:service}-roles-${sls:stage}\n    AUDIT_TABLE: ${self:service}-audit-${sls:stage}\n    WEB_BUCKET: { Ref: WebBucket }\n    UPLOADS_BUCKET: { Ref: UploadsBucket }\n    USER_POOL_ID: { Ref: CognitoUserPool }\n    USER_POOL_CLIENT_ID: { Ref: CognitoUserPoolClient }\n    SES_SENDER_EMAIL: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}\n    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}\n    APP_NAME: ${env:APP_NAME, 'UniApply'}\n\n  iam:\n    role:\n      statements:\n        - Effect: Allow\n          Action:\n            - dynamodb:PutItem\n            - dynamodb:GetItem\n            - dynamodb:UpdateItem\n            - dynamodb:DeleteItem\n            - dynamodb:Query\n            - dynamodb:Scan\n            - dynamodb:DescribeTable\n            - dynamodb:BatchWriteItem\n            - dynamodb:BatchGetItem\n          Resource:\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.FORMS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.ROLES_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.AUDIT_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}/index/*\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}/index/*\n        - Effect: Allow\n          Action:\n            - s3:GetObject\n            - s3:PutObject\n            - s3:DeleteObject\n            - s3:ListBucket\n          Resource:\n            - { \"Fn::GetAtt\": [WebBucket, Arn] }\n            - { \"Fn::Join\": [\"\", [{ \"Fn::GetAtt\": [WebBucket, Arn] }, \"/*\"]] }\n            - { \"Fn::GetAtt\": [UploadsBucket, Arn] }\n            - {\n                \"Fn::Join\":\n                  [\"\", [{ \"Fn::GetAtt\": [UploadsBucket, Arn] }, \"/*\"]],\n              }\n        - Effect: Allow\n          Action:\n            - ses:SendEmail\n            - ses:SendRawEmail\n          Resource: \"*\"\n        - Effect: Allow\n          Action:\n            - cognito-idp:AdminGetUser\n            - cognito-idp:ListUsers\n            - cognito-idp:DescribeUserPool\n          Resource:\n            - { \"Fn::GetAtt\": [CognitoUserPool, Arn] }\n        - Effect: Allow\n          Action:\n            - ssm:GetParameter\n            - ssm:GetParameters\n          Resource:\n            - arn:aws:ssm:${self:provider.region}:${aws:accountId}:parameter/uniapply/${sls:stage}/*\n\nparams:\n  default:\n    appBaseUrl: ${ssm:/uniapply/${sls:stage}/appBaseUrl, 'http://localhost:5173'}\n    localDevUrl: ${env:LOCAL_DEV_URL, 'http://localhost:5173'}\n    apiDomainName: ${ssm:/uniapply/${sls:stage}/api/domainName, ''}\n    apiHostedZoneId: ${ssm:/uniapply/${sls:stage}/route53/hostedZoneId, ''}\n    apiCertificateArn: ${ssm:/uniapply/${sls:stage}/acm/certArn, ''}\n    wafArn: ${ssm:/uniapply/${sls:stage}/waf/arn, ''}\n\npackage:\n  individually: true\n\ncustom:\n\nbuild:\n  esbuild:\n    minify: true\n    sourcemap: true\n    target: node20\n    external:\n      - zod\n    exclude:\n      - aws-sdk\n\nfunctions:\n  api:\n    handler: src/handler.main\n    memorySize: 512\n    timeout: 15\n    architecture: arm64\n    events:\n      - httpApi:\n          path: /{proxy+}\n          method: GET\n          authorizer: cognitoJwt\n      - httpApi:\n          path: /{proxy+}\n          method: POST\n          authorizer: cognitoJwt\n      - httpApi:\n          path: /{proxy+}\n          method: PUT\n          authorizer: cognitoJwt\n      - httpApi:\n          path: /{proxy+}\n          method: DELETE\n          authorizer: cognitoJwt\n\n  presignUpload:\n    handler: src/handler.presignUpload\n    memorySize: 256\n    timeout: 10\n    architecture: arm64\n    events:\n      - httpApi:\n          path: /files/presign\n          method: POST\n          authorizer: cognitoJwt\n\n  notifyStatusChange:\n    handler: src/handler.notifyStatusChange\n\n  postConfirmation:\n    handler: src/handler.postConfirmation\n    memorySize: 256\n    timeout: 10\n    architecture: arm64\n    events:\n      - cognitoUserPool:\n          pool: ${self:service}-${sls:stage}-userpool\n          trigger: PostConfirmation\n          existing: true\n\nresources:\n  Conditions:\n    HasApiDomain:\n      Fn::Not:\n        - Fn::Equals:\n            - \"\"\n            - ${param:apiDomainName, \"\"}\n    HasWaf:\n      Fn::Not:\n        - Fn::Equals:\n            - \"\"\n            - ${param:wafArn, \"\"}\n\n  Resources:\n    UsersTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.USERS_TABLE}\n        AttributeDefinitions:\n          - { AttributeName: id, AttributeType: S }\n          - { AttributeName: email, AttributeType: S }\n        KeySchema:\n          - { AttributeName: id, KeyType: HASH }\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n        GlobalSecondaryIndexes:\n          - IndexName: email-index\n            KeySchema: [{ AttributeName: email, KeyType: HASH }]\n            Projection: { ProjectionType: ALL }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    FormsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.FORMS_TABLE}\n        AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    ApplicationsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.APPLICATIONS_TABLE}\n        AttributeDefinitions:\n          - { AttributeName: id, AttributeType: S }\n          - { AttributeName: userId, AttributeType: S }\n          - { AttributeName: status, AttributeType: S }\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n        GlobalSecondaryIndexes:\n          - IndexName: userId-index\n            KeySchema: [{ AttributeName: userId, KeyType: HASH }]\n            Projection: { ProjectionType: ALL }\n          - IndexName: status-index\n            KeySchema: [{ AttributeName: status, KeyType: HASH }]\n            Projection: { ProjectionType: ALL }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    RolesTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.ROLES_TABLE}\n        AttributeDefinitions: [{ AttributeName: roleName, AttributeType: S }]\n        KeySchema: [{ AttributeName: roleName, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    AuditLogsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.AUDIT_TABLE}\n        AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    WebBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        OwnershipControls:\n          Rules: [{ ObjectOwnership: BucketOwnerPreferred }]\n        PublicAccessBlockConfiguration:\n          BlockPublicAcls: true\n          BlockPublicPolicy: true\n          IgnorePublicAcls: true\n          RestrictPublicBuckets: true\n        BucketEncryption:\n          ServerSideEncryptionConfiguration:\n            - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }\n        VersioningConfiguration: { Status: Enabled }\n        LifecycleConfiguration:\n          Rules:\n            - Id: ExpireOldVersions\n              Status: Enabled\n              NoncurrentVersionExpiration:\n                NoncurrentDays: 30\n        CorsConfiguration:\n          CorsRules:\n            - AllowedOrigins:\n                - ${param:appBaseUrl}\n              AllowedMethods: [GET, HEAD]\n              AllowedHeaders: [\"*\"]\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    UploadsBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        OwnershipControls:\n          Rules: [{ ObjectOwnership: BucketOwnerPreferred }]\n        PublicAccessBlockConfiguration:\n          BlockPublicAcls: true\n          BlockPublicPolicy: true\n          IgnorePublicAcls: true\n          RestrictPublicBuckets: true\n        BucketEncryption:\n          ServerSideEncryptionConfiguration:\n            - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }\n        VersioningConfiguration: { Status: Enabled }\n        CorsConfiguration:\n          CorsRules:\n            - AllowedOrigins:\n                - ${param:appBaseUrl}\n              AllowedMethods: [GET, PUT]\n              AllowedHeaders: [\"*\"]\n              ExposedHeaders: [\"ETag\"]\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    UploadsBucketPolicy:\n      Type: AWS::S3::BucketPolicy\n      Properties:\n        Bucket: { Ref: UploadsBucket }\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Sid: EnforceTLS\n              Effect: Deny\n              Principal: \"*\"\n              Action: \"s3:*\"\n              Resource:\n                - { \"Fn::GetAtt\": [UploadsBucket, Arn] }\n                - {\n                    \"Fn::Join\":\n                      [\"\", [{ \"Fn::GetAtt\": [UploadsBucket, Arn] }, \"/*\"]],\n                  }\n              Condition:\n                Bool: { aws:SecureTransport: \"false\" }\n\n    CloudFrontOAC:\n      Type: AWS::CloudFront::OriginAccessControl\n      Properties:\n        OriginAccessControlConfig:\n          Name: ${self:service}-${sls:stage}-oac\n          OriginAccessControlOriginType: s3\n          SigningBehavior: always\n          SigningProtocol: sigv4\n\n    SecurityHeadersPolicy:\n      Type: AWS::CloudFront::ResponseHeadersPolicy\n      Properties:\n        ResponseHeadersPolicyConfig:\n          Name: ${self:service}-${sls:stage}-security-headers\n          SecurityHeadersConfig:\n            ContentSecurityPolicy:\n              ContentSecurityPolicy: >-\n                default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; frame-ancestors 'none';\n              Override: true\n            StrictTransportSecurity:\n              AccessControlMaxAgeSec: 63072000\n              IncludeSubdomains: true\n              Preload: true\n              Override: true\n            ContentTypeOptions: { Override: true }\n            FrameOptions: { FrameOption: DENY, Override: true }\n            ReferrerPolicy: { ReferrerPolicy: \"no-referrer\", Override: true }\n\n    WebDistribution:\n      Type: AWS::CloudFront::Distribution\n      Properties:\n        DistributionConfig:\n          Enabled: true\n          DefaultRootObject: index.html\n          Origins:\n            - Id: WebBucketOrigin\n              DomainName: { \"Fn::GetAtt\": [WebBucket, RegionalDomainName] }\n              S3OriginConfig: {}\n              OriginAccessControlId: { Ref: CloudFrontOAC }\n          DefaultCacheBehavior:\n            TargetOriginId: WebBucketOrigin\n            ViewerProtocolPolicy: redirect-to-https\n            AllowedMethods: [GET, HEAD, OPTIONS]\n            CachedMethods: [GET, HEAD]\n            Compress: true\n            CachePolicyId: \"658327ea-f89d-4fab-a63d-7e88639e58f6\"\n            ResponseHeadersPolicyId: { Ref: SecurityHeadersPolicy }\n          PriceClass: PriceClass_100\n          ViewerCertificate:\n            CloudFrontDefaultCertificate: true\n          CustomErrorResponses:\n            - {\n                ErrorCode: 403,\n                ResponsePagePath: /index.html,\n                ResponseCode: 200,\n                ErrorCachingMinTTL: 0,\n              }\n            - {\n                ErrorCode: 404,\n                ResponsePagePath: /index.html,\n                ResponseCode: 200,\n                ErrorCachingMinTTL: 0,\n              }\n\n    WebBucketPolicy:\n      Type: AWS::S3::BucketPolicy\n      Properties:\n        Bucket: { Ref: WebBucket }\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Sid: AllowCloudFrontRead\n              Effect: Allow\n              Principal: { Service: cloudfront.amazonaws.com }\n              Action: s3:GetObject\n              Resource:\n                { \"Fn::Join\": [\"\", [{ \"Fn::GetAtt\": [WebBucket, Arn] }, \"/*\"]] }\n              Condition:\n                StringEquals:\n                  AWS:SourceArn:\n                    {\n                      \"Fn::Join\":\n                        [\n                          \"\",\n                          [\n                            \"arn:aws:cloudfront::\",\n                            { Ref: \"AWS::AccountId\" },\n                            \":distribution/\",\n                            { Ref: WebDistribution },\n                          ],\n                        ],\n                    }\n\n    ApiDomainName:\n      Type: AWS::ApiGatewayV2::DomainName\n      Condition: HasApiDomain\n      Properties:\n        DomainName: ${param:apiDomainName}\n        DomainNameConfigurations:\n          - CertificateArn: ${param:apiCertificateArn}\n            EndpointType: REGIONAL\n            SecurityPolicy: TLS_1_2\n\n    ApiBasePathMapping:\n      Type: AWS::ApiGatewayV2::ApiMapping\n      Condition: HasApiDomain\n      Properties:\n        DomainName: ${param:apiDomainName}\n        ApiId: { Ref: HttpApi }\n        Stage: \"$default\"\n\n    ApiDnsRecord:\n      Type: AWS::Route53::RecordSet\n      Condition: HasApiDomain\n      Properties:\n        HostedZoneId: ${param:apiHostedZoneId}\n        Name: ${param:apiDomainName}\n        Type: A\n        AliasTarget:\n          DNSName: { \"Fn::GetAtt\": [ApiDomainName, RegionalDomainName] }\n          HostedZoneId: { \"Fn::GetAtt\": [ApiDomainName, RegionalHostedZoneId] }\n\n    CognitoUserPool:\n      Type: AWS::Cognito::UserPool\n      Properties:\n        UserPoolName: ${self:service}-${sls:stage}-userpool\n        AutoVerifiedAttributes: [email]\n        UsernameAttributes: [email]\n        Policies:\n          PasswordPolicy:\n            MinimumLength: 8\n            RequireLowercase: true\n            RequireNumbers: true\n            RequireSymbols: false\n            RequireUppercase: true\n\n    CognitoUserPoolClient:\n      Type: AWS::Cognito::UserPoolClient\n      Properties:\n        ClientName: ${self:service}-${sls:stage}-client\n        UserPoolId: { Ref: CognitoUserPool }\n        GenerateSecret: false\n        ExplicitAuthFlows:\n          - ALLOW_USER_PASSWORD_AUTH\n          - ALLOW_REFRESH_TOKEN_AUTH\n          - ALLOW_USER_SRP_AUTH\n        PreventUserExistenceErrors: ENABLED\n        SupportedIdentityProviders: [COGNITO]\n        AllowedOAuthFlowsUserPoolClient: true\n        AllowedOAuthFlows: [code]\n        AllowedOAuthScopes: [email, openid, profile]\n        CallbackURLs:\n          - ${param:appBaseUrl}\n          - ${param:localDevUrl}\n        LogoutURLs:\n          - ${param:appBaseUrl}\n          - ${param:localDevUrl}\n\n    SesEmailIdentity:\n      Type: AWS::SES::EmailIdentity\n      Properties:\n        EmailIdentity: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}\n\n  Outputs:\n    WebBucketName:\n      Value: { Ref: WebBucket }\n    WebDistributionId:\n      Value: { Ref: WebDistribution }\n    WebDistributionDomain:\n      Value: { \"Fn::GetAtt\": [WebDistribution, DomainName] }\n    ApiCustomDomain:\n      Condition: HasApiDomain\n      Value: ${param:apiDomainName}\n",
+    "serviceRawFile": "service: uniapply-app\nframeworkVersion: \"4\"\nuseDotenv: true\n\nprovider:\n  name: aws\n  runtime: nodejs20.x\n  region: us-east-1\n  stage: ${opt:stage, 'dev'}\n\n  httpApi:\n    cors:\n      allowedOrigins:\n        - ${env:FRONTEND_URL, 'http://localhost:5173'}\n        - ${env:PRODUCTION_URL, 'https://uniapply.app'}\n        - ${env:STAGING_URL, 'https://staging.uniapply.app'}\n      allowedMethods: [GET, POST, PUT, DELETE, OPTIONS]\n      allowedHeaders:\n        - \"Authorization\"\n        - \"Content-Type\"\n        - \"X-Requested-With\"\n        - \"X-API-Key\"\n        - \"X-Content-Type-Options\"\n        - \"X-Frame-Options\"\n        - \"X-XSS-Protection\"\n        - \"Strict-Transport-Security\"\n        - \"Content-Security-Policy\"\n        - \"Referrer-Policy\"\n        - \"Permissions-Policy\"\n        - \"X-Permitted-Cross-Domain-Policies\"\n        - \"x-ratelimit-limit\"\n        - \"x-ratelimit-remaining\"\n        - \"x-ratelimit-reset\"\n        - \"retry-after\"\n\n      allowCredentials: true\n      maxAge: 86400\n\n  logRetentionInDays: 30\n  tracing:\n    lambda: true\n  tags:\n    Service: ${self:service}\n    Stage: ${sls:stage}\n\n  environment:\n    REGION: ${self:provider.region}\n    STAGE: ${sls:stage}\n    USERS_TABLE: ${self:service}-users-${sls:stage}\n    FORMS_TABLE: ${self:service}-forms-${sls:stage}\n    APPLICATIONS_TABLE: ${self:service}-applications-${sls:stage}\n    ROLES_TABLE: ${self:service}-roles-${sls:stage}\n    AUDIT_TABLE: ${self:service}-audit-${sls:stage}\n    RATE_LIMIT_TABLE: ${self:service}-rate-limits-${sls:stage}\n    TOKEN_BLACKLIST_TABLE: ${self:service}-token-blacklist-${sls:stage}\n    SECURITY_EVENTS_TABLE: ${self:service}-security-events-${sls:stage}\n    WEB_BUCKET: { Ref: WebBucket }\n    UPLOADS_BUCKET: { Ref: UploadsBucket }\n    USER_POOL_ID: { Ref: CognitoUserPool }\n    USER_POOL_CLIENT_ID: { Ref: CognitoUserPoolClient }\n    SES_SENDER_EMAIL: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}\n    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}\n    APP_NAME: ${env:APP_NAME, 'UniApply'}\n\n  iam:\n    role:\n      statements:\n        - Effect: Allow\n          Action:\n            - dynamodb:PutItem\n            - dynamodb:GetItem\n            - dynamodb:UpdateItem\n            - dynamodb:DeleteItem\n            - dynamodb:Query\n            - dynamodb:Scan\n            - dynamodb:DescribeTable\n            - dynamodb:BatchWriteItem\n            - dynamodb:BatchGetItem\n          Resource:\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.FORMS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.ROLES_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.AUDIT_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.RATE_LIMIT_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.TOKEN_BLACKLIST_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.SECURITY_EVENTS_TABLE}\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.APPLICATIONS_TABLE}/index/*\n            - arn:aws:dynamodb:${self:provider.region}:${aws:accountId}:table/${self:provider.environment.USERS_TABLE}/index/*\n        - Effect: Allow\n          Action:\n            - s3:GetObject\n            - s3:PutObject\n            - s3:DeleteObject\n            - s3:ListBucket\n          Resource:\n            - { \"Fn::GetAtt\": [WebBucket, Arn] }\n            - { \"Fn::Join\": [\"\", [{ \"Fn::GetAtt\": [WebBucket, Arn] }, \"/*\"]] }\n            - { \"Fn::GetAtt\": [UploadsBucket, Arn] }\n            - {\n                \"Fn::Join\":\n                  [\"\", [{ \"Fn::GetAtt\": [UploadsBucket, Arn] }, \"/*\"]],\n              }\n        - Effect: Allow\n          Action:\n            - ses:SendEmail\n            - ses:SendRawEmail\n          Resource: \"*\"\n        - Effect: Allow\n          Action:\n            - cognito-idp:AdminGetUser\n            - cognito-idp:ListUsers\n            - cognito-idp:DescribeUserPool\n          Resource:\n            - { \"Fn::GetAtt\": [CognitoUserPool, Arn] }\n        - Effect: Allow\n          Action:\n            - ssm:GetParameter\n            - ssm:GetParameters\n          Resource:\n            - arn:aws:ssm:${self:provider.region}:${aws:accountId}:parameter/uniapply/${sls:stage}/*\n\nparams:\n  default:\n    appBaseUrl: ${ssm:/uniapply/${sls:stage}/appBaseUrl, 'http://localhost:5173'}\n    localDevUrl: ${env:LOCAL_DEV_URL, 'http://localhost:5173'}\n    apiDomainName: ${ssm:/uniapply/${sls:stage}/api/domainName, ''}\n    apiHostedZoneId: ${ssm:/uniapply/${sls:stage}/route53/hostedZoneId, ''}\n    apiCertificateArn: ${ssm:/uniapply/${sls:stage}/acm/certArn, ''}\n    wafArn: ${ssm:/uniapply/${sls:stage}/waf/arn, ''}\n\npackage:\n  individually: true\n\ncustom:\n  httpApi:\n    responseData:\n      headers:\n        X-Content-Type-Options: nosniff\n        X-Frame-Options: DENY\n        X-XSS-Protection: \"1; mode=block\"\n        Strict-Transport-Security: \"max-age=31536000; includeSubDomains; preload\"\n        Content-Security-Policy: \"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self';\"\n        Referrer-Policy: \"strict-origin-when-cross-origin\"\n        Permissions-Policy: \"camera=(), microphone=(), geolocation=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()\"\n        X-Permitted-Cross-Domain-Policies: \"none\"\n        Cache-Control: \"no-store, no-cache, must-revalidate, private\"\n        Pragma: \"no-cache\"\n        Expires: \"0\"\n        Access-Control-Expose-Headers: \"x-ratelimit-limit, x-ratelimit-remaining, x-ratelimit-reset, retry-after\"\n\nbuild:\n  esbuild:\n    minify: true\n    sourcemap: true\n    target: node20\n    external:\n      - zod\n    exclude:\n      - aws-sdk\n\nfunctions:\n  api:\n    handler: src/handler.main\n    memorySize: 512\n    timeout: 15\n    architecture: arm64\n    events:\n\n      # Auth endpoints (public)\n      - httpApi:\n          path: /auth/login\n          method: POST\n      - httpApi:\n          path: /auth/signup\n          method: POST\n      - httpApi:\n          path: /auth/forgot-password\n          method: POST\n      - httpApi:\n          path: /auth/reset-password\n          method: POST\n      - httpApi:\n          path: /auth/confirm-code\n          method: POST\n      # GET requests with caching\n      - httpApi:\n          path: /{proxy+}\n          method: GET\n      # POST requests (no caching)\n      - httpApi:\n          path: /{proxy+}\n          method: POST\n      # PUT requests (no caching)\n      - httpApi:\n          path: /{proxy+}\n          method: PUT\n      # DELETE requests (no caching)\n      - httpApi:\n          path: /{proxy+}\n          method: DELETE\n\n  presignUpload:\n    handler: src/handler.presignUpload\n    memorySize: 256\n    timeout: 10\n    architecture: arm64\n    events:\n      - httpApi:\n          path: /files/presign\n          method: POST\n\n  notifyStatusChange:\n    handler: src/handler.notifyStatusChange\n\n  postConfirmation:\n    handler: src/handler.postConfirmation\n    memorySize: 256\n    timeout: 10\n    architecture: arm64\n    events:\n      - cognitoUserPool:\n          pool: ${self:service}-${sls:stage}-userpool\n          trigger: PostConfirmation\n          existing: true\n\nresources:\n  Conditions:\n    HasApiDomain:\n      Fn::Not:\n        - Fn::Equals:\n            - \"\"\n            - ${param:apiDomainName, \"\"}\n    HasWaf:\n      Fn::Not:\n        - Fn::Equals:\n            - \"\"\n            - ${param:wafArn, \"\"}\n\n  Resources:\n    UsersTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.USERS_TABLE}\n        AttributeDefinitions:\n          - { AttributeName: id, AttributeType: S }\n          - { AttributeName: email, AttributeType: S }\n        KeySchema:\n          - { AttributeName: id, KeyType: HASH }\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n        GlobalSecondaryIndexes:\n          - IndexName: email-index\n            KeySchema: [{ AttributeName: email, KeyType: HASH }]\n            Projection: { ProjectionType: ALL }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    FormsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.FORMS_TABLE}\n        AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    ApplicationsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.APPLICATIONS_TABLE}\n        AttributeDefinitions:\n          - { AttributeName: id, AttributeType: S }\n          - { AttributeName: userId, AttributeType: S }\n          - { AttributeName: status, AttributeType: S }\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n        GlobalSecondaryIndexes:\n          - IndexName: userId-index\n            KeySchema: [{ AttributeName: userId, KeyType: HASH }]\n            Projection: { ProjectionType: ALL }\n          - IndexName: status-index\n            KeySchema: [{ AttributeName: status, KeyType: HASH }]\n            Projection: { ProjectionType: ALL }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    RolesTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.ROLES_TABLE}\n        AttributeDefinitions: [{ AttributeName: roleName, AttributeType: S }]\n        KeySchema: [{ AttributeName: roleName, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    AuditLogsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.AUDIT_TABLE}\n        AttributeDefinitions: [{ AttributeName: id, AttributeType: S }]\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    RateLimitTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.RATE_LIMIT_TABLE}\n        AttributeDefinitions: [{ AttributeName: key, AttributeType: S }]\n        KeySchema: [{ AttributeName: key, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        TimeToLiveSpecification:\n          AttributeName: ttl\n          Enabled: true\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    SecurityEventsTable:\n      Type: AWS::DynamoDB::Table\n      Properties:\n        TableName: ${self:provider.environment.SECURITY_EVENTS_TABLE}\n        AttributeDefinitions:\n          - { AttributeName: id, AttributeType: S }\n          - { AttributeName: sourceIP, AttributeType: S }\n          - { AttributeName: timestamp, AttributeType: S }\n        KeySchema: [{ AttributeName: id, KeyType: HASH }]\n        BillingMode: PAY_PER_REQUEST\n        SSESpecification: { SSEEnabled: true }\n        PointInTimeRecoverySpecification: { PointInTimeRecoveryEnabled: true }\n        GlobalSecondaryIndexes:\n          - IndexName: sourceIP-timestamp-index\n            KeySchema:\n              - { AttributeName: sourceIP, KeyType: HASH }\n              - { AttributeName: timestamp, KeyType: RANGE }\n            Projection: { ProjectionType: ALL }\n        TimeToLiveSpecification:\n          AttributeName: ttl\n          Enabled: true\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    WebBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        OwnershipControls:\n          Rules: [{ ObjectOwnership: BucketOwnerPreferred }]\n        PublicAccessBlockConfiguration:\n          BlockPublicAcls: true\n          BlockPublicPolicy: true\n          IgnorePublicAcls: true\n          RestrictPublicBuckets: true\n        BucketEncryption:\n          ServerSideEncryptionConfiguration:\n            - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }\n        VersioningConfiguration: { Status: Enabled }\n        LifecycleConfiguration:\n          Rules:\n            - Id: ExpireOldVersions\n              Status: Enabled\n              NoncurrentVersionExpiration:\n                NoncurrentDays: 30\n        CorsConfiguration:\n          CorsRules:\n            - AllowedOrigins:\n                - ${param:appBaseUrl}\n              AllowedMethods: [GET, HEAD]\n              AllowedHeaders: [\"*\"]\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    UploadsBucket:\n      Type: AWS::S3::Bucket\n      Properties:\n        OwnershipControls:\n          Rules: [{ ObjectOwnership: BucketOwnerPreferred }]\n        PublicAccessBlockConfiguration:\n          BlockPublicAcls: true\n          BlockPublicPolicy: true\n          IgnorePublicAcls: true\n          RestrictPublicBuckets: true\n        BucketEncryption:\n          ServerSideEncryptionConfiguration:\n            - ServerSideEncryptionByDefault: { SSEAlgorithm: AES256 }\n        VersioningConfiguration: { Status: Enabled }\n        CorsConfiguration:\n          CorsRules:\n            - AllowedOrigins:\n                - ${param:appBaseUrl}\n              AllowedMethods: [GET, PUT]\n              AllowedHeaders: [\"*\"]\n              ExposedHeaders: [\"ETag\"]\n      DeletionPolicy: Retain\n      UpdateReplacePolicy: Retain\n\n    UploadsBucketPolicy:\n      Type: AWS::S3::BucketPolicy\n      Properties:\n        Bucket: { Ref: UploadsBucket }\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Sid: EnforceTLS\n              Effect: Deny\n              Principal: \"*\"\n              Action: \"s3:*\"\n              Resource:\n                - { \"Fn::GetAtt\": [UploadsBucket, Arn] }\n                - {\n                    \"Fn::Join\":\n                      [\"\", [{ \"Fn::GetAtt\": [UploadsBucket, Arn] }, \"/*\"]],\n                  }\n              Condition:\n                Bool: { aws:SecureTransport: \"false\" }\n\n    CloudFrontOAC:\n      Type: AWS::CloudFront::OriginAccessControl\n      Properties:\n        OriginAccessControlConfig:\n          Name: ${self:service}-${sls:stage}-oac\n          OriginAccessControlOriginType: s3\n          SigningBehavior: always\n          SigningProtocol: sigv4\n\n    SecurityHeadersPolicy:\n      Type: AWS::CloudFront::ResponseHeadersPolicy\n      Properties:\n        ResponseHeadersPolicyConfig:\n          Name: ${self:service}-${sls:stage}-security-headers\n          SecurityHeadersConfig:\n            ContentSecurityPolicy:\n              ContentSecurityPolicy: >-\n                default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' https:; frame-ancestors 'none';\n              Override: true\n            StrictTransportSecurity:\n              AccessControlMaxAgeSec: 63072000\n              IncludeSubdomains: true\n              Preload: true\n              Override: true\n            ContentTypeOptions: { Override: true }\n            FrameOptions: { FrameOption: DENY, Override: true }\n            ReferrerPolicy: { ReferrerPolicy: \"no-referrer\", Override: true }\n\n    WebDistribution:\n      Type: AWS::CloudFront::Distribution\n      Properties:\n        DistributionConfig:\n          Enabled: true\n          DefaultRootObject: index.html\n          Origins:\n            - Id: WebBucketOrigin\n              DomainName: { \"Fn::GetAtt\": [WebBucket, RegionalDomainName] }\n              S3OriginConfig: {}\n              OriginAccessControlId: { Ref: CloudFrontOAC }\n          DefaultCacheBehavior:\n            TargetOriginId: WebBucketOrigin\n            ViewerProtocolPolicy: redirect-to-https\n            AllowedMethods: [GET, HEAD, OPTIONS]\n            CachedMethods: [GET, HEAD]\n            Compress: true\n            CachePolicyId: \"658327ea-f89d-4fab-a63d-7e88639e58f6\"\n            ResponseHeadersPolicyId: { Ref: SecurityHeadersPolicy }\n          PriceClass: PriceClass_100\n          ViewerCertificate:\n            CloudFrontDefaultCertificate: true\n          CustomErrorResponses:\n            - {\n                ErrorCode: 403,\n                ResponsePagePath: /index.html,\n                ResponseCode: 200,\n                ErrorCachingMinTTL: 0,\n              }\n            - {\n                ErrorCode: 404,\n                ResponsePagePath: /index.html,\n                ResponseCode: 200,\n                ErrorCachingMinTTL: 0,\n              }\n\n    WebBucketPolicy:\n      Type: AWS::S3::BucketPolicy\n      Properties:\n        Bucket: { Ref: WebBucket }\n        PolicyDocument:\n          Version: \"2012-10-17\"\n          Statement:\n            - Sid: AllowCloudFrontRead\n              Effect: Allow\n              Principal: { Service: cloudfront.amazonaws.com }\n              Action: s3:GetObject\n              Resource:\n                { \"Fn::Join\": [\"\", [{ \"Fn::GetAtt\": [WebBucket, Arn] }, \"/*\"]] }\n              Condition:\n                StringEquals:\n                  AWS:SourceArn:\n                    {\n                      \"Fn::Join\":\n                        [\n                          \"\",\n                          [\n                            \"arn:aws:cloudfront::\",\n                            { Ref: \"AWS::AccountId\" },\n                            \":distribution/\",\n                            { Ref: WebDistribution },\n                          ],\n                        ],\n                    }\n\n    ApiDomainName:\n      Type: AWS::ApiGatewayV2::DomainName\n      Condition: HasApiDomain\n      Properties:\n        DomainName: ${param:apiDomainName}\n        DomainNameConfigurations:\n          - CertificateArn: ${param:apiCertificateArn}\n            EndpointType: REGIONAL\n            SecurityPolicy: TLS_1_2\n\n    ApiBasePathMapping:\n      Type: AWS::ApiGatewayV2::ApiMapping\n      Condition: HasApiDomain\n      Properties:\n        DomainName: ${param:apiDomainName}\n        ApiId: { Ref: HttpApi }\n        Stage: \"$default\"\n\n    ApiDnsRecord:\n      Type: AWS::Route53::RecordSet\n      Condition: HasApiDomain\n      Properties:\n        HostedZoneId: ${param:apiHostedZoneId}\n        Name: ${param:apiDomainName}\n        Type: A\n        AliasTarget:\n          DNSName: { \"Fn::GetAtt\": [ApiDomainName, RegionalDomainName] }\n          HostedZoneId: { \"Fn::GetAtt\": [ApiDomainName, RegionalHostedZoneId] }\n\n    CognitoUserPool:\n      Type: AWS::Cognito::UserPool\n      Properties:\n        UserPoolName: ${self:service}-${sls:stage}-userpool\n        AutoVerifiedAttributes: [email]\n        UsernameAttributes: [email]\n        Policies:\n          PasswordPolicy:\n            MinimumLength: 12\n            RequireLowercase: true\n            RequireNumbers: true\n            RequireSymbols: true\n            RequireUppercase: true\n            TemporaryPasswordValidityDays: 7\n        MfaConfiguration: \"OPTIONAL\"\n        AccountRecoverySetting:\n          RecoveryMechanisms:\n            - Name: \"verified_email\"\n              Priority: 1\n        VerificationMessageTemplate:\n          DefaultEmailOption: \"CONFIRM_WITH_CODE\"\n        EmailConfiguration:\n          EmailSendingAccount: \"COGNITO_DEFAULT\"\n        AdminCreateUserConfig:\n          AllowAdminCreateUserOnly: false\n\n    CognitoUserPoolClient:\n      Type: AWS::Cognito::UserPoolClient\n      Properties:\n        ClientName: ${self:service}-${sls:stage}-client\n        UserPoolId: { Ref: CognitoUserPool }\n        GenerateSecret: false\n        ExplicitAuthFlows:\n          - ALLOW_USER_PASSWORD_AUTH\n          - ALLOW_REFRESH_TOKEN_AUTH\n          - ALLOW_USER_SRP_AUTH\n        PreventUserExistenceErrors: ENABLED\n        SupportedIdentityProviders: [COGNITO]\n        AllowedOAuthFlowsUserPoolClient: true\n        AllowedOAuthFlows: [code]\n        AllowedOAuthScopes: [email, openid, profile]\n        CallbackURLs:\n          - ${param:appBaseUrl}\n          - ${param:localDevUrl}\n        LogoutURLs:\n          - ${param:appBaseUrl}\n          - ${param:localDevUrl}\n        TokenValidityUnits:\n          AccessToken: hours\n          IdToken: hours\n          RefreshToken: days\n        AccessTokenValidity: 1\n        IdTokenValidity: 1\n        RefreshTokenValidity: 30\n\n    SesEmailIdentity:\n      Type: AWS::SES::EmailIdentity\n      Properties:\n        EmailIdentity: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}\n\n  Outputs:\n    WebBucketName:\n      Value: { Ref: WebBucket }\n    WebDistributionId:\n      Value: { Ref: WebDistribution }\n    WebDistributionDomain:\n      Value: { \"Fn::GetAtt\": [WebDistribution, DomainName] }\n    ApiCustomDomain:\n      Condition: HasApiDomain\n      Value: ${param:apiDomainName}\n",
     "command": [
       "deploy"
     ],
@@ -4643,12 +5106,12 @@
     "serviceProviderAwsCfStackName": "uniapply-app-dev",
     "serviceProviderAwsCfStackId": "arn:aws:cloudformation:us-east-1:584326014609:stack/uniapply-app-dev/c40a7140-7aea-11f0-9b33-0e6db4f85ebf",
     "serviceProviderAwsCfStackCreated": "2025-08-16T21:48:38.010Z",
-    "serviceProviderAwsCfStackUpdated": "2025-08-23T12:57:34.094Z",
+    "serviceProviderAwsCfStackUpdated": "2025-08-24T13:44:55.069Z",
     "serviceProviderAwsCfStackStatus": "UPDATE_COMPLETE",
     "serviceProviderAwsCfStackOutputs": [
       {
         "OutputKey": "PresignUploadLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-presignUpload:64",
+        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-presignUpload:107",
         "Description": "Current Lambda function version",
         "ExportName": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
       },
@@ -4662,7 +5125,7 @@
       },
       {
         "OutputKey": "ApiLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-api:64",
+        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-api:107",
         "Description": "Current Lambda function version",
         "ExportName": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
       },
@@ -4678,7 +5141,7 @@
       },
       {
         "OutputKey": "NotifyStatusChangeLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-notifyStatusChange:64",
+        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-notifyStatusChange:107",
         "Description": "Current Lambda function version",
         "ExportName": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
       },
@@ -4689,7 +5152,7 @@
       },
       {
         "OutputKey": "PostConfirmationLambdaFunctionQualifiedArn",
-        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-postConfirmation:63",
+        "OutputValue": "arn:aws:lambda:us-east-1:584326014609:function:uniapply-app-dev-postConfirmation:106",
         "Description": "Current Lambda function version",
         "ExportName": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
       },
@@ -4809,6 +5272,9 @@
                         "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev",
                         "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-roles-dev",
                         "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-audit-dev",
+                        "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-rate-limits-dev",
+                        "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-token-blacklist-dev",
+                        "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-security-events-dev",
                         "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-applications-dev/index/*",
                         "arn:aws:dynamodb:us-east-1:584326014609:table/uniapply-app-users-dev/index/*"
                       ]
@@ -4931,7 +5397,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-              "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-api.zip"
+              "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-api.zip"
             },
             "Handler": "src/handler.main",
             "Runtime": "nodejs20.x",
@@ -4963,6 +5429,9 @@
                 "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                 "ROLES_TABLE": "uniapply-app-roles-dev",
                 "AUDIT_TABLE": "uniapply-app-audit-dev",
+                "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                 "WEB_BUCKET": {
                   "Ref": "WebBucket"
                 },
@@ -4997,7 +5466,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-              "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-presignUpload.zip"
+              "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-presignUpload.zip"
             },
             "Handler": "src/handler.presignUpload",
             "Runtime": "nodejs20.x",
@@ -5029,6 +5498,9 @@
                 "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                 "ROLES_TABLE": "uniapply-app-roles-dev",
                 "AUDIT_TABLE": "uniapply-app-audit-dev",
+                "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                 "WEB_BUCKET": {
                   "Ref": "WebBucket"
                 },
@@ -5063,7 +5535,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-              "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-notifyStatusChange.zip"
+              "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-notifyStatusChange.zip"
             },
             "Handler": "src/handler.notifyStatusChange",
             "Runtime": "nodejs20.x",
@@ -5092,6 +5564,9 @@
                 "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                 "ROLES_TABLE": "uniapply-app-roles-dev",
                 "AUDIT_TABLE": "uniapply-app-audit-dev",
+                "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                 "WEB_BUCKET": {
                   "Ref": "WebBucket"
                 },
@@ -5126,7 +5601,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-              "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/uniapply-app-postConfirmation.zip"
+              "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/uniapply-app-postConfirmation.zip"
             },
             "Handler": "src/handler.postConfirmation",
             "Runtime": "nodejs20.x",
@@ -5158,6 +5633,9 @@
                 "APPLICATIONS_TABLE": "uniapply-app-applications-dev",
                 "ROLES_TABLE": "uniapply-app-roles-dev",
                 "AUDIT_TABLE": "uniapply-app-audit-dev",
+                "RATE_LIMIT_TABLE": "uniapply-app-rate-limits-dev",
+                "TOKEN_BLACKLIST_TABLE": "<REDACTED>",
+                "SECURITY_EVENTS_TABLE": "uniapply-app-security-events-dev",
                 "WEB_BUCKET": {
                   "Ref": "WebBucket"
                 },
@@ -5187,44 +5665,44 @@
             "PostConfirmationLogGroup"
           ]
         },
-        "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ": {
-          "Type": "AWS::Lambda::Version",
-          "DeletionPolicy": "Retain",
-          "Properties": {
-            "FunctionName": {
-              "Ref": "PostConfirmationLambdaFunction"
-            },
-            "CodeSha256": "daUaHH113WWhVHvEgSwDY9LcRyWgawr4PrjUN7o4MVg="
-          }
-        },
-        "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM": {
-          "Type": "AWS::Lambda::Version",
-          "DeletionPolicy": "Retain",
-          "Properties": {
-            "FunctionName": {
-              "Ref": "ApiLambdaFunction"
-            },
-            "CodeSha256": "QIr1h5watLk3y0z4ueaD3arkzi/wfoWI56LO1Qk0qAo="
-          }
-        },
-        "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw": {
-          "Type": "AWS::Lambda::Version",
-          "DeletionPolicy": "Retain",
-          "Properties": {
-            "FunctionName": {
-              "Ref": "PresignUploadLambdaFunction"
-            },
-            "CodeSha256": "qOeD8ma1RFZuasKvzpDpBxQiq47bl7pHtDdlE53o1z8="
-          }
-        },
-        "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo": {
+        "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4": {
           "Type": "AWS::Lambda::Version",
           "DeletionPolicy": "Retain",
           "Properties": {
             "FunctionName": {
               "Ref": "NotifyStatusChangeLambdaFunction"
             },
-            "CodeSha256": "qOeD8ma1RFZuasKvzpDpBxQiq47bl7pHtDdlE53o1z8="
+            "CodeSha256": "Omo8Gn1QWI+ZMaS4JuR+jvVqfoTjLEOVijkwOyT1urQ="
+          }
+        },
+        "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "PostConfirmationLambdaFunction"
+            },
+            "CodeSha256": "mHjbe+y2qtWqOJ3kE5Wdcx0a6oZpO+EdJFGTEfyyYlw="
+          }
+        },
+        "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "ApiLambdaFunction"
+            },
+            "CodeSha256": "KbFllb5Olfe4Ncg2zCA9Ub47CjgDtelzxI6ciFdqegs="
+          }
+        },
+        "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU": {
+          "Type": "AWS::Lambda::Version",
+          "DeletionPolicy": "Retain",
+          "Properties": {
+            "FunctionName": {
+              "Ref": "PresignUploadLambdaFunction"
+            },
+            "CodeSha256": "PcYQcD2Ttpsz2JYdvC0Qub3sIToIYVZSW/foL+lbH8g="
           }
         },
         "PostConfirmationCustomCognitoUserPool1": {
@@ -5342,7 +5820,7 @@
           "Properties": {
             "Code": {
               "S3Bucket": "serverless-framework-deployments-us-east-1-2532fbd3-7393",
-              "S3Key": "serverless/uniapply-app/dev/1755956452898-2025-08-23T13:40:52.898Z/custom-resources.zip"
+              "S3Key": "serverless/uniapply-app/dev/1756043228696-2025-08-24T13:47:08.696Z/custom-resources.zip"
             },
             "FunctionName": "uniapply-app-dev-custom-resource-existing-cup",
             "Handler": "cognito-user-pool/handler.handler",
@@ -5378,8 +5856,24 @@
               "Stage": "dev"
             },
             "CorsConfiguration": {
+              "AllowCredentials": "<REDACTED>",
               "AllowHeaders": [
-                "*"
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With",
+                "X-API-Key",
+                "X-Content-Type-Options",
+                "X-Frame-Options",
+                "X-XSS-Protection",
+                "Strict-Transport-Security",
+                "Content-Security-Policy",
+                "Referrer-Policy",
+                "Permissions-Policy",
+                "X-Permitted-Cross-Domain-Policies",
+                "x-ratelimit-limit",
+                "x-ratelimit-remaining",
+                "x-ratelimit-reset",
+                "retry-after"
               ],
               "AllowMethods": [
                 "GET",
@@ -5389,7 +5883,9 @@
                 "OPTIONS"
               ],
               "AllowOrigins": [
-                "*"
+                "http://localhost:5173",
+                "https://uniapply.app",
+                "https://staging.uniapply.app"
               ],
               "MaxAge": 86400
             }
@@ -5409,39 +5905,6 @@
             "Tags": {
               "Service": "uniapply-app",
               "Stage": "dev"
-            }
-          }
-        },
-        "HttpApiAuthorizerCognitoJwt": {
-          "Type": "AWS::ApiGatewayV2::Authorizer",
-          "Properties": {
-            "ApiId": {
-              "Ref": "HttpApi"
-            },
-            "Name": "cognitoJwt",
-            "IdentitySource": [
-              "$request.header.Authorization"
-            ],
-            "AuthorizerType": "JWT",
-            "JwtConfiguration": {
-              "Audience": [
-                {
-                  "Ref": "CognitoUserPoolClient"
-                }
-              ],
-              "Issuer": {
-                "Fn::Join": [
-                  "",
-                  [
-                    "https://cognito-idp.",
-                    "us-east-1",
-                    ".amazonaws.com/",
-                    {
-                      "Ref": "CognitoUserPool"
-                    }
-                  ]
-                ]
-              }
             }
           }
         },
@@ -5499,6 +5962,71 @@
             "TimeoutInMillis": 30000
           }
         },
+        "HttpApiRoutePostAuthLogin": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "RouteKey": "POST /auth/login",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "HttpApiIntegrationApi"
+                  }
+                ]
+              ]
+            }
+          },
+          "DependsOn": "HttpApiIntegrationApi"
+        },
+        "HttpApiRoutePostAuthSignup": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "RouteKey": "POST /auth/signup",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "HttpApiIntegrationApi"
+                  }
+                ]
+              ]
+            }
+          },
+          "DependsOn": "HttpApiIntegrationApi"
+        },
+        "HttpApiRoutePostAuthForgotDashpassword": "<REDACTED>",
+        "HttpApiRoutePostAuthResetDashpassword": "<REDACTED>",
+        "HttpApiRoutePostAuthConfirmDashcode": {
+          "Type": "AWS::ApiGatewayV2::Route",
+          "Properties": {
+            "ApiId": {
+              "Ref": "HttpApi"
+            },
+            "RouteKey": "POST /auth/confirm-code",
+            "Target": {
+              "Fn::Join": [
+                "/",
+                [
+                  "integrations",
+                  {
+                    "Ref": "HttpApiIntegrationApi"
+                  }
+                ]
+              ]
+            }
+          },
+          "DependsOn": "HttpApiIntegrationApi"
+        },
         "HttpApiRouteGetProxyVar": {
           "Type": "AWS::ApiGatewayV2::Route",
           "Properties": {
@@ -5516,10 +6044,6 @@
                   }
                 ]
               ]
-            },
-            "AuthorizationType": "JWT",
-            "AuthorizerId": {
-              "Ref": "HttpApiAuthorizerCognitoJwt"
             }
           },
           "DependsOn": "HttpApiIntegrationApi"
@@ -5541,10 +6065,6 @@
                   }
                 ]
               ]
-            },
-            "AuthorizationType": "JWT",
-            "AuthorizerId": {
-              "Ref": "HttpApiAuthorizerCognitoJwt"
             }
           },
           "DependsOn": "HttpApiIntegrationApi"
@@ -5566,10 +6086,6 @@
                   }
                 ]
               ]
-            },
-            "AuthorizationType": "JWT",
-            "AuthorizerId": {
-              "Ref": "HttpApiAuthorizerCognitoJwt"
             }
           },
           "DependsOn": "HttpApiIntegrationApi"
@@ -5591,10 +6107,6 @@
                   }
                 ]
               ]
-            },
-            "AuthorizationType": "JWT",
-            "AuthorizerId": {
-              "Ref": "HttpApiAuthorizerCognitoJwt"
             }
           },
           "DependsOn": "HttpApiIntegrationApi"
@@ -5670,10 +6182,6 @@
                   }
                 ]
               ]
-            },
-            "AuthorizationType": "JWT",
-            "AuthorizerId": {
-              "Ref": "HttpApiAuthorizerCognitoJwt"
             }
           },
           "DependsOn": "HttpApiIntegrationPresignUpload"
@@ -5860,6 +6368,91 @@
             },
             "PointInTimeRecoverySpecification": {
               "PointInTimeRecoveryEnabled": true
+            }
+          },
+          "DeletionPolicy": "Retain",
+          "UpdateReplacePolicy": "Retain"
+        },
+        "RateLimitTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "uniapply-app-rate-limits-dev",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "key",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "key",
+                "KeyType": "HASH"
+              }
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+            "SSESpecification": {
+              "SSEEnabled": true
+            },
+            "TimeToLiveSpecification": {
+              "AttributeName": "ttl",
+              "Enabled": true
+            }
+          },
+          "DeletionPolicy": "Retain",
+          "UpdateReplacePolicy": "Retain"
+        },
+        "SecurityEventsTable": {
+          "Type": "AWS::DynamoDB::Table",
+          "Properties": {
+            "TableName": "uniapply-app-security-events-dev",
+            "AttributeDefinitions": [
+              {
+                "AttributeName": "id",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "sourceIP",
+                "AttributeType": "S"
+              },
+              {
+                "AttributeName": "timestamp",
+                "AttributeType": "S"
+              }
+            ],
+            "KeySchema": [
+              {
+                "AttributeName": "id",
+                "KeyType": "HASH"
+              }
+            ],
+            "BillingMode": "PAY_PER_REQUEST",
+            "SSESpecification": {
+              "SSEEnabled": true
+            },
+            "PointInTimeRecoverySpecification": {
+              "PointInTimeRecoveryEnabled": true
+            },
+            "GlobalSecondaryIndexes": [
+              {
+                "IndexName": "sourceIP-timestamp-index",
+                "KeySchema": [
+                  {
+                    "AttributeName": "sourceIP",
+                    "KeyType": "HASH"
+                  },
+                  {
+                    "AttributeName": "timestamp",
+                    "KeyType": "RANGE"
+                  }
+                ],
+                "Projection": {
+                  "ProjectionType": "ALL"
+                }
+              }
+            ],
+            "TimeToLiveSpecification": {
+              "AttributeName": "ttl",
+              "Enabled": true
             }
           },
           "DeletionPolicy": "Retain",
@@ -6237,6 +6830,24 @@
             ],
             "Policies": {
               "PasswordPolicy": "<REDACTED>"
+            },
+            "MfaConfiguration": "OPTIONAL",
+            "AccountRecoverySetting": {
+              "RecoveryMechanisms": [
+                {
+                  "Name": "verified_email",
+                  "Priority": 1
+                }
+              ]
+            },
+            "VerificationMessageTemplate": {
+              "DefaultEmailOption": "CONFIRM_WITH_CODE"
+            },
+            "EmailConfiguration": {
+              "EmailSendingAccount": "COGNITO_DEFAULT"
+            },
+            "AdminCreateUserConfig": {
+              "AllowAdminCreateUserOnly": false
             }
           }
         },
@@ -6273,7 +6884,11 @@
             "LogoutURLs": [
               "http://localhost:5173",
               "http://localhost:5173"
-            ]
+            ],
+            "TokenValidityUnits": "<REDACTED>",
+            "AccessTokenValidity": "<REDACTED>",
+            "IdTokenValidity": "<REDACTED>",
+            "RefreshTokenValidity": "<REDACTED>"
           }
         },
         "SesEmailIdentity": {
@@ -6290,10 +6905,19 @@
             "Name": "sls-uniapply-app-dev-ServerlessDeploymentBucketName"
           }
         },
+        "NotifyStatusChangeLambdaFunctionQualifiedArn": {
+          "Description": "Current Lambda function version",
+          "Value": {
+            "Ref": "NotifyStatusChangeLambdaVersionEpFHA1gu2SLZmMKEyhC8Us8OhFGX0s7C8ui1dZmu2B4"
+          },
+          "Export": {
+            "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
+          }
+        },
         "PostConfirmationLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "PostConfirmationLambdaVersionzko0thumFQRCr2kEyZW881mNmF1syvgEYYJaLX2HGQ"
+            "Ref": "PostConfirmationLambdaVersionQy8aLfPO4tslbrrfcIUY8X3f097Re3lFT9aJXJjo"
           },
           "Export": {
             "Name": "sls-uniapply-app-dev-PostConfirmationLambdaFunctionQualifiedArn"
@@ -6302,7 +6926,7 @@
         "ApiLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "ApiLambdaVersionifwkHIkQHT5mWD4bSHfIOnFz4fAbtrZIGW7CmuGwvM"
+            "Ref": "ApiLambdaVersionHYOO4Rx7PgEwCFj6euMtdZrBzRVT42zZxIC2oIo2vNQ"
           },
           "Export": {
             "Name": "sls-uniapply-app-dev-ApiLambdaFunctionQualifiedArn"
@@ -6311,19 +6935,10 @@
         "PresignUploadLambdaFunctionQualifiedArn": {
           "Description": "Current Lambda function version",
           "Value": {
-            "Ref": "PresignUploadLambdaVersionOwNoJXCsWGmOUq26BFxqRMcEXskV7vzUkPd5H3m2DRw"
+            "Ref": "PresignUploadLambdaVersionywu6FyHqt2FVCXLxv9b2Uc8qBbOWpKkB4DOMoDkoU"
           },
           "Export": {
             "Name": "sls-uniapply-app-dev-PresignUploadLambdaFunctionQualifiedArn"
-          }
-        },
-        "NotifyStatusChangeLambdaFunctionQualifiedArn": {
-          "Description": "Current Lambda function version",
-          "Value": {
-            "Ref": "NotifyStatusChangeLambdaVersionmj0glBz01zhNqjs2EMFMyvNmQD5y6GQtq0R2NVqloo"
-          },
-          "Export": {
-            "Name": "sls-uniapply-app-dev-NotifyStatusChangeLambdaFunctionQualifiedArn"
           }
         },
         "HttpApiId": {
