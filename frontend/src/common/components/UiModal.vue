@@ -24,9 +24,17 @@
           @click.stop
         >
           <div
-            class="border-b border-gray-200 px-4 md:px-5 py-3 md:py-4 text-base font-semibold text-gray-800 flex-shrink-0"
+            class="border-b border-gray-200 px-4 md:px-5 py-3 md:py-4 text-base font-semibold text-gray-800 flex-shrink-0 flex items-center justify-between"
           >
             <slot name="title">{{ title }}</slot>
+            <button
+              class="ml-4 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              @click="close"
+              aria-label="Close modal"
+              title="Close modal"
+            >
+              <UiIcon :path="mdiWindowClose" class="w-5 h-5" />
+            </button>
           </div>
           <div class="p-4 md:p-5 overflow-y-auto flex-1">
             <slot />
@@ -52,6 +60,8 @@
 <script setup lang="ts">
 import { watch, onUnmounted, ref } from 'vue'
 import { onClickOutside } from '@vueuse/core'
+import UiIcon from '@/common/components/UiIcon.vue'
+import { mdiWindowClose } from '@mdi/js'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl'
 

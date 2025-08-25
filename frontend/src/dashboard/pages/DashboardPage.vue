@@ -32,7 +32,10 @@
     </div>
 
     <!-- Loading state -->
-    <div v-if="store.loading" class="flex items-center justify-center py-16">
+    <div
+      v-if="store.loading || appStore.isLoadingInitialData"
+      class="flex items-center justify-center py-16"
+    >
       <div class="text-center">
         <div
           class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mx-auto mb-6"
@@ -186,7 +189,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDashboardStore } from '@/dashboard/store'
 import { useAuthStore } from '@/auth/store'
@@ -198,11 +201,13 @@ import DashboardStatCard from '@/dashboard/components/DashboardStatCard.vue'
 import DashboardApplicationsWidget from '@/dashboard/components/DashboardApplicationsWidget.vue'
 import DashboardAuditLogsWidget from '@/dashboard/components/DashboardAuditLogsWidget.vue'
 import { mdiPlus } from '@mdi/js'
+import { useAppStore } from '@/common/store/app'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useDashboardStore()
 const { getUserPermissions } = usePermissions()
+const appStore = useAppStore()
 
 const showTemplateSelector = ref(false)
 
