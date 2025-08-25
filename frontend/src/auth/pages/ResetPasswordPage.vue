@@ -28,6 +28,7 @@
           type="password"
           v-model="state.confirm"
           :error="errorMessageHandler(v$.confirm)"
+          @keyup.enter="submit"
           @blur="v$.confirm.$touch"
         />
       </div>

@@ -293,7 +293,7 @@ const fetchLogs = async () => {
   } catch (error) {
     console.error('Failed to fetch logs:', error)
     toastStore.show({
-      type: 'error',
+      tone: 'error',
       title: 'Error',
       message: 'Failed to load audit logs',
     })
@@ -324,8 +324,8 @@ const nextPage = () => {
   }
 }
 
-const getEntityColor = (entity: string) => {
-  const colors: Record<string, string> = {
+const getEntityColor = (entity: string): 'blue' | 'green' | 'gray' | 'purple' => {
+  const colors: Record<string, 'blue' | 'green' | 'gray' | 'purple'> = {
     APPLICATION: 'blue',
     FORM_TEMPLATE: 'green',
     USER: 'purple',
@@ -333,8 +333,8 @@ const getEntityColor = (entity: string) => {
   return colors[entity] || 'gray'
 }
 
-const getActionColor = (action: string) => {
-  const colors: Record<string, string> = {
+const getActionColor = (action: string): 'red' | 'green' | 'gray' | 'blue' => {
+  const colors: Record<string, 'red' | 'green' | 'gray' | 'blue'> = {
     CREATE: 'green',
     UPDATE: 'blue',
     DELETE: 'red',

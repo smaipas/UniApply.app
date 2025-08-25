@@ -7,6 +7,7 @@
         type="email"
         v-model="state.email"
         :error="errorMessageHandler(v$.email)"
+        @keyup.enter="submit"
         @blur="v$.email.$touch"
       />
       <div class="mt-6 flex items-center justify-between">

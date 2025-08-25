@@ -75,18 +75,31 @@ export const useDashboardStore = defineStore('dashboard', () => {
     error.value = null
 
     try {
-      // Load applications data
-      const [draftRes, pendingRes, approvedRes, rejectedRes] = await Promise.all([
-        api.get<Application[]>('/applications', { params: { status: 'DRAFT' } }),
-        api.get<Application[]>('/applications', { params: { status: 'PENDING_APPROVAL' } }),
-        api.get<Application[]>('/applications', { params: { status: 'APPROVED' } }),
-        api.get<Application[]>('/applications', { params: { status: 'REJECTED' } }),
-      ])
+      // Load applications data - only make calls that user has permission for
+      let draft: Application[] = []
+      let pending: Application[] = []
+      let approved: Application[] = []
+      let rejected: Application[] = []
 
-      const draft = draftRes.data
-      const pending = pendingRes.data
-      const approved = approvedRes.data
-      const rejected = rejectedRes.data
+      // Check if user has permission to read applications
+      if (permissions.value.applications.readAll || permissions.value.applications.readOwn) {
+        try {
+          const [draftRes, pendingRes, approvedRes, rejectedRes] = await Promise.all([
+            api.get<Application[]>('/applications', { params: { status: 'DRAFT' } }),
+            api.get<Application[]>('/applications', { params: { status: 'PENDING_APPROVAL' } }),
+            api.get<Application[]>('/applications', { params: { status: 'APPROVED' } }),
+            api.get<Application[]>('/applications', { params: { status: 'REJECTED' } }),
+          ])
+
+          draft = draftRes.data
+          pending = pendingRes.data
+          approved = approvedRes.data
+          rejected = rejectedRes.data
+        } catch (apiError: any) {
+          console.warn('Failed to load applications:', apiError)
+          // If API calls fail, continue with empty arrays
+        }
+      }
 
       const all = [...draft, ...pending, ...approved, ...rejected].sort((a, b) =>
         (b.updatedAt || '').localeCompare(a.updatedAt || ''),

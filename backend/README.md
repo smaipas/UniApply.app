@@ -2,7 +2,7 @@
 
 The backend for the UniApply application, built with AWS Lambda, TypeScript, and the Serverless Framework.
 
-## 🏗️ Architecture
+## Architecture
 
 ### Serverless Stack
 
@@ -13,6 +13,8 @@ The backend for the UniApply application, built with AWS Lambda, TypeScript, and
 - **SES** - Email notifications
 - **Route53** - DNS management
 - **CloudWatch** - Logging and monitoring
+- **S3** - File storage
+- **CloudFront** - Content delivery network
 
 ### Database Tables
 
@@ -21,39 +23,209 @@ The backend for the UniApply application, built with AWS Lambda, TypeScript, and
 - `ROLES_TABLE` - Role definitions and permissions
 - `FORMS_TABLE` - Form templates
 - `AUDIT_TABLE` - Audit logs
+- `RATE_LIMIT_TABLE` - Rate limiting
+- `TOKEN_BLACKLIST_TABLE` - JWT token blacklist
+- `SECURITY_EVENTS_TABLE` - Security monitoring
 
-## 🚀 Quick Start
+## Deployment Guide
 
 ### Prerequisites
 
-- Node.js 20+
-- AWS CLI configured
-- Serverless Framework installed globally
+1. **AWS CLI Configuration**
 
-### Installation
+   ```bash
+   aws configure
+   # Enter your AWS Access Key ID, Secret Access Key, Region (eu-central-1), and output format (json)
+   ```
+
+2. **Node.js 20+**
+
+   ```bash
+   node --version  # Should be 20.x or higher
+   ```
+
+3. **Serverless Framework**
+
+   ```bash
+   npm install -g serverless
+   serverless --version  # Should be 4.x or higher
+   ```
+
+4. **AWS Permissions**
+   Ensure your AWS user/role has permissions for:
+   - CloudFormation
+   - Lambda
+   - API Gateway
+   - DynamoDB
+   - Cognito
+   - S3
+   - CloudFront
+   - Route53
+   - SES
+   - CloudWatch
+   - IAM
+
+### Initial Setup
+
+1. **Clone and Install Dependencies**
+
+   ```bash
+   cd backend
+   npm install
+   ```
+
+2. **Environment Configuration**
+
+   ```bash
+   # Copy environment template
+   cp env.example .env
+
+   # Edit .env with your configuration
+   # Key variables:
+   # - SES_SENDER_EMAIL: Email for notifications
+   # - FRONTEND_URL: Your frontend URL
+   # - APP_NAME: Application name
+   ```
+
+### Deployment Steps
+
+#### 1. First-Time Deployment
 
 ```bash
-cd backend
-npm install
-```
-
-### Development
-
-```bash
-# Deploy to development
+# Deploy to development stage
 npx serverless deploy --stage dev
 
+# Wait for deployment to complete (5-10 minutes)
+# Note: This will create all AWS resources including Cognito User Pool
+```
+
+#### 2. Post-Deployment Configuration
+
+After successful deployment, you'll need to configure the frontend with the generated Cognito credentials:
+
+```bash
+# Get the Cognito User Pool ID and Client ID
+aws cloudformation describe-stacks \
+  --stack-name uniapply-app-dev \
+  --query 'Stacks[0].Outputs[?OutputKey==`CognitoUserPoolId` || OutputKey==`CognitoUserPoolClientId`]' \
+  --output table
+
+# Or use the provided script
+node scripts/get-new-cognito-config.js
+```
+
+#### 3. Frontend Environment Variables
+
+Update your frontend `.env` file with the values from step 2:
+
+```env
+VITE_API_BASE=https://api-dev.uniapply.app
+VITE_COGNITO_REGION=eu-central-1
+VITE_COGNITO_USER_POOL_ID=<User Pool ID from step 2>
+VITE_COGNITO_CLIENT_ID=<Client ID from step 2>
+```
+
+#### 4. Verify Deployment
+
+```bash
+# Check API health
+curl https://api-dev.uniapply.app/health
+
+# Check CloudFormation stack
+aws cloudformation describe-stacks --stack-name uniapply-app-dev --query 'Stacks[0].StackStatus'
+```
+
+### Production Deployment
+
+```bash
 # Deploy to production
 npx serverless deploy --stage prod
 
-# View logs
-npx serverless logs -f handler
-
-# Remove deployment
-npx serverless remove --stage dev
+# Update production frontend environment variables
+# Use the production Cognito credentials
 ```
 
-## 📁 Project Structure
+### Troubleshooting Deployment Issues
+
+#### Common Issues and Solutions
+
+1. **S3 Bucket Not Empty Error**
+
+   ```bash
+   # If you get "bucket not empty" error during removal
+   node scripts/empty-s3-bucket.js
+   npx serverless remove --stage dev
+   ```
+
+2. **DynamoDB Tables Retained**
+
+   ```bash
+   # If tables are retained due to DeletionPolicy
+   node scripts/cleanup-dynamodb.js
+   ```
+
+3. **Duplicate Cognito User Pools**
+
+   ```bash
+   # List all user pools
+   aws cognito-idp list-user-pools --max-results 60
+
+   # Delete duplicate pools (keep the one used by Lambda)
+   aws cognito-idp delete-user-pool --user-pool-id <pool-id>
+   ```
+
+4. **JWT Token Issues**
+   - Ensure frontend and backend use the same Cognito configuration
+   - Check that the User Pool ID and Client ID match
+   - Verify the JWT token is not expired
+
+#### Debug Commands
+
+```bash
+# View deployment logs
+npx serverless logs -f api --stage dev --tail
+
+# Check function configuration
+aws lambda get-function-configuration --function-name uniapply-app-dev-api
+
+# Test API endpoints
+curl -X GET https://api-dev.uniapply.app/applications \
+  -H "Authorization: Bearer <your-jwt-token>"
+
+# Check DynamoDB tables
+aws dynamodb list-tables
+
+# Check Cognito user pools
+aws cognito-idp list-user-pools --max-results 60
+```
+
+### Development Workflow
+
+```bash
+# Make code changes
+# ...
+
+# Deploy changes
+npx serverless deploy --stage dev
+
+# View logs
+npx serverless logs -f api --stage dev --tail
+
+# Test changes
+curl -X GET https://api-dev.uniapply.app/applications
+```
+
+### Cleanup
+
+```bash
+# Remove development deployment
+npx serverless remove --stage dev
+
+# Remove production deployment
+npx serverless remove --stage prod
+```
+
+## Project Structure
 
 ```
 backend/
@@ -68,34 +240,39 @@ backend/
 │   │   ├── auth.ts          # Authentication helpers
 │   │   ├── db.ts            # Database operations
 │   │   ├── ses.ts           # Email service
+│   │   ├── jwtSecurity.ts   # JWT validation
+│   │   ├── rateLimit.ts     # Rate limiting
 │   │   └── audit.ts         # Audit logging
 │   └── validation/          # Request validation
 │       ├── http.ts          # HTTP validation
 │       └── query.ts         # Query parameter validation
+├── scripts/                 # Deployment and maintenance scripts
+│   ├── empty-s3-bucket.js   # Clean S3 bucket
+│   ├── cleanup-dynamodb.js  # Clean DynamoDB tables
+│   └── get-new-cognito-config.js # Get Cognito config
 ├── serverless.yml           # Serverless configuration
 ├── package.json
 └── tsconfig.json
 ```
 
-## 🔌 API Endpoints
+## API Endpoints
 
 ### Authentication
 
 - `POST /auth/login` - User login
-- `POST /auth/register` - User registration
+- `POST /auth/signup` - User registration
 - `POST /auth/forgot-password` - Password reset
 - `POST /auth/reset-password` - Password reset confirmation
 
 ### Applications
 
-- `GET /applications` - List applications
+- `GET /applications` - List applications (supports status filter)
 - `POST /applications` - Create application
 - `GET /applications/{id}` - Get application details
 - `PUT /applications/{id}` - Update application
 - `DELETE /applications/{id}` - Delete application
 - `POST /applications/{id}/submit` - Submit application
-- `POST /applications/{id}/approve` - Approve application
-- `POST /applications/{id}/reject` - Reject application
+- `POST /applications/{id}/status` - Update application status
 
 ### Form Templates
 
@@ -122,105 +299,71 @@ backend/
 - `PUT /roles/{id}` - Update role
 - `DELETE /roles/{id}` - Delete role
 
-### Search
+### Audit Logs
 
-- `GET /search` - Global search across all resources
+- `GET /audit-logs` - Get audit logs
 
-## 🔧 Configuration
+### File Upload
+
+- `POST /files/presign` - Get presigned URL for file upload
+
+## Configuration
 
 ### Environment Variables
 
 ```bash
 # AWS Configuration
-AWS_REGION=us-east-1
-AWS_ACCOUNT_ID=123456789012
+REGION=eu-central-1
+STAGE=dev
 
 # Database Tables
-APPLICATIONS_TABLE=uniapply-applications-dev
-USERS_TABLE=uniapply-users-dev
-ROLES_TABLE=uniapply-roles-dev
-FORMS_TABLE=uniapply-forms-dev
-AUDIT_TABLE=uniapply-audit-dev
+USERS_TABLE=uniapply-app-users-dev
+FORMS_TABLE=uniapply-app-forms-dev
+APPLICATIONS_TABLE=uniapply-app-applications-dev
+ROLES_TABLE=uniapply-app-roles-dev
+AUDIT_TABLE=uniapply-app-audit-dev
+RATE_LIMIT_TABLE=uniapply-app-rate-limits-dev
+TOKEN_BLACKLIST_TABLE=uniapply-app-token-blacklist-dev
+SECURITY_EVENTS_TABLE=uniapply-app-security-events-dev
+
+# Cognito Configuration
+USER_POOL_ID=eu-central-1_xxxxxxxxx
+USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
 
 # Email Configuration
 SES_SENDER_EMAIL=no-reply@uniapply.app
 FRONTEND_URL=http://localhost:5173
+APP_NAME=UniApply
+
+# Storage
+WEB_BUCKET=uniapply-app-dev-webbucket
+UPLOADS_BUCKET=uniapply-app-dev-uploads
 ```
 
-### AWS SSM Parameters
-
-```bash
-# Development
-aws ssm put-parameter --name "/uniapply/dev/appBaseUrl" --type String --value "http://localhost:5173"
-aws ssm put-parameter --name "/uniapply/dev/ses/senderEmail" --type String --value "no-reply-dev@uniapply.app"
-aws ssm put-parameter --name "/uniapply/dev/api/domainName" --type String --value "dev-api.uniapply.app"
-aws ssm put-parameter --name "/uniapply/dev/route53/hostedZoneId" --type String --value "ZXXXXXXXXXXXX"
-aws ssm put-parameter --name "/uniapply/dev/acm/certArn" --type String --value "arn:aws:acm:us-east-1:...:certificate/..."
-
-# Production
-aws ssm put-parameter --name "/uniapply/prod/appBaseUrl" --type String --value "https://uniapply.app"
-aws ssm put-parameter --name "/uniapply/prod/ses/senderEmail" --type String --value "no-reply@uniapply.app"
-aws ssm put-parameter --name "/uniapply/prod/api/domainName" --type String --value "api.uniapply.app"
-aws ssm put-parameter --name "/uniapply/prod/route53/hostedZoneId" --type String --value "ZYYYYYYYYYYYY"
-aws ssm put-parameter --name "/uniapply/prod/acm/certArn" --type String --value "arn:aws:acm:us-east-1:...:certificate/..."
-```
-
-## 🛠️ Development
-
-### Local Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run TypeScript compilation
-npm run build
-
-# Run linting
-npm run lint
-
-# Deploy to development
-npx serverless deploy --stage dev
-```
-
-### Testing
-
-```bash
-# Test email notifications
-node test-notification.js
-```
-
-### Monitoring
-
-```bash
-# View CloudWatch logs
-npx serverless logs -f handler --stage dev
-
-# View specific function logs
-npx serverless logs -f handler --stage dev --tail
-```
-
-## 🔐 Security
+## Security
 
 ### Authentication
 
 - JWT tokens via AWS Cognito
 - Role-based access control (RBAC)
-- API key validation for internal services
+- Token blacklisting for logout
+- Rate limiting on API endpoints
 
 ### Authorization
 
 - User permissions based on roles
 - Resource-level access control
 - Audit logging for all operations
+- Input validation and sanitization
 
 ### Data Protection
 
 - All data encrypted at rest
 - HTTPS for all API communications
-- Input validation and sanitization
+- CORS configuration for frontend
+- Security headers and CSP
 
-## 📊 Monitoring
+## Monitoring
 
 ### CloudWatch Metrics
 
@@ -236,27 +379,7 @@ npx serverless logs -f handler --stage dev --tail
 - Error tracking and alerting
 - Performance monitoring
 
-## 🚀 Deployment
-
-### Development
-
-```bash
-npx serverless deploy --stage dev
-```
-
-### Production
-
-```bash
-npx serverless deploy --stage prod
-```
-
-### Rollback
-
-```bash
-npx serverless rollback --stage prod
-```
-
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -264,6 +387,8 @@ npx serverless rollback --stage prod
 2. **Permission Denied** - Verify IAM roles and policies
 3. **Database Connection** - Check DynamoDB table permissions
 4. **Email Not Sent** - Verify SES configuration and limits
+5. **JWT Validation Fails** - Check Cognito configuration
+6. **403 Forbidden** - Verify user permissions and role assignments
 
 ### Debug Commands
 
@@ -275,12 +400,17 @@ npx serverless info --stage dev
 npx serverless print --stage dev
 
 # Test API endpoints
-curl -X GET https://dev-api.uniapply.app/health
+curl -X GET https://api-dev.uniapply.app/health
+
+# Check user permissions
+curl -X GET https://api-dev.uniapply.app/debug/fix-user-role \
+  -H "Authorization: Bearer <jwt-token>"
 ```
 
-## 📚 Related Documentation
+## Related Documentation
 
 - [Serverless Framework Documentation](https://www.serverless.com/framework/docs/)
 - [AWS Lambda Documentation](https://docs.aws.amazon.com/lambda/)
 - [DynamoDB Documentation](https://docs.aws.amazon.com/dynamodb/)
 - [API Gateway Documentation](https://docs.aws.amazon.com/apigateway/)
+- [Cognito Documentation](https://docs.aws.amazon.com/cognito/)

@@ -105,7 +105,7 @@
                     @update:model-value="updatePermission(resource, key, $event)"
                   />
                   <label class="text-sm font-medium text-gray-700 capitalize">
-                    {{ key.replace(/([A-Z])/g, ' $1').trim() }}
+                    {{ (key as string).replace(/([A-Z])/g, ' $1').trim() }}
                   </label>
                 </div>
               </div>
@@ -185,57 +185,66 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { mdiPlus, mdiFloppy } from '@mdi/js'
-import { useAuthStore } from '@/auth/store'
+
 import { useToastStore } from '@/common/store/toast'
 import { usePermissions } from '@/common/utils/permissions'
 import { UiButton, UiCheckbox, UiModal } from '@/common/components'
 import axios from '@/app/axios'
 
 // Types
-type Role = {
-  roleName: string
-  roleLabel: string
-  access: {
-    applications: {
-      create: boolean
-      update: boolean
-      delete: boolean
-      approve: boolean
-      reject: boolean
-      readAll: boolean
-      readOwn: boolean
-    }
-    formTemplates: {
-      create: boolean
-      readAll: boolean
-      readActive: boolean
-      update: boolean
-      delete: boolean
-    }
-    users: {
-      create: boolean
-      readAll: boolean
-      update: boolean
-      delete: boolean
-    }
-    auditLogs: {
-      read: boolean
-    }
-    systemSettings: {
-      read: boolean
-      update: boolean
-    }
-    roles: {
-      readAll: boolean
-      create: boolean
-      update: boolean
-      delete: boolean
-    }
+type PermissionResource =
+  | 'applications'
+  | 'formTemplates'
+  | 'users'
+  | 'auditLogs'
+  | 'systemSettings'
+  | 'roles'
+
+type PermissionAccess = {
+  applications: {
+    create: boolean
+    update: boolean
+    delete: boolean
+    approve: boolean
+    reject: boolean
+    readAll: boolean
+    readOwn: boolean
+  }
+  formTemplates: {
+    create: boolean
+    readAll: boolean
+    readActive: boolean
+    update: boolean
+    delete: boolean
+  }
+  users: {
+    create: boolean
+    readAll: boolean
+    update: boolean
+    delete: boolean
+  }
+  auditLogs: {
+    read: boolean
+  }
+  systemSettings: {
+    read: boolean
+    update: boolean
+  }
+  roles: {
+    readAll: boolean
+    create: boolean
+    update: boolean
+    delete: boolean
   }
 }
 
+type Role = {
+  roleName: string
+  roleLabel: string
+  access: PermissionAccess
+}
+
 // Stores
-const authStore = useAuthStore()
 const toastStore = useToastStore()
 const { getUserPermissions } = usePermissions()
 
@@ -312,7 +321,7 @@ const fetchRoles = async () => {
   } catch (error) {
     console.error('Failed to fetch roles:', error)
     toastStore.show({
-      type: 'error',
+      tone: 'error',
       title: 'Error',
       message: 'Failed to load user groups',
     })
@@ -321,12 +330,13 @@ const fetchRoles = async () => {
   }
 }
 
-const updatePermission = (resource: string, permission: string, value: boolean) => {
+const updatePermission = (resource: PermissionResource, permission: string, value: boolean) => {
   if (!activeRole.value) return
-  if (!activeRole.value.access[resource]) {
-    activeRole.value.access[resource] = {} as any
+  // TypeScript knows the structure now, so we can safely access it
+  const access = activeRole.value.access[resource]
+  if (access && typeof access === 'object') {
+    ;(access as Record<string, boolean>)[permission] = value
   }
-  activeRole.value.access[resource][permission] = value
 }
 
 const saveRole = async () => {
@@ -337,14 +347,14 @@ const saveRole = async () => {
     const updatableFields = activeRole.value
     await axios.put(`/roles/${activeRole.value.roleName}`, updatableFields)
     toastStore.show({
-      type: 'success',
+      tone: 'success',
       title: 'Success',
       message: 'User group updated successfully',
     })
   } catch (error) {
     console.error('Failed to save role:', error)
     toastStore.show({
-      type: 'error',
+      tone: 'error',
       title: 'Error',
       message: 'Failed to update user group',
     })
@@ -363,14 +373,14 @@ const createRole = async () => {
     showAddRoleModal.value = false
     newRole.value = { roleName: '', roleLabel: '' }
     toastStore.show({
-      type: 'success',
+      tone: 'success',
       title: 'Success',
       message: 'User group created successfully',
     })
   } catch (error) {
     console.error('Failed to create role:', error)
     toastStore.show({
-      type: 'error',
+      tone: 'error',
       title: 'Error',
       message: 'Failed to create user group',
     })

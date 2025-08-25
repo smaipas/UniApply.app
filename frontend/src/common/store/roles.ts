@@ -20,6 +20,7 @@ export const useRolesStore = defineStore('roles', () => {
       // backend may hide access for non-admins; keep shape consistent
       roles.value = (res.data || []).map((r: any) => ({
         roleName: r.roleName,
+        roleLabel: (r as RoleModel).roleLabel || r.roleName,
         access: (r as RoleModel).access || ({} as any),
         createdAt: (r as RoleModel).createdAt || '',
         updatedAt: (r as RoleModel).updatedAt || '',

@@ -95,7 +95,9 @@ async function saveProfile(data: any) {
       ...data,
       // Remove empty address fields
       address: Object.fromEntries(
-        Object.entries(data.address).filter(([, value]) => value && value.trim()),
+        Object.entries(data.address).filter(
+          ([, value]) => value && typeof value === 'string' && value.trim(),
+        ),
       ),
     }
 

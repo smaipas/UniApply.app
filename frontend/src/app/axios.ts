@@ -2,8 +2,7 @@ import axios, { type AxiosError, type AxiosRequestHeaders, type AxiosRequestConf
 import { useAuthStore } from '@/auth/store'
 
 const api = axios.create({
-  baseURL:
-    import.meta.env.VITE_API_BASE || 'https://vxiw2se4zf.execute-api.us-east-1.amazonaws.com',
+  baseURL: import.meta.env.VITE_API_BASE || 'https://api.uniapply.app',
   timeout: 15000,
 })
 type RetryableRequestConfig = AxiosRequestConfig & { _retried?: boolean }

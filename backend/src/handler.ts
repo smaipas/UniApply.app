@@ -67,7 +67,14 @@ const SES_SENDER_EMAIL = process.env.SES_SENDER_EMAIL!;
 // ------------ Helpers ------------
 function getMethodPath(event: APIGatewayProxyEventV2) {
   const method = event.requestContext?.http?.method || "GET";
-  const path = event.requestContext?.http?.path || event.rawPath || "";
+  let path = event.requestContext?.http?.path || event.rawPath || "";
+
+  // Strip stage name from path (e.g., /dev/applications -> /applications)
+  const stage = event.requestContext?.stage || "dev";
+  if (path.startsWith(`/${stage}/`)) {
+    path = path.substring(stage.length + 1); // +1 for the leading slash (keep the trailing slash)
+  }
+
   return { method, path };
 }
 
@@ -78,8 +85,28 @@ function getPathParam(path: string, prefix: string): string | null {
 }
 
 function requesterSub(event: APIGatewayProxyEventV2): string | null {
+  // Try to get claims from API Gateway authorizer first
   const claims = (event.requestContext as any)?.authorizer?.jwt?.claims;
-  return (claims?.sub as string) || null;
+  if (claims?.sub) {
+    return claims.sub as string;
+  }
+
+  // If no authorizer claims, extract from Authorization header
+  const authHeader =
+    event.headers?.authorization || event.headers?.Authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.substring(7);
+      const { jwtDecode } = require("jwt-decode");
+      const decoded = jwtDecode(token);
+      return decoded.sub || null;
+    } catch (error) {
+      console.error("Failed to decode JWT token:", error);
+      return null;
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -568,7 +595,7 @@ async function getUser(event: APIGatewayProxyEventV2, id: string) {
 async function listUsers(event: APIGatewayProxyEventV2) {
   // Only roles with canViewAllUsers can view all users
   const viewerSub = requesterSub(event);
-  if (!viewerSub) return response(403, { message: "Forbidden" });
+  if (!viewerSub) return response(403, { message: "Forbidden" }, event);
   const viewerRes = await ddb.send(
     new GetItemCommand({
       TableName: USERS_TABLE,
@@ -1883,7 +1910,11 @@ export const presignUpload: APIGatewayProxyHandlerV2 = async (event) => {
 // ------------ Main router ------------
 export const main: APIGatewayProxyHandlerV2 = async (event) => {
   try {
+    console.log("=== LAMBDA FUNCTION STARTED ===");
+    console.log("Event received:", JSON.stringify(event, null, 2));
+
     const { method, path } = getMethodPath(event);
+    console.log("Method:", method, "Path:", path);
 
     // Seed default roles on cold start (idempotent)
     await seedDefaultRoles();
@@ -2107,6 +2138,103 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       } catch (error) {
         console.error("Logout error:", error);
         return response(500, { error: "Internal server error" }, event);
+      }
+    }
+
+    // Debug endpoint to check and fix user roles (temporary)
+    if (method === "POST" && path === "/debug/fix-user-role") {
+      const viewerSub = requesterSub(event);
+      if (!viewerSub) return response(403, { message: "Forbidden" });
+
+      try {
+        // Check if user exists and has a role
+        const userRes = await ddb.send(
+          new GetItemCommand({
+            TableName: USERS_TABLE,
+            Key: marshall({ id: viewerSub }),
+          })
+        );
+
+        if (!userRes.Item) {
+          return response(404, { message: "User not found" });
+        }
+
+        const user = unmarshall(userRes.Item) as any;
+
+        // If user has no role, assign USER role
+        if (!user.role) {
+          await ddb.send(
+            new UpdateItemCommand({
+              TableName: USERS_TABLE,
+              Key: marshall({ id: viewerSub }),
+              UpdateExpression: "SET #role = :role, #updatedAt = :updatedAt",
+              ExpressionAttributeNames: {
+                "#role": "role",
+                "#updatedAt": "updatedAt",
+              },
+              ExpressionAttributeValues: marshall({
+                ":role": "USER",
+                ":updatedAt": nowIso(),
+              }),
+            })
+          );
+
+          return response(200, {
+            message: "User role fixed",
+            previousRole: null,
+            newRole: "USER",
+            user: { id: user.id, email: user.email },
+          });
+        }
+
+        // Check if the role exists
+        const roleRes = await ddb.send(
+          new GetItemCommand({
+            TableName: process.env.ROLES_TABLE!,
+            Key: marshall({ roleName: user.role }),
+          })
+        );
+
+        if (!roleRes.Item) {
+          // Role doesn't exist, assign USER role
+          await ddb.send(
+            new UpdateItemCommand({
+              TableName: USERS_TABLE,
+              Key: marshall({ id: viewerSub }),
+              UpdateExpression: "SET #role = :role, #updatedAt = :updatedAt",
+              ExpressionAttributeNames: {
+                "#role": "role",
+                "#updatedAt": "updatedAt",
+              },
+              ExpressionAttributeValues: marshall({
+                ":role": "USER",
+                ":updatedAt": nowIso(),
+              }),
+            })
+          );
+
+          return response(200, {
+            message: "User role fixed - invalid role replaced",
+            previousRole: user.role,
+            newRole: "USER",
+            user: { id: user.id, email: user.email },
+          });
+        }
+
+        const role = unmarshall(roleRes.Item) as any;
+
+        return response(200, {
+          message: "User role check completed",
+          user: { id: user.id, email: user.email, role: user.role },
+          role: {
+            roleName: role.roleName,
+            roleLabel: role.roleLabel,
+            applications: role.access?.applications,
+          },
+        });
+      } catch (error) {
+        console.error("Debug fix user role error:", error);
+        return response(500, { error: "Internal server error" });
       }
     }
 
@@ -2879,6 +3007,8 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       });
     }
 
+    console.log("=== CATCH-ALL ROUTE REACHED ===");
+    console.log("No matching route found for:", method, path);
     return response(404, { message: "Not found" });
   } catch (err: any) {
     // Handle specific error types with appropriate status codes

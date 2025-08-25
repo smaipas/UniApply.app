@@ -158,7 +158,7 @@ const groupedResults = computed(() => {
 })
 
 // Debounced search
-let searchTimeout: NodeJS.Timeout | null = null
+let searchTimeout: ReturnType<typeof setTimeout> | null = null
 
 function handleSearch() {
   if (searchTimeout) {

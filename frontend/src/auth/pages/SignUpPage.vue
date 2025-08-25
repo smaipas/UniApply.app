@@ -34,6 +34,7 @@
           type="password"
           v-model="state.confirm"
           :error="errorMessageHandler(v$.confirm)"
+          @keyup.enter="submit"
           @blur="v$.confirm.$touch"
         />
       </div>
@@ -56,7 +57,7 @@
       </p>
       <form @submit.prevent="confirmCode">
         <div class="flex gap-3 items-end">
-          <UiInput label="Code" v-model="code" @keydown.enter="confirmCode" />
+          <UiInput label="Code" v-model="code" @keyup.enter="confirmCode" />
           <UiButton type="submit" :disabled="loading">Confirm</UiButton>
         </div>
       </form>

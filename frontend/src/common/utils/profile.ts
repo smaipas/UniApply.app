@@ -1,4 +1,4 @@
-import type { UserModel } from '@uniapply/shared'
+import type { User } from '@uniapply/shared'
 
 export interface ProfileCompletionStatus {
   isComplete: boolean
@@ -6,7 +6,7 @@ export interface ProfileCompletionStatus {
   completionPercentage: number
 }
 
-export function checkProfileCompletion(profile: UserModel | null): ProfileCompletionStatus {
+export function checkProfileCompletion(profile: User | null): ProfileCompletionStatus {
   if (!profile) {
     return {
       isComplete: false,
@@ -36,7 +36,7 @@ export function checkProfileCompletion(profile: UserModel | null): ProfileComple
   const missingFields: string[] = []
 
   requiredFields.forEach((field) => {
-    const value = profile[field.key as keyof UserModel]
+    const value = profile[field.key as keyof User]
     if (!value || String(value).trim() === '') {
       missingFields.push(field.label)
     }

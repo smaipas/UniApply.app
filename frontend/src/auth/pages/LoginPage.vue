@@ -15,6 +15,7 @@
           type="password"
           v-model="state.password"
           :error="errorMessageHandler(v$.password)"
+          @keyup.enter="submit"
           @blur="v$.password.$touch"
         />
       </div>
