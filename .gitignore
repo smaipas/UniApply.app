@@ -12,6 +12,10 @@ dist/
 build/
 */build/
 
+# Serverless deployment artifacts
+.serverless/
+*/.serverless/
+
 # Logs
 logs
 *.log
