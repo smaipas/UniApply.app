@@ -2,7 +2,7 @@
 
 A comprehensive web application for managing university applications, built with Vue.js 3, TypeScript, and AWS Serverless architecture.
 
-## 🏗️ Project Architecture
+## Project Architecture
 
 This is a monorepo containing three main packages:
 
@@ -10,7 +10,7 @@ This is a monorepo containing three main packages:
 - **`backend/`** - AWS Lambda serverless backend with TypeScript
 - **`packages/shared/`** - Shared TypeScript types and utilities
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -139,7 +139,7 @@ This is a monorepo containing three main packages:
    npm run dev
    ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 UniApply.app/
@@ -170,7 +170,7 @@ UniApply.app/
         └── package.json
 ```
 
-## 🚀 Deployment Guide
+## Deployment Guide
 
 ### Deployment Process
 
@@ -333,7 +333,7 @@ curl -X GET "https://api-dev.uniapply.app/applications?status=DRAFT" \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
-## 🛠️ Development
+## Development
 
 ### Shared Package
 
@@ -467,7 +467,7 @@ aws apigatewayv2 get-routes --api-id <api-id>
    aws ssm put-parameter --name "/uniapply/prod/acm/certArn" --type String --value "arn:aws:acm:us-east-1:...:certificate/..."
    ```
 
-## 🎯 Features
+## Features
 
 ### Core Functionality
 
@@ -488,13 +488,13 @@ aws apigatewayv2 get-routes --api-id <api-id>
 - **Cognito** - User authentication
 - **SES** - Email service
 
-## 📚 Documentation
+## Documentation
 
 - [Frontend Documentation](./frontend/README.md)
 - [Backend Documentation](./backend/README.md)
 - [Shared Package Documentation](./packages/shared/README.md)
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Create a feature branch
@@ -502,6 +502,6 @@ aws apigatewayv2 get-routes --api-id <api-id>
 4. Run tests and linting
 5. Submit a pull request
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License.
