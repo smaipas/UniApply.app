@@ -25,6 +25,7 @@
         ]"
         @input="handleInput"
         @change="handleChange"
+        @blur="emit('blur')"
       />
     </div>
     <p v-if="error" class="mt-1 text-xs text-red-600">{{ error }}</p>
@@ -62,6 +63,7 @@ withDefaults(
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
   (e: 'change', v: string): void
+  (e: 'blur'): void
 }>()
 
 function handleInput(event: Event) {

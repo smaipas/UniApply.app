@@ -13,7 +13,7 @@ export function checkProfileCompletion(profile: User | null): ProfileCompletionS
       missingFields: [
         'firstName',
         'lastName',
-        'tel',
+        'mo',
         'studentId',
         'userOfficialId',
         'userOfficialType',
@@ -26,7 +26,7 @@ export function checkProfileCompletion(profile: User | null): ProfileCompletionS
   const requiredFields = [
     { key: 'firstName', label: 'First Name' },
     { key: 'lastName', label: 'Last Name' },
-    { key: 'tel', label: 'Phone Number' },
+    { key: 'mobilePhoneNumber', label: 'Phone Number' },
     { key: 'studentId', label: 'Student ID' },
     { key: 'userOfficialId', label: 'Official ID Number' },
     { key: 'userOfficialType', label: 'Official ID Type' },

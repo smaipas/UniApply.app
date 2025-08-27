@@ -29,12 +29,32 @@ router.post("/", async (req, res) => {
     role: d.role,
     firstName: d.firstName,
     lastName: d.lastName,
+    fathersName: d.fathersName,
+    mothersName: d.mothersName,
     studentId: d.studentId,
     userOfficialId: d.userOfficialId,
+    userOfficialIdIssuedDate: d.userOfficialIdIssuedDate,
+    userOfficialIdIssuedAuthority: d.userOfficialIdIssuedAuthority,
     userOfficialType: d.userOfficialType,
-    tel: d.tel,
+    mobilePhoneNumber: d.mobilePhoneNumber,
+    phoneNumber: d.phoneNumber,
     email: d.email,
-    address: d.address,
+    currentAddress: d.currentAddress,
+    permanentResidenceAddress: d.permanentResidenceAddress,
+    dateOfBirth: d.dateOfBirth,
+    placeOfBirth: d.placeOfBirth,
+    nationality: d.nationality,
+    gender: d.gender,
+    maleRegistryNumber: d.maleRegistryNumber,
+    maleRegistryIssuedPlace: d.maleRegistryIssuedPlace,
+    militaryObligations: d.militaryObligations,
+    maritalStatus: d.maritalStatus,
+    numberOfChildren: d.numberOfChildren,
+    municipalRegisterNumber: d.municipalRegisterNumber,
+    municipalRegisterPrefecture: d.municipalRegisterPrefecture,
+    ssn: d.ssn,
+    academicEnrollmentYear: d.academicEnrollmentYear,
+    department: d.department,
     active: d.active ?? true,
     verified: d.verified ?? false,
     settings: d.settings || {
@@ -65,8 +85,8 @@ router.put("/:id", async (req, res) => {
 
     // Additional validation for country codes
     if (
-      updates.address?.country &&
-      !isValidCountryCode(updates.address.country)
+      updates.currentAddress?.country &&
+      !isValidCountryCode(updates.currentAddress.country)
     ) {
       return res.status(400).json({ error: "Invalid country code" });
     }

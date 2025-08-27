@@ -14,6 +14,7 @@
             : 'border-gray-300 focus:border-primary focus:ring-primary/30 hover:border-gray-400',
         ]"
         @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
+        @blur="emit('blur')"
       >
         <option v-if="placeholder" disabled value="">{{ placeholder }}</option>
         <option v-for="opt in options" :key="opt.value" :value="opt.value">
@@ -67,6 +68,7 @@ withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
+  (e: 'blur'): void
 }>()
 </script>
 

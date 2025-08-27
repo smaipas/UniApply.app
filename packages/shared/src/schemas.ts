@@ -70,6 +70,7 @@ export const sanitizedPhone = z
     return val.replace(/[^\d+]/g, "");
   })
   .refine((val) => {
+    if (val === "") return true;
     // E.164 format validation
     const e164Pattern = /^\+?[1-9]\d{1,14}$/;
     return e164Pattern.test(val);
@@ -80,9 +81,21 @@ export const OfficialIdType = z.enum([
   "ID",
   "PASSPORT",
   "DRIVING_LICENCE",
+  "CYPRIOT_ID",
+  "REPATRIATED_GREEK_ID",
+  "POLICE_ID",
+  "SOLDIER_ID",
+  "MILLITARY_ID",
   "OTHER",
 ]);
 export const Gender = z.enum(["MALE", "FEMALE", "OTHER", "PREFER_NOT_TO_SAY"]);
+export const MilitaryObligations = z.enum(["OF_SERVICE", "COMPLETED"]);
+export const MaritalStatus = z.enum([
+  "SINGLE",
+  "MARRIED",
+  "DIVORCED",
+  "WIDOWED",
+]);
 export const AppStatus = z.enum([
   "DRAFT",
   "APPROVED",
@@ -197,21 +210,281 @@ export const RoleModelSchema = RoleSchema.extend({
 // ========= Users =========
 export const UserBase = z
   .object({
-    role: sanitizedString(64).min(2),
-    firstName: sanitizedName.max(64).min(2),
-    lastName: sanitizedName.max(64).min(2),
+    role: z
+      .string()
+      .trim()
+      .min(2)
+      .max(64)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content"),
+    firstName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(64)
+      .transform((val) => {
+        // Remove control characters and normalize whitespace
+        return val
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+          .replace(/\s+/g, " ");
+      })
+      .refine((val) => {
+        // Only allow letters, spaces, hyphens, apostrophes
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        return validNamePattern.test(val);
+      }, "First name contains invalid characters"),
+    lastName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(64)
+      .transform((val) => {
+        // Remove control characters and normalize whitespace
+        return val
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+          .replace(/\s+/g, " ");
+      })
+      .refine((val) => {
+        // Only allow letters, spaces, hyphens, apostrophes
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        return validNamePattern.test(val);
+      }, "Last name contains invalid characters"),
+    fathersName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(32)
+      .transform((val) => {
+        // Remove control characters and normalize whitespace
+        return val
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+          .replace(/\s+/g, " ");
+      })
+      .refine((val) => {
+        // Only allow letters, spaces, hyphens, apostrophes
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        return validNamePattern.test(val);
+      }, "Father's name contains invalid characters"),
+    mothersName: z
+      .string()
+      .trim()
+      .min(2)
+      .max(32)
+      .transform((val) => {
+        // Remove control characters and normalize whitespace
+        return val
+          .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
+          .replace(/\s+/g, " ");
+      })
+      .refine((val) => {
+        // Only allow letters, spaces, hyphens, apostrophes
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        return validNamePattern.test(val);
+      }, "Mother's name contains invalid characters"),
     studentId: sanitizedId.max(10).optional(), // string to preserve leading zeros
-    userOfficialId: sanitizedString(32).min(2).optional(),
+    userOfficialId: z
+      .string()
+      .trim()
+      .min(2)
+      .max(32)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
+    userOfficialIdIssuedDate: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
+      .optional(),
+    userOfficialIdIssuedAuthority: z
+      .string()
+      .trim()
+      .min(2)
+      .max(32)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
     userOfficialType: OfficialIdType.optional(),
-    tel: sanitizedPhone.optional(),
+    mobilePhoneNumber: sanitizedPhone.optional(), // renamed from tel
+    phoneNumber: sanitizedPhone.optional(), // new field
     email: sanitizedEmail,
-    address: AddressSchema.optional(),
+    currentAddress: AddressSchema.optional(), // renamed from address
+    permanentResidenceAddress: AddressSchema.optional(), // new field
     dateOfBirth: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format")
       .optional(),
-    nationality: sanitizedString(100).min(1).optional(),
+    placeOfBirth: z
+      .string()
+      .trim()
+      .min(2)
+      .max(32)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
+    nationality: z
+      .string()
+      .trim()
+      .min(1)
+      .max(100)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
     gender: Gender.optional(),
+    maleRegistryNumber: z
+      .string()
+      .trim()
+      .max(32)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
+    maleRegistryIssuedPlace: z
+      .string()
+      .trim()
+      .max(32)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
+    militaryObligations: MilitaryObligations.optional(),
+    maritalStatus: MaritalStatus.optional(),
+    numberOfChildren: z.number().int().min(0).optional(),
+    municipalRegisterNumber: z.number().int().min(0).optional(),
+    municipalRegisterPrefecture: z
+      .string()
+      .trim()
+      .max(32)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
+    ssn: z.number().int().min(0).optional(),
+    academicEnrollmentYear: z
+      .number()
+      .int()
+      .min(1900)
+      .max(new Date().getFullYear() + 10)
+      .optional(),
+    department: z
+      .string()
+      .trim()
+      .max(64)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
     active: z.boolean().default(true),
     verified: z.boolean().default(false),
     settings: z
@@ -331,8 +604,47 @@ export const TemplateApprovalStepSchema = z.discriminatedUnion("type", [
 
 export const FormTemplateCreateSchema = z
   .object({
-    title: sanitizedString(64).min(2),
-    description: sanitizedString(1024).min(2).optional(),
+    title: z
+      .string()
+      .trim()
+      .min(2)
+      .max(64)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content"),
+    description: z
+      .string()
+      .trim()
+      .min(2)
+      .max(1024)
+      .transform((val) => {
+        // Remove control characters except \t, \n, \r
+        return val.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+      })
+      .refine((val) => {
+        // Check for potential injection patterns
+        const dangerousPatterns = [
+          /<script[^>]*>[\s\S]*?<\/script>/gi,
+          /javascript\s*:/i,
+          /on\w+\s*=/i,
+          /\$\w+\(/i, // NoSQL patterns
+          /(union|select|insert|update|delete|drop|create|alter)\s+/i,
+        ];
+        return !dangerousPatterns.some((pattern) => pattern.test(val));
+      }, "Input contains potentially malicious content")
+      .optional(),
     fields: z.array(FormFieldSchema).min(1).max(200),
     approvalSteps: z.array(TemplateApprovalStepSchema).min(1).max(10),
     visibleToRoles: z.array(sanitizedString(64)).min(1).max(50),

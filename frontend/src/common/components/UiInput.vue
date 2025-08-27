@@ -17,7 +17,8 @@
           icon ? 'pl-10' : 'px-3',
           type === 'date' ? 'cursor-pointer' : '',
         ]"
-        @input="emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+        @input="onInput"
+        @blur="onBlur"
       />
       <UiIcon
         v-if="icon"
@@ -70,7 +71,17 @@ withDefaults(
 
 const emit = defineEmits<{
   (e: 'update:modelValue', v: string): void
+  (e: 'blur'): void
 }>()
+
+function onInput(event: Event) {
+  emit('update:modelValue', (event.target as HTMLInputElement).value)
+  onBlur()
+}
+
+function onBlur() {
+  emit('blur')
+}
 </script>
 
 <style scoped>
