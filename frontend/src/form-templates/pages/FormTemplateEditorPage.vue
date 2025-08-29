@@ -49,7 +49,12 @@
               @update:modelValue="(v) => onFieldNameInput(i, v)"
               :error="fieldNameErrors[i]"
             />
-            <UiInput label="Label" v-model="f.label" :error="fieldLabelErrors[i]" />
+            <UiInput
+              label="Label"
+              v-model="f.label"
+              :error="fieldLabelErrors[i]"
+              placeholder="Optional display label"
+            />
             <UiSelect
               label="Type"
               :model-value="f.inputType"
@@ -92,9 +97,25 @@
               <UiInput class="flex-1" v-model="(f.options || (f.options = []))[oi]" />
               <UiButton flat color="red" :icon="mdiClose" size="sm" @click="removeOption(i, oi)" />
             </div>
+            <div class="mt-2">
+              <UiCheckbox
+                label="Allow multiple values selection"
+                v-model="f.allowSelectMultipleValues"
+              />
+            </div>
           </div>
 
-          <div class="md:col-span-3 mt-2 space-y-3">
+          <div v-if="f.inputType === 'FIXED_TEXT'" class="md:col-span-3 space-y-2">
+            <label class="text-sm font-medium text-gray-700">Fixed Text Content</label>
+            <textarea
+              v-model="f.fixedTextContent"
+              rows="6"
+              class="w-full rounded-xs border bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:ring-2 border-gray-300 focus:border-primary focus:ring-primary/30 disabled:bg-gray-100"
+              placeholder="Enter the text content to display..."
+            ></textarea>
+          </div>
+
+          <div v-if="f.inputType !== 'FIXED_TEXT'" class="md:col-span-3 mt-2 space-y-3">
             <div class="text-sm font-bold text-gray-500 border-b border-gray-300 pb-1">
               Validations
             </div>
@@ -218,6 +239,30 @@
             At least one approval step is required
           </p>
         </div>
+        <div class="mt-6 border-t border-gray-300 pt-6">
+          <UiCheckbox
+            label="Allow application creators to select approvers from user groups"
+            v-model="form.allowApplicationCreatorsToSelectApprover"
+          />
+          <div v-if="form.allowApplicationCreatorsToSelectApprover" class="space-y-2">
+            <label class="text-sm font-medium text-gray-700">
+              User groups for approver selection
+            </label>
+            <div class="grid grid-cols-2 gap-2 md:grid-cols-4 mt-2">
+              <label
+                v-for="r in roleOptions"
+                :key="r"
+                class="inline-flex items-center gap-2 text-sm"
+              >
+                <UiCheckbox
+                  :model-value="isApproverSelectionRole(r)"
+                  @update:modelValue="(v) => toggleApproverSelectionRole(r, v)"
+                />
+                <span>{{ r }}</span>
+              </label>
+            </div>
+          </div>
+        </div>
       </UiCard>
 
       <!-- Approval Step Modal -->
@@ -315,6 +360,8 @@ type TemplateField = {
   defaultValue?: string | number
   options?: string[]
   validationRules?: unknown[]
+  allowSelectMultipleValues?: boolean
+  fixedTextContent?: string
 }
 interface ApprovalStep {
   type: 'USER_GROUP' | 'FIXED_USER' | 'DYNAMIC_USER'
@@ -334,6 +381,8 @@ type TemplateForm = {
   approvalSteps: ApprovalStep[]
   visibleToRoles: string[]
   active: boolean
+  allowApplicationCreatorsToSelectApprover: boolean
+  approverSelectionUserGroups: string[]
 }
 
 const route = useRoute()
@@ -352,6 +401,8 @@ const form = ref<TemplateForm>({
   approvalSteps: [{ type: 'USER_GROUP', role: 'ADMIN' }],
   visibleToRoles: ['USER', 'ADMIN'],
   active: true,
+  allowApplicationCreatorsToSelectApprover: false,
+  approverSelectionUserGroups: [],
 })
 
 const rolesStore = useRolesStore()
@@ -399,11 +450,6 @@ const hasFieldNameErrors = computed(() => Object.values(fieldNameErrors.value).s
 
 const fieldLabelErrors = computed<Record<number, string>>(() => {
   const errors: Record<number, string> = {}
-  form.value.fields.forEach((f, i) => {
-    if (!String(f.label || '').trim()) {
-      errors[i] = 'Label is required'
-    }
-  })
   return errors
 })
 const hasFieldLabelErrors = computed(() => Object.values(fieldLabelErrors.value).some(Boolean))
@@ -417,6 +463,7 @@ const fieldTypeOptions = [
   { label: 'Date', value: 'DATE' },
   { label: 'Select', value: 'SELECT' },
   { label: 'Checkbox', value: 'CHECKBOX' },
+  { label: 'Fixed text', value: 'FIXED_TEXT' },
 ]
 
 function isDefaultApplicable(t: string) {
@@ -429,8 +476,17 @@ function onFieldTypeChange(index: number, newType: string) {
   delete f.defaultValue
   if (newType === 'SELECT') {
     f.options = []
+    f.allowSelectMultipleValues = false
   } else {
     delete f.options
+    delete f.allowSelectMultipleValues
+  }
+  if (newType === 'FIXED_TEXT') {
+    f.fixedTextContent = ''
+    // Clear validation rules for FIXED_TEXT fields
+    f.validationRules = []
+  } else {
+    delete f.fixedTextContent
   }
 }
 
@@ -455,8 +511,26 @@ function toggleVisibleRole(role: string, checked: boolean) {
   form.value.visibleToRoles = Array.from(set)
 }
 
+function isApproverSelectionRole(role: string): boolean {
+  return form.value.approverSelectionUserGroups.includes(role)
+}
+
+function toggleApproverSelectionRole(role: string, checked: boolean) {
+  const set = new Set(form.value.approverSelectionUserGroups)
+  if (checked) set.add(role)
+  else set.delete(role)
+  form.value.approverSelectionUserGroups = Array.from(set)
+}
+
 function addField() {
-  form.value.fields.push({ name: '', label: '', inputType: 'TEXT', validationRules: [] })
+  form.value.fields.push({
+    name: '',
+    label: '',
+    inputType: 'TEXT',
+    validationRules: [],
+    allowSelectMultipleValues: false,
+    fixedTextContent: '',
+  })
 }
 function removeField(i: number) {
   form.value.fields.splice(i, 1)
@@ -487,6 +561,8 @@ async function load() {
         defaultValue?: unknown
         validationRules?: unknown
         options?: unknown
+        allowSelectMultipleValues?: unknown
+        fixedTextContent?: unknown
       }
       const nf: TemplateField = {
         name: String(r?.name || ''),
@@ -494,6 +570,8 @@ async function load() {
         inputType: String(r?.inputType || 'TEXT'),
         defaultValue: r?.defaultValue as string | number | undefined,
         validationRules: Array.isArray(r?.validationRules) ? (r.validationRules as unknown[]) : [],
+        allowSelectMultipleValues: Boolean(r?.allowSelectMultipleValues),
+        fixedTextContent: String(r?.fixedTextContent || ''),
       }
       if (nf.inputType === 'SELECT') {
         const opts = r?.options
@@ -534,6 +612,8 @@ async function load() {
         ) || [],
       visibleToRoles: t.visibleToRoles || [],
       active: !!t.active,
+      allowApplicationCreatorsToSelectApprover: !!t.allowApplicationCreatorsToSelectApprover,
+      approverSelectionUserGroups: t.approverSelectionUserGroups || [],
     }
     formVersion.value = t.version
   } catch (error) {
@@ -562,8 +642,19 @@ async function save() {
         }
         if (f.inputType === 'SELECT') {
           out.options = (f.options || []).map((s) => String(s).trim()).filter((s) => s.length > 0)
+          if (!out.allowSelectMultipleValues) {
+            delete out.allowSelectMultipleValues
+          }
         } else {
           delete out.options
+          delete out.allowSelectMultipleValues
+        }
+        if (f.inputType === 'FIXED_TEXT') {
+          if (!out.fixedTextContent || out.fixedTextContent.trim() === '') {
+            delete out.fixedTextContent
+          }
+        } else {
+          delete out.fixedTextContent
         }
         return out as TemplateField
       }),

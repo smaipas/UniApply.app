@@ -171,7 +171,7 @@
             <div>
               <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
               <div class="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-gray-900">
-                {{ authStore.profile?.tel || 'Not provided' }}
+                {{ authStore.profile?.mobilePhoneNumber || 'Not provided' }}
               </div>
             </div>
 
@@ -332,7 +332,7 @@
           <div v-for="field in template.fields" :key="field.name" class="space-y-2">
             <label :for="field.name" class="block text-sm font-medium text-gray-700">
               {{ field.label }}
-              <span v-if="isFieldRequired(field)" class="text-red-500">*</span>
+              <span v-if="isFieldRequired(field) && field.label" class="text-red-500">*</span>
             </label>
 
             <!-- Text Input -->
@@ -380,7 +380,7 @@
 
             <!-- Select Input -->
             <select
-              v-else-if="field.inputType === 'SELECT'"
+              v-else-if="field.inputType === 'SELECT' && !field.allowSelectMultipleValues"
               :id="field.name"
               v-model="formData[field.name]"
               :disabled="isReadOnly"
@@ -397,6 +397,39 @@
               </option>
             </select>
 
+            <!-- Multi-Select Input -->
+            <div
+              v-else-if="field.inputType === 'SELECT' && field.allowSelectMultipleValues"
+              class="space-y-2"
+            >
+              <div class="flex flex-wrap gap-2">
+                <label
+                  v-for="option in field.options"
+                  :key="typeof option === 'string' ? option : option.value"
+                  class="inline-flex items-center"
+                >
+                  <input
+                    type="checkbox"
+                    :value="typeof option === 'string' ? option : option.value"
+                    v-model="formData[field.name]"
+                    :disabled="isReadOnly"
+                    :required="isFieldRequired(field)"
+                    class="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <span class="ml-2 text-sm text-gray-700">
+                    {{ typeof option === 'string' ? option : option.label }}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Fixed Text Display -->
+            <div v-else-if="field.inputType === 'FIXED_TEXT'" class="p-4 bg-gray-50 rounded-md">
+              <div class="text-sm text-gray-700 whitespace-pre-wrap">
+                {{ field.fixedTextContent }}
+              </div>
+            </div>
+
             <!-- Checkbox Input -->
             <div v-else-if="field.inputType === 'CHECKBOX'" class="flex items-center">
               <UiCheckbox
@@ -412,17 +445,113 @@
 
             <!-- File Input -->
             <div v-else-if="field.inputType === 'FILE'" class="space-y-2">
-              <input
-                :id="field.name"
-                type="file"
-                :disabled="isReadOnly"
-                :required="isFieldRequired(field)"
-                @change="handleFileUpload($event, field.name)"
-                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-              />
-              <p v-if="formData[field.name]" class="text-sm text-gray-600">
-                File selected: {{ getFileName(formData[field.name]) }}
-              </p>
+              <!-- File Display (when file exists) -->
+              <div v-if="formData[field.name] && !uploadingFiles[field.name]" class="space-y-3">
+                <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg border">
+                  <!-- File Icon/Thumbnail -->
+                  <div class="flex-shrink-0">
+                    <div
+                      v-if="isImageFile(formData[field.name])"
+                      class="w-12 h-12 rounded overflow-hidden bg-gray-100"
+                    >
+                      <img
+                        v-if="filePreviewUrls[formData[field.name]]"
+                        :src="filePreviewUrls[formData[field.name]]"
+                        :alt="getFileName(formData[field.name])"
+                        class="w-full h-full object-cover"
+                        @error="handleImageError"
+                        loading="lazy"
+                      />
+                      <div v-else class="w-full h-full flex items-center justify-center">
+                        <div
+                          class="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"
+                        ></div>
+                      </div>
+                    </div>
+                    <div
+                      v-else
+                      class="w-12 h-12 rounded bg-gray-100 flex items-center justify-center"
+                    >
+                      <UiIcon
+                        :path="getFileIcon(formData[field.name])"
+                        class="w-6 h-6 text-gray-500"
+                      />
+                    </div>
+                  </div>
+
+                  <!-- File Info -->
+                  <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">
+                      {{ getFileName(formData[field.name]) }}
+                    </p>
+                    <p class="text-xs text-gray-500">
+                      {{ getFileType(formData[field.name]) }}
+                    </p>
+                  </div>
+
+                  <!-- Actions -->
+                  <div class="flex items-center space-x-2">
+                    <UiButton
+                      size="sm"
+                      flat
+                      @click="downloadFile(formData[field.name])"
+                      title="Download file"
+                    >
+                      <UiIcon :path="mdiDownload" class="w-4 h-4" />
+                    </UiButton>
+
+                    <!-- Replace/Delete buttons (only in draft mode) -->
+                    <template v-if="!isReadOnly && (application?.status === 'DRAFT' || !isEditing)">
+                      <UiButton
+                        size="sm"
+                        flat
+                        @click="replaceFile(field.name)"
+                        title="Replace file"
+                      >
+                        <UiIcon :path="mdiPencil" class="w-4 h-4" />
+                      </UiButton>
+                      <UiButton
+                        size="sm"
+                        flat
+                        color="red"
+                        @click="removeFile(field.name)"
+                        title="Remove file"
+                      >
+                        <UiIcon :path="mdiClose" class="w-4 h-4" />
+                      </UiButton>
+                    </template>
+                  </div>
+                </div>
+
+                <!-- Hidden file input for replacement -->
+                <input
+                  :id="`${field.name}-replace`"
+                  type="file"
+                  :accept="getFileAcceptTypes(formData[field.name])"
+                  @change="handleFileUpload($event, field.name)"
+                  class="hidden"
+                  ref="fileInputRefs"
+                />
+              </div>
+
+              <!-- File Upload (when no file exists or uploading) -->
+              <div v-else class="space-y-2">
+                <input
+                  :id="field.name"
+                  type="file"
+                  :disabled="isReadOnly || uploadingFiles[field.name]"
+                  :required="isFieldRequired(field)"
+                  @change="handleFileUpload($event, field.name)"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+                />
+                <div
+                  v-if="uploadingFiles[field.name]"
+                  class="flex items-center gap-2 text-sm text-blue-600"
+                >
+                  <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                  Uploading file...
+                </div>
+              </div>
             </div>
 
             <!-- Error Message -->
@@ -568,9 +697,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { mdiPrinter, mdiContentSave, mdiSend, mdiTimerSand, mdiCheck, mdiCancel } from '@mdi/js'
+import {
+  mdiPrinter,
+  mdiContentSave,
+  mdiSend,
+  mdiTimerSand,
+  mdiCheck,
+  mdiCancel,
+  mdiFilePdfBox,
+  mdiFileWord,
+  mdiFileImage,
+  mdiFile,
+  mdiClose,
+  mdiPencil,
+  mdiDownload,
+} from '@mdi/js'
 import {
   UiButton,
   UiInput,
@@ -593,7 +736,15 @@ interface FormField {
   name: string
   label: string
   description?: string
-  inputType: 'TEXT' | 'LONG_TEXT' | 'NUMBER' | 'DATE' | 'SELECT' | 'CHECKBOX' | 'FILE'
+  inputType:
+    | 'TEXT'
+    | 'LONG_TEXT'
+    | 'NUMBER'
+    | 'DATE'
+    | 'SELECT'
+    | 'CHECKBOX'
+    | 'FILE'
+    | 'FIXED_TEXT'
   validationRules?: Array<{
     rule: string
     value?: string | number | boolean
@@ -601,6 +752,8 @@ interface FormField {
   }>
   options?: string[] | Array<{ label: string; value: string }>
   defaultValue?: string | number
+  allowSelectMultipleValues?: boolean
+  fixedTextContent?: string
 }
 
 interface FormTemplate {
@@ -667,6 +820,8 @@ const application = ref<Application | null>(null)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const formData = ref<Record<string, any>>({})
 const fieldErrors = ref<Record<string, string>>({})
+const uploadingFiles = ref<Record<string, boolean>>({})
+const filePreviewUrls = ref<Record<string, string>>({})
 const applicationFormRef = ref<HTMLElement | null>(null)
 
 interface User {
@@ -712,6 +867,22 @@ const dynamicApprovalSteps = computed(() => {
 onMounted(async () => {
   await loadData()
 })
+
+watch(
+  formData,
+  async (newFormData) => {
+    if (!template.value?.fields) return
+
+    const fileFields = template.value.fields.filter((field) => field.inputType === 'FILE')
+    for (const field of fileFields) {
+      const fieldValue = newFormData[field.name]
+      if (fieldValue && typeof fieldValue === 'string' && isImageFile(fieldValue)) {
+        await loadFilePreviewUrl(fieldValue)
+      }
+    }
+  },
+  { deep: true },
+)
 
 async function loadData() {
   loading.value = true
@@ -844,6 +1015,8 @@ async function submitApplication() {
   submitting.value = true
 
   try {
+    await uploadPendingFiles()
+
     if (isEditing.value) {
       // When editing, submit the existing application
       if (!application.value?.id) {
@@ -908,6 +1081,8 @@ async function saveDraft() {
   saving.value = true
 
   try {
+    await uploadPendingFiles()
+
     if (isEditing.value) {
       // For updates, only send fields (userId and formId are not allowed in updates)
       const updatePayload = {
@@ -961,13 +1136,72 @@ async function saveDraft() {
 function handleFileUpload(event: Event, fieldName: string) {
   const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
-    formData.value[fieldName] = target.files[0]
+    const file = target.files[0]
+
+    formData.value[fieldName] = file
+
+    toastStore.show({
+      tone: 'success',
+      title: 'File selected',
+      message: `${file.name} ready for upload`,
+    })
   }
 }
 
 function getFileName(file: File | string): string {
-  if (typeof file === 'string') return file
+  if (typeof file === 'string') {
+    const parts = file.split('/')
+    return parts[parts.length - 1] || file
+  }
   return file.name
+}
+
+async function uploadPendingFiles(): Promise<void> {
+  if (!template.value?.fields) return
+
+  const fileFields = template.value.fields.filter((field) => field.inputType === 'FILE')
+
+  for (const field of fileFields) {
+    const fieldValue = formData.value[field.name]
+
+    if (!fieldValue || typeof fieldValue === 'string') continue
+
+    if (!(fieldValue instanceof File)) continue
+
+    const file = fieldValue as File
+
+    try {
+      uploadingFiles.value[field.name] = true
+
+      const fileData = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => {
+          const result = reader.result as string
+          const base64 = result.split(',')[1]
+          resolve(base64)
+        }
+        reader.onerror = () => reject(reader.error)
+        reader.readAsDataURL(file)
+      })
+
+      const uploadResponse = await api.post('/files/upload', {
+        fileData,
+        fileName: file.name,
+        contentType: file.type,
+      })
+
+      const { key } = uploadResponse.data
+
+      formData.value[field.name] = key
+
+      console.log(`File ${file.name} uploaded successfully`)
+    } catch (error) {
+      console.error(`Failed to upload ${file.name}:`, error)
+      throw new Error(`Failed to upload ${file.name}`)
+    } finally {
+      uploadingFiles.value[field.name] = false
+    }
+  }
 }
 
 async function printApplication() {
@@ -1351,15 +1585,15 @@ async function confirmAction() {
 
 function formatAddress(): string {
   const profile = authStore.profile
-  if (!profile?.address) return 'Not provided'
+  if (!profile?.currentAddress) return 'Not provided'
 
   const parts = [
-    profile.address.street,
-    profile.address.number,
-    profile.address.city,
-    profile.address.province,
-    profile.address.zipCode,
-    profile.address.country ? getCountryName(profile.address.country) : null,
+    profile.currentAddress.street,
+    profile.currentAddress.number,
+    profile.currentAddress.city,
+    profile.currentAddress.province,
+    profile.currentAddress.zipCode,
+    profile.currentAddress.country ? getCountryName(profile.currentAddress.country) : null,
   ].filter((part) => part && part.trim())
 
   return parts.length > 0 ? parts.join(', ') : 'Not provided'
@@ -1399,6 +1633,122 @@ function goToProfile() {
 
 function goBack() {
   router.back()
+}
+
+// File handling functions
+function isImageFile(fileKey: string): boolean {
+  const fileName = getFileName(fileKey).toLowerCase()
+  return (
+    fileName.endsWith('.jpg') ||
+    fileName.endsWith('.jpeg') ||
+    fileName.endsWith('.png') ||
+    fileName.endsWith('.gif') ||
+    fileName.endsWith('.webp')
+  )
+}
+
+function getFileIcon(fileKey: string): string {
+  const fileName = getFileName(fileKey).toLowerCase()
+  if (fileName.endsWith('.pdf')) {
+    return mdiFilePdfBox
+  } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+    return mdiFileWord
+  } else if (isImageFile(fileKey)) {
+    return mdiFileImage
+  }
+  return mdiFile
+}
+
+function getFileType(fileKey: string): string {
+  const fileName = getFileName(fileKey).toLowerCase()
+  if (fileName.endsWith('.pdf')) {
+    return 'PDF Document'
+  } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+    return 'Word Document'
+  } else if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg')) {
+    return 'JPEG Image'
+  } else if (fileName.endsWith('.png')) {
+    return 'PNG Image'
+  } else if (fileName.endsWith('.gif')) {
+    return 'GIF Image'
+  } else if (fileName.endsWith('.webp')) {
+    return 'WebP Image'
+  }
+  return 'File'
+}
+
+function getFileAcceptTypes(fileKey: string): string {
+  const fileName = getFileName(fileKey).toLowerCase()
+  if (fileName.endsWith('.pdf')) {
+    return '.pdf'
+  } else if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+    return '.doc,.docx'
+  } else if (isImageFile(fileKey)) {
+    return 'image/*'
+  }
+  return '*/*'
+}
+
+async function loadFilePreviewUrl(fileKey: string) {
+  if (filePreviewUrls.value[fileKey]) return // Already loaded
+
+  try {
+    const response = await api.post('/files/download-url', { fileKey })
+    filePreviewUrls.value[fileKey] = response.data.downloadUrl
+  } catch (error) {
+    console.error('Failed to get file preview URL:', error)
+  }
+}
+
+function handleImageError(event: Event) {
+  const img = event.target as HTMLImageElement
+  img.style.display = 'none'
+}
+
+async function downloadFile(fileKey: string) {
+  try {
+    const response = await api.post('/files/download-url', { fileKey })
+    const downloadUrl = response.data.downloadUrl
+
+    const fileResponse = await fetch(downloadUrl)
+    const blob = await fileResponse.blob()
+
+    const blobUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = blobUrl
+    link.download = getFileName(fileKey)
+    link.style.display = 'none'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    window.URL.revokeObjectURL(blobUrl)
+  } catch (error) {
+    console.error('Failed to download file:', error)
+    toastStore.show({
+      tone: 'error',
+      title: 'Download Failed',
+      message: 'Failed to download file',
+    })
+  }
+}
+
+function replaceFile(fieldName: string) {
+  // Trigger the hidden file input
+  const fileInput = document.getElementById(`${fieldName}-replace`) as HTMLInputElement
+  if (fileInput) {
+    fileInput.click()
+  }
+}
+
+function removeFile(fieldName: string) {
+  // Clear the file from form data
+  formData.value[fieldName] = null
+  toastStore.show({
+    tone: 'success',
+    title: 'File Removed',
+    message: 'File has been removed from the form',
+  })
 }
 </script>
 

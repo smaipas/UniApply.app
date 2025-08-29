@@ -69,7 +69,7 @@
     <div v-else class="space-y-8">
       <!-- Welcome Header -->
       <div class="bg-gradient-to-r from-sky-900 to-cyan-700 rounded-xs p-8 text-white">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           <div>
             <h1 class="text-3xl font-bold mb-2">
               Welcome back, {{ authStore.profile?.firstName || 'User' }}!

@@ -23,7 +23,7 @@ router.post("/", async (req, res) => {
   const item: FormTemplate = {
     id: d.id || uuid(),
     title: d.title,
-    description: d.description || "",
+    description: d.description || null,
     fields: d.fields || [],
     approvalSteps: (d.approvalSteps || []).map((s: any, i: number) => ({
       ...s,

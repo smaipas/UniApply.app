@@ -17,7 +17,11 @@ import {
   BatchWriteItemCommand,
 } from "@aws-sdk/client-dynamodb";
 import { marshall, unmarshall } from "@aws-sdk/util-dynamodb";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  PutObjectCommand,
+  GetObjectCommand,
+} from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { SESv2Client, SendEmailCommand } from "@aws-sdk/client-sesv2";
 
@@ -1881,11 +1885,6 @@ export const presignUpload: APIGatewayProxyHandlerV2 = async (event) => {
       Bucket: UPLOADS_BUCKET,
       Key: key,
       ContentType: ct,
-      // Additional security headers
-      Metadata: {
-        uploadedBy: requesterSub(event) || "anonymous",
-        uploadedAt: new Date().toISOString(),
-      },
     });
 
     const uploadUrl = await getSignedUrl(s3, cmd, { expiresIn: 300 }); // 5 minutes
@@ -1903,6 +1902,122 @@ export const presignUpload: APIGatewayProxyHandlerV2 = async (event) => {
         details: err.details ?? [],
       });
     console.error("File upload presign error:", err);
+    return response(500, { message: "Internal Server Error" });
+  }
+};
+
+// ------------ Direct file upload (validated) ------------
+export const uploadFile: APIGatewayProxyHandlerV2 = async (event) => {
+  try {
+    // Check if request has JSON content type
+    if (
+      !event.body ||
+      !event.headers["content-type"]?.includes("application/json")
+    ) {
+      return response(400, {
+        message: "Invalid content type. Expected application/json",
+      });
+    }
+
+    // Parse JSON body
+    const raw = jsonParse(event.body) as {
+      fileData?: string;
+      fileName?: string;
+      contentType?: string;
+    };
+    const { fileData, fileName, contentType } = raw;
+
+    if (!fileData || !fileName || !contentType) {
+      return response(400, {
+        message: "Missing required fields: fileData, fileName, contentType",
+      });
+    }
+
+    // Validate file size (10MB limit)
+    const fileSize = Math.ceil((fileData.length * 3) / 4); // Approximate base64 size
+    if (fileSize > 10 * 1024 * 1024) {
+      return response(400, { message: "File too large. Maximum size is 10MB" });
+    }
+
+    // Generate unique key
+    const ext = contentType.includes("png")
+      ? "png"
+      : contentType.includes("jpeg") || contentType.includes("jpg")
+        ? "jpg"
+        : contentType.includes("pdf")
+          ? "pdf"
+          : "bin";
+    const key = `uploads/${randomUUID()}.${ext}`;
+
+    // Convert base64 to buffer
+    const fileBuffer = Buffer.from(fileData, "base64");
+
+    // Upload to S3
+    await s3.send(
+      new PutObjectCommand({
+        Bucket: UPLOADS_BUCKET,
+        Key: key,
+        Body: fileBuffer,
+        ContentType: contentType,
+        Metadata: {
+          uploadedBy: requesterSub(event) || "anonymous",
+          uploadedAt: new Date().toISOString(),
+          originalName: fileName,
+        },
+      })
+    );
+
+    return response(200, {
+      key,
+      fileName,
+      message: "File uploaded successfully",
+    });
+  } catch (err: any) {
+    console.error("File upload error:", err);
+    return response(500, { message: "Internal Server Error" });
+  }
+};
+
+// ------------ Generate file download URL ------------
+export const generateDownloadUrl: APIGatewayProxyHandlerV2 = async (event) => {
+  try {
+    // Check if request has JSON content type
+    if (
+      !event.body ||
+      !event.headers["content-type"]?.includes("application/json")
+    ) {
+      return response(400, {
+        message: "Invalid content type. Expected application/json",
+      });
+    }
+
+    // Parse JSON body
+    const raw = jsonParse(event.body) as {
+      fileKey?: string;
+    };
+    const { fileKey } = raw;
+
+    if (!fileKey) {
+      return response(400, {
+        message: "Missing required field: fileKey",
+      });
+    }
+
+    // Generate presigned download URL
+    const cmd = new GetObjectCommand({
+      Bucket: UPLOADS_BUCKET,
+      Key: fileKey,
+    });
+
+    const downloadUrl = await getSignedUrl(s3, cmd, { expiresIn: 3600 }); // 1 hour
+
+    return response(200, {
+      downloadUrl,
+      fileKey,
+      message: "Download URL generated successfully",
+    });
+  } catch (err: any) {
+    console.error("Generate download URL error:", err);
     return response(500, { message: "Internal Server Error" });
   }
 };

@@ -215,6 +215,26 @@ functions:
           path: /files/presign
           method: POST
 
+  uploadFile:
+    handler: src/handler.uploadFile
+    memorySize: 512
+    timeout: 25
+    architecture: arm64
+    events:
+      - httpApi:
+          path: /files/upload
+          method: POST
+
+  generateDownloadUrl:
+    handler: src/handler.generateDownloadUrl
+    memorySize: 256
+    timeout: 10
+    architecture: arm64
+    events:
+      - httpApi:
+          path: /files/download-url
+          method: POST
+
   notifyStatusChange:
     handler: src/handler.notifyStatusChange
 
@@ -434,6 +454,7 @@ resources:
           CorsRules:
             - AllowedOrigins:
                 - ${param:appBaseUrl}
+                - ${param:localDevUrl}
               AllowedMethods: [GET, PUT]
               AllowedHeaders: ["*"]
               ExposedHeaders: ["ETag"]
