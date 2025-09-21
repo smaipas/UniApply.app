@@ -11,9 +11,6 @@ The frontend for the UniApply application, built with Vue.js 3, TypeScript, Tail
 - **Vite** - Fast build tool and dev server
 - **Tailwind CSS** - Utility-first CSS framework
 - **Pinia** - State management
-- **Vue Router** - Client-side routing
-- **Axios** - HTTP client
-- **Vuelidate** - Form validation
 
 ### Key Features
 
