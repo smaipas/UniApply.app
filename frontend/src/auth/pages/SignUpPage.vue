@@ -29,6 +29,26 @@
           :error="errorMessageHandler(v$.password)"
           @blur="v$.password.$touch"
         />
+        <!-- Password Requirements -->
+        <div v-if="state.password" class="text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
+          <p class="font-medium mb-2">Password Requirements:</p>
+          <ul class="space-y-1">
+            <li
+              v-for="requirement in passwordRequirements"
+              :key="requirement"
+              class="flex items-center"
+            >
+              <span
+                class="w-2 h-2 rounded-full mr-2"
+                :class="{
+                  'bg-green-500': checkPasswordRequirement(state.password, requirement),
+                  'bg-gray-300': !checkPasswordRequirement(state.password, requirement),
+                }"
+              ></span>
+              {{ requirement }}
+            </li>
+          </ul>
+        </div>
         <UiInput
           label="Confirm password"
           type="password"
@@ -83,9 +103,20 @@ import AuthCard from '@/auth/components/AuthCard.vue'
 import { UiInput } from '@/common/components'
 import { UiButton } from '@/common/components'
 import { signUp, confirmSignUp } from '@/auth/services/cognito'
-import { errorMessageHandler } from '@/common/utils/validation'
+import {
+  errorMessageHandler,
+  validatePasswordStrength,
+  getPasswordRequirements,
+  checkPasswordRequirement,
+} from '@/common/utils/validation'
 
 const router = useRouter()
+
+// Custom password validator for Cognito requirements
+const passwordValidator = (value: string) => {
+  const validation = validatePasswordStrength(value)
+  return validation.isValid
+}
 
 const state = reactive({
   first: '',
@@ -100,6 +131,7 @@ const error = ref('')
 const cError = ref('')
 const success = ref('')
 const step = ref<'form' | 'confirm'>('form')
+const passwordRequirements = getPasswordRequirements()
 
 const rules = computed(() => ({
   first: {
@@ -118,7 +150,10 @@ const rules = computed(() => ({
   },
   password: {
     required: helpers.withMessage('Password is required', required),
-    minLength: helpers.withMessage('Password must be at least 6 characters', minLength(6)),
+    passwordValidator: helpers.withMessage(
+      'Password does not meet security requirements',
+      passwordValidator,
+    ),
   },
   confirm: {
     required: helpers.withMessage('Password confirmation is required', required),

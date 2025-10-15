@@ -5,7 +5,7 @@
     </span>
     <div class="relative">
       <input
-        :type="type"
+        :type="inputType"
         :value="modelValue"
         :placeholder="placeholder"
         :disabled="disabled"
@@ -16,6 +16,7 @@
             : 'border-gray-300 focus:border-primary focus:ring-primary/30 hover:border-gray-400',
           icon ? 'pl-10' : 'px-3',
           type === 'date' ? 'cursor-pointer' : '',
+          isPasswordInput ? 'pr-10' : '',
         ]"
         @input="onInput"
         @blur="onBlur"
@@ -25,6 +26,15 @@
         :path="icon"
         class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
       />
+      <!-- Password visibility toggle -->
+      <button
+        v-if="isPasswordInput"
+        type="button"
+        class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600"
+        @click="togglePasswordVisibility"
+      >
+        <UiIcon :path="showPassword ? mdiEyeOff : mdiEye" class="w-4 h-4" />
+      </button>
       <!-- Calendar icon for date inputs -->
       <div
         v-if="type === 'date'"
@@ -45,9 +55,11 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+import { mdiEye, mdiEyeOff } from '@mdi/js'
 import UiIcon from './UiIcon.vue'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     modelValue?: string | number
     label?: string
@@ -74,6 +86,20 @@ const emit = defineEmits<{
   (e: 'blur'): void
 }>()
 
+// Password visibility toggle
+const showPassword = ref(false)
+
+// Computed property for input type
+const inputType = computed(() => {
+  if (props.type === 'password') {
+    return showPassword.value ? 'text' : 'password'
+  }
+  return props.type
+})
+
+// Check if this is a password input
+const isPasswordInput = computed(() => props.type === 'password')
+
 function onInput(event: Event) {
   emit('update:modelValue', (event.target as HTMLInputElement).value)
   onBlur()
@@ -81,6 +107,10 @@ function onInput(event: Event) {
 
 function onBlur() {
   emit('blur')
+}
+
+function togglePasswordVisibility() {
+  showPassword.value = !showPassword.value
 }
 </script>
 
