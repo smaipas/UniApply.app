@@ -50,6 +50,7 @@ export declare const FieldInputType: z.ZodEnum<{
     DATE: "DATE";
     SELECT: "SELECT";
     CHECKBOX: "CHECKBOX";
+    FIXED_TEXT: "FIXED_TEXT";
 }>;
 export declare const AddressSchema: z.ZodObject<{
     street: z.ZodOptional<z.ZodString>;
@@ -495,7 +496,7 @@ export declare const ValidationRuleSchema: z.ZodObject<{
 }, z.core.$strict>;
 export declare const FormFieldSchema: z.ZodObject<{
     name: z.ZodString;
-    label: z.ZodString;
+    label: z.ZodOptional<z.ZodString>;
     description: z.ZodOptional<z.ZodString>;
     inputType: z.ZodEnum<{
         TEXT: "TEXT";
@@ -505,6 +506,7 @@ export declare const FormFieldSchema: z.ZodObject<{
         DATE: "DATE";
         SELECT: "SELECT";
         CHECKBOX: "CHECKBOX";
+        FIXED_TEXT: "FIXED_TEXT";
     }>;
     validationRules: z.ZodDefault<z.ZodArray<z.ZodObject<{
         rule: z.ZodEnum<{
@@ -524,6 +526,8 @@ export declare const FormFieldSchema: z.ZodObject<{
         label: z.ZodString;
         value: z.ZodString;
     }, z.core.$strict>>]>>;
+    allowSelectMultipleValues: z.ZodDefault<z.ZodBoolean>;
+    fixedTextContent: z.ZodOptional<z.ZodString>;
 }, z.core.$strict>;
 export declare const ApprovalStepType: z.ZodEnum<{
     USER_GROUP: "USER_GROUP";
@@ -555,7 +559,7 @@ export declare const FormTemplateCreateSchema: z.ZodObject<{
     description: z.ZodOptional<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>;
     fields: z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        label: z.ZodString;
+        label: z.ZodOptional<z.ZodString>;
         description: z.ZodOptional<z.ZodString>;
         inputType: z.ZodEnum<{
             TEXT: "TEXT";
@@ -565,6 +569,7 @@ export declare const FormTemplateCreateSchema: z.ZodObject<{
             DATE: "DATE";
             SELECT: "SELECT";
             CHECKBOX: "CHECKBOX";
+            FIXED_TEXT: "FIXED_TEXT";
         }>;
         validationRules: z.ZodDefault<z.ZodArray<z.ZodObject<{
             rule: z.ZodEnum<{
@@ -584,6 +589,8 @@ export declare const FormTemplateCreateSchema: z.ZodObject<{
             label: z.ZodString;
             value: z.ZodString;
         }, z.core.$strict>>]>>;
+        allowSelectMultipleValues: z.ZodDefault<z.ZodBoolean>;
+        fixedTextContent: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>;
     approvalSteps: z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
         type: z.ZodLiteral<"USER_GROUP">;
@@ -602,13 +609,15 @@ export declare const FormTemplateCreateSchema: z.ZodObject<{
     }, z.core.$strict>], "type">>;
     visibleToRoles: z.ZodArray<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>;
     active: z.ZodDefault<z.ZodBoolean>;
+    allowApplicationCreatorsToSelectApprover: z.ZodDefault<z.ZodBoolean>;
+    approverSelectionUserGroups: z.ZodDefault<z.ZodArray<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>>;
 }, z.core.$strict>;
 export declare const FormTemplateUpdateSchema: z.ZodObject<{
     title: z.ZodOptional<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>;
     description: z.ZodOptional<z.ZodOptional<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>>;
     fields: z.ZodOptional<z.ZodArray<z.ZodObject<{
         name: z.ZodString;
-        label: z.ZodString;
+        label: z.ZodOptional<z.ZodString>;
         description: z.ZodOptional<z.ZodString>;
         inputType: z.ZodEnum<{
             TEXT: "TEXT";
@@ -618,6 +627,7 @@ export declare const FormTemplateUpdateSchema: z.ZodObject<{
             DATE: "DATE";
             SELECT: "SELECT";
             CHECKBOX: "CHECKBOX";
+            FIXED_TEXT: "FIXED_TEXT";
         }>;
         validationRules: z.ZodDefault<z.ZodArray<z.ZodObject<{
             rule: z.ZodEnum<{
@@ -637,6 +647,8 @@ export declare const FormTemplateUpdateSchema: z.ZodObject<{
             label: z.ZodString;
             value: z.ZodString;
         }, z.core.$strict>>]>>;
+        allowSelectMultipleValues: z.ZodDefault<z.ZodBoolean>;
+        fixedTextContent: z.ZodOptional<z.ZodString>;
     }, z.core.$strict>>>;
     approvalSteps: z.ZodOptional<z.ZodArray<z.ZodDiscriminatedUnion<[z.ZodObject<{
         type: z.ZodLiteral<"USER_GROUP">;
@@ -655,6 +667,8 @@ export declare const FormTemplateUpdateSchema: z.ZodObject<{
     }, z.core.$strict>], "type">>>;
     visibleToRoles: z.ZodOptional<z.ZodArray<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>>;
     active: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    allowApplicationCreatorsToSelectApprover: z.ZodOptional<z.ZodDefault<z.ZodBoolean>>;
+    approverSelectionUserGroups: z.ZodOptional<z.ZodDefault<z.ZodArray<z.ZodPipe<z.ZodString, z.ZodTransform<string, string>>>>>;
 }, z.core.$strict>;
 export declare const FormTemplateModelSchema: z.ZodObject<{
     id: z.ZodString;
@@ -681,6 +695,8 @@ export declare const FormTemplateModelSchema: z.ZodObject<{
     version: z.ZodNumber;
     createdAt: z.ZodString;
     updatedAt: z.ZodString;
+    allowApplicationCreatorsToSelectApprover: z.ZodDefault<z.ZodBoolean>;
+    approverSelectionUserGroups: z.ZodDefault<z.ZodArray<z.ZodString>>;
 }, z.core.$strict>;
 export declare const ApplicationStepSchema: z.ZodObject<{
     type: z.ZodEnum<{

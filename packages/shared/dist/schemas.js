@@ -64,7 +64,6 @@ export const sanitizedPhone = z
     return val.replace(/[^\d+]/g, "");
 })
     .refine((val) => {
-    // Allow empty strings for optional fields
     if (val === "")
         return true;
     // E.164 format validation
@@ -106,6 +105,7 @@ export const FieldInputType = z.enum([
     "DATE",
     "SELECT",
     "CHECKBOX",
+    "FIXED_TEXT",
 ]);
 // ========= Helpers =========
 const e164Phone = z.string().regex(/^\+?[1-9]\d{1,14}$/, {
@@ -505,7 +505,7 @@ export const ValidationRuleSchema = z
 export const FormFieldSchema = z
     .object({
     name: z.string().min(1).max(64),
-    label: z.string().min(1).max(128),
+    label: z.string().max(128).optional(),
     description: z.string().max(512).optional(),
     inputType: FieldInputType,
     validationRules: z.array(ValidationRuleSchema).default([]),
@@ -518,6 +518,10 @@ export const FormFieldSchema = z
         z.array(z.object({ label: z.string(), value: z.string() }).strict()),
     ])
         .optional(),
+    // for SELECT fields: allow multiple values selection
+    allowSelectMultipleValues: z.boolean().default(false),
+    // for FIXED_TEXT fields: the text content to display
+    fixedTextContent: z.string().max(2000).optional(),
 })
     .superRefine((field, ctx) => {
     const t = field.inputType;
@@ -535,6 +539,34 @@ export const FormFieldSchema = z
             code: "custom",
             message: "defaultValue must be a number for NUMBER fields",
             path: ["defaultValue"],
+        });
+    }
+    // Validate FIXED_TEXT fields have content
+    if (t === "FIXED_TEXT" && !field.fixedTextContent) {
+        ctx.addIssue({
+            code: "custom",
+            message: "fixedTextContent is required for FIXED_TEXT fields",
+            path: ["fixedTextContent"],
+        });
+    }
+    // FIXED_TEXT fields should not have validation rules
+    if (t === "FIXED_TEXT" &&
+        field.validationRules &&
+        field.validationRules.length > 0) {
+        ctx.addIssue({
+            code: "custom",
+            message: "FIXED_TEXT fields should not have validation rules",
+            path: ["validationRules"],
+        });
+    }
+    // Validate SELECT fields have options when allowSelectMultipleValues is true
+    if (t === "SELECT" &&
+        field.allowSelectMultipleValues &&
+        (!field.options || field.options.length === 0)) {
+        ctx.addIssue({
+            code: "custom",
+            message: "options are required for SELECT fields with multiple values",
+            path: ["options"],
         });
     }
 })
@@ -604,7 +636,6 @@ export const FormTemplateCreateSchema = z
     description: z
         .string()
         .trim()
-        .min(2)
         .max(1024)
         .transform((val) => {
         // Remove control characters except \t, \n, \r
@@ -626,6 +657,10 @@ export const FormTemplateCreateSchema = z
     approvalSteps: z.array(TemplateApprovalStepSchema).min(1).max(10),
     visibleToRoles: z.array(sanitizedString(64)).min(1).max(50),
     active: z.boolean().default(true),
+    // Allow application creators to select approvers from user groups
+    allowApplicationCreatorsToSelectApprover: z.boolean().default(false),
+    // User groups from which application creators can select approvers
+    approverSelectionUserGroups: z.array(sanitizedString(64)).default([]),
 })
     .strict();
 export const FormTemplateUpdateSchema = FormTemplateCreateSchema.partial().strict();
@@ -634,7 +669,7 @@ export const FormTemplateModelSchema = z
     .object({
     id: z.string().min(1).max(64),
     title: z.string().min(2).max(64),
-    description: z.string().min(2).max(1024).optional(),
+    description: z.string().max(1024).optional(),
     // We keep fields loosely typed to allow backend/frontend to evolve independently
     fields: z.array(z.any()),
     approvalSteps: z.array(TemplateApprovalStepSchema).min(1).max(10),
@@ -643,6 +678,10 @@ export const FormTemplateModelSchema = z
     version: z.number().int().min(1),
     createdAt: z.string(),
     updatedAt: z.string(),
+    // Allow application creators to select approvers from user groups
+    allowApplicationCreatorsToSelectApprover: z.boolean().default(false),
+    // User groups from which application creators can select approvers
+    approverSelectionUserGroups: z.array(z.string()).default([]),
 })
     .strict();
 // ========= Applications =========

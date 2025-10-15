@@ -62,7 +62,7 @@ provider:
     USER_POOL_ID: { Ref: CognitoUserPool }
     USER_POOL_CLIENT_ID: { Ref: CognitoUserPoolClient }
     SES_SENDER_EMAIL: ${env:SES_SENDER_EMAIL, 'no-reply@uniapply.app'}
-    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'https://dev.uniapply.app'}
     APP_NAME: ${env:APP_NAME, 'UniApply'}
 
   iam:
@@ -247,6 +247,18 @@ functions:
       - cognitoUserPool:
           pool: ${self:service}-${sls:stage}-userpool
           trigger: PostConfirmation
+          existing: true
+
+  customMessage:
+    handler: src/handler.customMessage
+    memorySize: 256
+    timeout: 10
+    architecture: arm64
+    name: CustomMessageLambdaFunction
+    events:
+      - cognitoUserPool:
+          pool: ${self:service}-${sls:stage}-userpool
+          trigger: CustomMessage
           existing: true
 
 resources:

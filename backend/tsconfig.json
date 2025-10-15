@@ -9,7 +9,11 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "strict": true,
-    "types": ["node"]
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@uniapply/shared": ["../packages/shared/src"]
+    }
   },
   "include": ["src/**/*.ts"]
 }

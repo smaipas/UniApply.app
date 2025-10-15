@@ -3,6 +3,7 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyHandlerV2,
   PostConfirmationTriggerHandler,
+  CustomMessageTriggerHandler,
 } from "aws-lambda";
 import { randomUUID } from "crypto";
 import {
@@ -1590,7 +1591,7 @@ async function tryNotifyApplicantDecision(
     const user = u.Item ? (unmarshall(u.Item) as any) : null;
     if (!user?.email) return;
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
     const appName = process.env.APP_NAME || "UniApply";
     const subject = `Your application was ${status}`;
     const body = `Hello ${user.firstName ?? ""},
@@ -1709,7 +1710,7 @@ async function tryNotifyApprovers(
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
     const appName = process.env.APP_NAME || "UniApply";
     const subject = `New application requires approval: ${formTitle}`;
     const body = `Hello,
@@ -1760,7 +1761,7 @@ async function tryNotifyApplicant(
       return;
     }
 
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
     const appName = process.env.APP_NAME || "UniApply";
     const subject = `Your application status update: ${formTitle}`;
     const body = `Hello ${user.firstName || "there"},
@@ -1827,7 +1828,8 @@ async function tryNotifyDynamicUsers(newApp: any, oldApp: any) {
           continue;
         }
 
-        const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+        const frontendUrl =
+          process.env.FRONTEND_URL || "https://dev.uniapply.app";
         const appName = process.env.APP_NAME || "UniApply";
         const subject = `You have been assigned to approve an application: ${newApp.formTitle}`;
         const body = `Hello ${user.firstName || "there"},
@@ -3288,7 +3290,7 @@ export const notifyStatusChange: APIGatewayProxyHandlerV2 = async (event) => {
 
     const finalStatus = status ?? application.status ?? "UPDATED";
     const formTitle = application.formTitle || "Application";
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
     const appName = process.env.APP_NAME || "UniApply";
     const subject = `Your application status update: ${formTitle}`;
     const bodyText = `Hello ${user.firstName ?? ""},
@@ -3548,3 +3550,47 @@ async function globalSearch(event: APIGatewayProxyEventV2) {
 
   return response(200, { results });
 }
+
+export const customMessage: CustomMessageTriggerHandler = async (event) => {
+  try {
+    if (event.triggerSource === "CustomMessage_ForgotPassword") {
+      const { codeParameter, userAttributes } = event.request;
+      const email = userAttributes.email;
+      const frontendUrl =
+        process.env.FRONTEND_URL || "https://dev.uniapply.app";
+
+      event.response.emailSubject = "Reset your password - UniApply";
+      event.response.emailMessage = `
+        <html>
+          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #007bff;">Reset your password</h2>
+              <p>You requested to reset your password for your UniApply account.</p>
+              <p>Click the button below to reset your password:</p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&code=${codeParameter}" 
+                   style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
+                   Reset Password
+                 </a>
+              </div>
+              <p>Or copy and paste this link into your browser:</p>
+              <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">
+                ${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&code=${codeParameter}
+              </p>
+              <p><strong>This link will expire in 24 hours.</strong></p>
+              <p>If you didn't request this password reset, please ignore this email.</p>
+              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
+              <p style="font-size: 12px; color: #666;">
+                This email was sent from UniApply. If you have any questions, please contact support.
+              </p>
+            </div>
+          </body>
+        </html>
+      `;
+    }
+  } catch (e) {
+    console.error("customMessage error", e);
+  }
+
+  return event;
+};

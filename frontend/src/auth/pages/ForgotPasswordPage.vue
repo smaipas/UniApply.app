@@ -1,6 +1,9 @@
 <template>
   <AuthCard>
     <h1 class="mb-6 text-2xl font-semibold text-gray-900">Forgot your password?</h1>
+    <p class="mb-6 text-sm text-gray-600">
+      Enter your email address and we'll send you a link to reset your password.
+    </p>
     <form @submit.prevent="submit">
       <UiInput
         label="Email"
@@ -15,7 +18,7 @@
           Back to sign in
         </router-link>
         <UiButton :disabled="loading" @click="submit">
-          {{ loading ? 'Sending…' : 'Send reset code' }}
+          {{ loading ? 'Sending…' : 'Send reset link' }}
         </UiButton>
       </div>
     </form>
@@ -59,7 +62,8 @@ async function submit() {
   loading.value = true
   try {
     await forgotPassword(state.email)
-    success.value = 'Reset code sent. Check your email and continue to reset password.'
+    success.value =
+      'Password reset link sent! Check your email and click the link to reset your password.'
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     error.value = e?.message || 'Failed to send reset code'
