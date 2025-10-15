@@ -1478,7 +1478,7 @@ async function printApplication() {
         
         @media print {
           body { margin: 0; font-size: 13px; }
-          * { -webkit-print-color-adjust: exact !important; color-adjust: exact !important; }
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
       </style>
     `
@@ -1767,7 +1767,7 @@ function removeFile(fieldName: string) {
 
   * {
     -webkit-print-color-adjust: exact !important;
-    color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   .bg-white {
