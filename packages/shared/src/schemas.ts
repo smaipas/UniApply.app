@@ -116,7 +116,7 @@ export const FieldInputType = z.enum([
 
 // ========= Helpers =========
 const e164Phone = z.string().regex(/^\+?[1-9]\d{1,14}$/, {
-  message: "Invalid phone (use E.164, e.g. +357...)",
+  message: "Invalid phone (use E.164, e.g. +30...)",
 });
 
 const id = z.string().min(1).max(64);
