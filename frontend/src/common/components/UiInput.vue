@@ -117,4 +117,18 @@ input[type='date']::-webkit-datetime-edit-day-field,
 input[type='date']::-webkit-datetime-edit-year-field {
   color: #374151;
 }
+
+/* Safari iOS specific fixes for date inputs */
+@supports (-webkit-touch-callout: none) {
+  /* Hide the native Safari calendar icon completely */
+  input[type='date']::-webkit-calendar-picker-indicator {
+    display: none !important;
+  }
+
+  /* Adjust padding for Safari iOS date inputs */
+  input[type='date'] {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+  }
+}
 </style>
