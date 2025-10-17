@@ -817,7 +817,7 @@ async function confirmRegistration(event: APIGatewayProxyEventV2) {
     // Confirm the signup with Cognito
     await cognito.send(
       new ConfirmSignUpCommand({
-        ClientId: process.env.COGNITO_CLIENT_ID!,
+        ClientId: process.env.USER_POOL_CLIENT_ID!,
         Username: email,
         ConfirmationCode: code,
       })
@@ -994,7 +994,7 @@ async function resendConfirmationCode(event: APIGatewayProxyEventV2) {
     // Resend the confirmation code with Cognito
     await cognito.send(
       new ResendConfirmationCodeCommand({
-        ClientId: process.env.COGNITO_CLIENT_ID!,
+        ClientId: process.env.USER_POOL_CLIENT_ID!,
         Username: email,
       })
     );
