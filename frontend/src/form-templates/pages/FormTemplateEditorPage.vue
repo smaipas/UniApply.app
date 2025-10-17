@@ -34,15 +34,15 @@
         <div
           v-for="(f, i) in form.fields"
           :key="i"
-          class="relative grid grid-cols-1 gap-2 md:grid-cols-3 items-start bg-gray-100 p-4 rounded-md my-2"
+          class="relative flex flex-col gap-2 md:grid md:grid-cols-3 md:gap-2 items-start bg-gray-100 p-4 rounded-md my-2"
         >
-          <div class="col-span-4 flex justify-end">
+          <div class="w-full md:col-span-3 flex justify-end">
             <UiButton flat color="red" :icon="mdiClose" size="sm" @click="removeField(i)">
               Remove
             </UiButton>
           </div>
 
-          <div class="col-span-4 grid grid-cols-1 md:grid-cols-3 gap-2 items-start">
+          <div class="w-full md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-2 items-start">
             <UiInput
               label="Name"
               :model-value="f.name"
@@ -64,7 +64,7 @@
             />
           </div>
 
-          <div v-if="isDefaultApplicable(f.inputType)" class="md:col-span-3">
+          <div v-if="isDefaultApplicable(f.inputType)" class="w-full md:col-span-3">
             <textarea
               v-if="f.inputType === 'LONG_TEXT'"
               rows="10"
@@ -85,7 +85,7 @@
             </template>
           </div>
 
-          <div v-if="f.inputType === 'SELECT'" class="md:col-span-3 space-y-2">
+          <div v-if="f.inputType === 'SELECT'" class="w-full md:col-span-3 space-y-2">
             <div class="flex items-center justify-between">
               <label class="text-sm font-medium text-gray-700">Options</label>
               <UiButton flat :icon="mdiPlus" size="sm" @click="addOption(i)">Add option</UiButton>
@@ -105,7 +105,7 @@
             </div>
           </div>
 
-          <div v-if="f.inputType === 'FIXED_TEXT'" class="md:col-span-3 space-y-2">
+          <div v-if="f.inputType === 'FIXED_TEXT'" class="w-full md:col-span-3 space-y-2">
             <label class="text-sm font-medium text-gray-700">Fixed Text Content</label>
             <textarea
               v-model="f.fixedTextContent"
@@ -115,7 +115,7 @@
             ></textarea>
           </div>
 
-          <div v-if="f.inputType !== 'FIXED_TEXT'" class="md:col-span-3 mt-2 space-y-3">
+          <div v-if="f.inputType !== 'FIXED_TEXT'" class="w-full md:col-span-3 mt-2 space-y-3">
             <div class="text-sm font-bold text-gray-500 border-b border-gray-300 pb-1">
               Validations
             </div>

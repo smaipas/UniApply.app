@@ -62,14 +62,18 @@
     >
       <!-- Form Header -->
       <div class="px-6 py-4 border-b border-gray-200">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-900">{{ template.title }}</h2>
+        <div
+          class="flex flex-col space-y-3 md:flex-row md:items-center md:justify-between md:space-y-0"
+        >
+          <div class="flex-1 min-w-0">
+            <h2 class="text-lg font-semibold text-gray-900 truncate">{{ template.title }}</h2>
             <p v-if="template.description" class="text-gray-600 text-sm mt-1">
               {{ template.description }}
             </p>
           </div>
-          <div class="flex items-center space-x-4">
+          <div
+            class="flex flex-col space-y-2 md:flex-row md:items-center md:space-y-0 md:space-x-4"
+          >
             <StatusChip :status="application?.status || 'DRAFT'" />
             <span v-if="application?.id" class="text-sm text-gray-500">
               ID: {{ application.id }}
