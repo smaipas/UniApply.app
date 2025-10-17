@@ -12,6 +12,13 @@ import {
 import api from '@/app/axios'
 import type { User as UserModel } from '@uniapply/shared'
 import { useDashboardStore } from '@/dashboard/store'
+import { useSearchStore } from '@/common/store/search'
+import { useModalStore } from '@/common/store/modal'
+import { useToastStore } from '@/common/store/toast'
+import { useRolesStore } from '@/common/store/roles'
+import { useAppStore } from '@/common/store/app'
+import { useUiStore } from '@/common/store/ui'
+import { useCounterStore } from '@/stores/counter'
 
 type AuthTokens = {
   accessToken: string
@@ -250,12 +257,61 @@ export const useAuthStore = defineStore('auth', () => {
     clearRefreshTimer()
     persist(null)
 
-    // Clear dashboard data when user logs out
+    // Clear all stores when user logs out
     try {
       const dashboardStore = useDashboardStore()
       dashboardStore.clear()
     } catch {
       // Ignore errors if dashboard store is not available
+    }
+
+    try {
+      const searchStore = useSearchStore()
+      searchStore.clear()
+    } catch {
+      // Ignore errors if search store is not available
+    }
+
+    try {
+      const modalStore = useModalStore()
+      modalStore.clear()
+    } catch {
+      // Ignore errors if modal store is not available
+    }
+
+    try {
+      const toastStore = useToastStore()
+      toastStore.clear()
+    } catch {
+      // Ignore errors if toast store is not available
+    }
+
+    try {
+      const rolesStore = useRolesStore()
+      rolesStore.clear()
+    } catch {
+      // Ignore errors if roles store is not available
+    }
+
+    try {
+      const appStore = useAppStore()
+      appStore.clear()
+    } catch {
+      // Ignore errors if app store is not available
+    }
+
+    try {
+      const uiStore = useUiStore()
+      uiStore.clear()
+    } catch {
+      // Ignore errors if ui store is not available
+    }
+
+    try {
+      const counterStore = useCounterStore()
+      counterStore.clear()
+    } catch {
+      // Ignore errors if counter store is not available
     }
   }
 

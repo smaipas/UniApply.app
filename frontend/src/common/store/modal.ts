@@ -78,6 +78,17 @@ export const useModalStore = defineStore('modal', () => {
     })
   }
 
+  function clear() {
+    open.value = false
+    data.value = {}
+    confirmText.value = 'Confirm'
+    cancelText.value = 'Cancel'
+    if (resolver) {
+      resolver(false)
+      resolver = null
+    }
+  }
+
   return {
     // state
     open,
@@ -89,5 +100,6 @@ export const useModalStore = defineStore('modal', () => {
     close,
     resolve,
     confirm,
+    clear,
   }
 })

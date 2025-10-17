@@ -9,5 +9,8 @@ export const useUiStore = defineStore('ui', () => {
   function setSidebar(v: boolean) {
     sidebarOpen.value = v
   }
-  return { sidebarOpen, toggleSidebar, setSidebar }
+  function clear() {
+    sidebarOpen.value = false
+  }
+  return { sidebarOpen, toggleSidebar, setSidebar, clear }
 })

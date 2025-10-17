@@ -39,5 +39,12 @@ export const useRolesStore = defineStore('roles', () => {
     }
   }
 
-  return { roles, roleNames, loaded, loading, error, fetchRoles, ensureLoaded }
+  function clear() {
+    roles.value = []
+    loaded.value = false
+    loading.value = false
+    error.value = null
+  }
+
+  return { roles, roleNames, loaded, loading, error, fetchRoles, ensureLoaded, clear }
 })

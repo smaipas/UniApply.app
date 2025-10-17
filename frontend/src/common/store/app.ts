@@ -23,9 +23,15 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  function clear() {
+    isLoadingInitialData.value = false
+    error.value = null
+  }
+
   return {
     isLoadingInitialData,
     error,
     loadInitialData,
+    clear,
   }
 })

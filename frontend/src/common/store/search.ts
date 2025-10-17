@@ -86,6 +86,14 @@ export const useSearchStore = defineStore('search', () => {
     query.value = newQuery
   }
 
+  function clear() {
+    query.value = ''
+    results.value = []
+    loading.value = false
+    error.value = null
+    isOpen.value = false
+  }
+
   return {
     // State
     query,
@@ -103,5 +111,6 @@ export const useSearchStore = defineStore('search', () => {
     openSearch,
     closeSearch,
     setQuery,
+    clear,
   }
 })
