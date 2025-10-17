@@ -74,7 +74,7 @@
     <div v-else class="space-y-4">
       <h2 class="text-lg font-medium">Confirm your email</h2>
       <p class="text-sm text-gray-600">
-        We've sent a 6-digit code to {{ state.email }}. Enter it below to verify.
+        We've sent a confirmation email to {{ state.email }}. Enter it below to verify.
       </p>
       <form @submit.prevent="confirmCode">
         <div class="flex gap-3 items-end">
