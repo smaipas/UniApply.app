@@ -59,12 +59,13 @@
         />
       </div>
       <div class="mt-6 flex items-center justify-between">
-        <router-link class="text-sm text-blue-700 hover:underline" to="/login"
-          >Back to sign in</router-link
-        >
-        <UiButton :disabled="loading" @click="submit">{{
-          loading ? 'Creating…' : 'Create account'
-        }}</UiButton>
+        <router-link class="text-sm text-blue-700 hover:underline" to="/login">
+          Back to sign in
+        </router-link>
+
+        <UiButton :disabled="loading" @click="submit">
+          {{ loading ? 'Creating…' : 'Create account' }}
+        </UiButton>
       </div>
       <p v-if="error" class="mt-4 text-sm text-red-600">{{ error }}</p>
       <p v-if="success" class="mt-4 text-sm text-green-700">{{ success }}</p>
@@ -179,8 +180,8 @@ async function submit() {
       givenName: state.first,
       familyName: state.last,
     })
-    step.value = 'confirm'
-    success.value = 'Account created. Please enter the confirmation code sent to your email.'
+    // Redirect to the confirm-registration page with email parameter
+    router.push(`/confirm-registration?email=${encodeURIComponent(state.email)}`)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (e: any) {
     error.value = e?.message || 'Sign up failed'

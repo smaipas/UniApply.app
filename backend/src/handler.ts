@@ -55,6 +55,11 @@ import {
   PresignUploadSchema,
   RoleSchema,
 } from "@uniapply/shared";
+import {
+  createPasswordResetEmail,
+  createRegistrationConfirmationEmail,
+  createWelcomeEmail,
+} from "./utils/emailTemplates";
 
 // ------------ AWS clients ------------
 const ddb = new DynamoDBClient({ region: process.env.REGION });
@@ -125,6 +130,8 @@ function requiresAuth(path: string, method: string): boolean {
     { path: "/auth/forgot-password", method: "POST" },
     { path: "/auth/reset-password", method: "POST" },
     { path: "/auth/confirm-code", method: "POST" },
+    { path: "/auth/confirm-registration", method: "POST" },
+    { path: "/auth/resend-confirmation", method: "POST" },
   ];
 
   // Check if this is a public endpoint
@@ -770,6 +777,289 @@ async function toggleUserStatus(event: APIGatewayProxyEventV2, id: string) {
     message: `User ${newStatus ? "activated" : "deactivated"} successfully`,
     active: newStatus,
   });
+}
+
+async function confirmRegistration(event: APIGatewayProxyEventV2) {
+  const body = jsonParse(event.body);
+
+  if (!body || typeof body !== "object") {
+    return response(
+      400,
+      {
+        error: "Bad Request",
+        message: "Invalid request body",
+      },
+      event
+    );
+  }
+
+  const { email, code } = body as { email?: string; code?: string };
+
+  if (!email || !code) {
+    return response(
+      400,
+      {
+        error: "Bad Request",
+        message: "Email and confirmation code are required",
+      },
+      event
+    );
+  }
+
+  try {
+    // Import Cognito client for confirmation
+    const { CognitoIdentityProviderClient, ConfirmSignUpCommand } =
+      await import("@aws-sdk/client-cognito-identity-provider");
+    const cognito = new CognitoIdentityProviderClient({
+      region: process.env.REGION,
+    });
+
+    // Confirm the signup with Cognito
+    await cognito.send(
+      new ConfirmSignUpCommand({
+        ClientId: process.env.COGNITO_CLIENT_ID!,
+        Username: email,
+        ConfirmationCode: code,
+      })
+    );
+
+    // Update user status in our database to active and verified
+    // First, find the user by email
+    const scanResult = await ddb.send(
+      new ScanCommand({
+        TableName: USERS_TABLE,
+        FilterExpression: "email = :email",
+        ExpressionAttributeValues: marshall({ ":email": email }),
+      })
+    );
+
+    if (!scanResult.Items || scanResult.Items.length === 0) {
+      return response(
+        404,
+        {
+          error: "User Not Found",
+          message: "User with this email address not found",
+        },
+        event
+      );
+    }
+
+    const userItem = unmarshall(scanResult.Items[0]) as any;
+    const userId = userItem.id;
+
+    // Update user status to active and verified
+    await ddb.send(
+      new UpdateItemCommand({
+        TableName: USERS_TABLE,
+        Key: marshall({ id: userId }),
+        UpdateExpression:
+          "SET active = :active, verified = :verified, updatedAt = :updatedAt",
+        ExpressionAttributeValues: marshall({
+          ":active": true,
+          ":verified": true,
+          ":updatedAt": nowIso(),
+        }),
+      })
+    );
+
+    // Log audit
+    await writeAudit("USER", userId, userId, "CONFIRM_REGISTRATION", {
+      email: email,
+      status: "email_confirmed",
+    });
+
+    // Send welcome email
+    try {
+      const { subject, html } = createWelcomeEmail(email, userItem.firstName);
+      await ses.send(
+        new SendEmailCommand({
+          FromEmailAddress: SES_SENDER_EMAIL,
+          Destination: { ToAddresses: [email] },
+          Content: {
+            Simple: {
+              Subject: { Data: subject },
+              Body: { Html: { Data: html } },
+            },
+          },
+        })
+      );
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail the confirmation if email fails
+    }
+
+    return response(
+      200,
+      {
+        message: "Registration confirmed successfully",
+        user: {
+          id: userId,
+          email: email,
+          firstName: userItem.firstName,
+          lastName: userItem.lastName,
+          active: true,
+          verified: true,
+        },
+      },
+      event
+    );
+  } catch (error: any) {
+    console.error("Confirm registration error:", error);
+
+    if (
+      error.name === "NotAuthorizedException" ||
+      error.name === "CodeMismatchException"
+    ) {
+      return response(
+        400,
+        {
+          error: "Invalid Confirmation Code",
+          message:
+            "The confirmation code is invalid or expired. Please check your email and try again.",
+        },
+        event
+      );
+    }
+
+    if (error.name === "ExpiredCodeException") {
+      return response(
+        400,
+        {
+          error: "Code Expired",
+          message:
+            "The confirmation code has expired. Please request a new confirmation email.",
+        },
+        event
+      );
+    }
+
+    if (error.name === "UserNotFoundException") {
+      return response(
+        404,
+        {
+          error: "User Not Found",
+          message: "User with this email address not found",
+        },
+        event
+      );
+    }
+
+    return response(
+      500,
+      {
+        error: "Internal Server Error",
+        message:
+          "An error occurred while confirming your registration. Please try again.",
+      },
+      event
+    );
+  }
+}
+
+async function resendConfirmationCode(event: APIGatewayProxyEventV2) {
+  const body = jsonParse(event.body);
+
+  if (!body || typeof body !== "object") {
+    return response(
+      400,
+      {
+        error: "Bad Request",
+        message: "Invalid request body",
+      },
+      event
+    );
+  }
+
+  const { email } = body as { email?: string };
+
+  if (!email) {
+    return response(
+      400,
+      {
+        error: "Bad Request",
+        message: "Email is required",
+      },
+      event
+    );
+  }
+
+  try {
+    // Import Cognito client for resending confirmation
+    const { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } =
+      await import("@aws-sdk/client-cognito-identity-provider");
+    const cognito = new CognitoIdentityProviderClient({
+      region: process.env.REGION,
+    });
+
+    // Resend the confirmation code with Cognito
+    await cognito.send(
+      new ResendConfirmationCodeCommand({
+        ClientId: process.env.COGNITO_CLIENT_ID!,
+        Username: email,
+      })
+    );
+
+    // Log audit
+    await writeAudit("USER", "system", "system", "RESEND_CONFIRMATION", {
+      email: email,
+      action: "resend_confirmation_code",
+    });
+
+    return response(
+      200,
+      {
+        message:
+          "Confirmation code resent successfully. Please check your email.",
+      },
+      event
+    );
+  } catch (error: any) {
+    console.error("Resend confirmation code error:", error);
+
+    if (error.name === "UserNotFoundException") {
+      return response(
+        404,
+        {
+          error: "User Not Found",
+          message: "User with this email address not found",
+        },
+        event
+      );
+    }
+
+    if (error.name === "InvalidParameterException") {
+      return response(
+        400,
+        {
+          error: "Invalid Request",
+          message: "User is already confirmed or email is invalid",
+        },
+        event
+      );
+    }
+
+    if (error.name === "LimitExceededException") {
+      return response(
+        429,
+        {
+          error: "Too Many Requests",
+          message:
+            "Too many requests. Please wait before requesting another confirmation code.",
+        },
+        event
+      );
+    }
+
+    return response(
+      500,
+      {
+        error: "Internal Server Error",
+        message:
+          "An error occurred while resending the confirmation code. Please try again.",
+      },
+      event
+    );
+  }
 }
 
 async function getCurrentUser(event: APIGatewayProxyEventV2) {
@@ -2827,6 +3117,16 @@ export const main: APIGatewayProxyHandlerV2 = async (event) => {
       }
     }
 
+    // Confirm registration endpoint
+    if (method === "POST" && path === "/auth/confirm-registration") {
+      return await confirmRegistration(event);
+    }
+
+    // Resend confirmation code endpoint
+    if (method === "POST" && path === "/auth/resend-confirmation") {
+      return await resendConfirmationCode(event);
+    }
+
     // Forms
     if (method === "POST" && path === "/forms") return await createForm(event);
     {
@@ -3352,8 +3652,8 @@ export const postConfirmation: PostConfirmationTriggerHandler = async (
       email,
       firstName: firstName || "",
       lastName: lastName || "",
-      active: true,
-      verified: true,
+      active: false, // User starts as inactive until email confirmation
+      verified: false, // User starts as unverified until email confirmation
       createdAt: now,
       updatedAt: now,
     };
@@ -3370,7 +3670,28 @@ export const postConfirmation: PostConfirmationTriggerHandler = async (
         email,
         firstName: item.firstName,
         lastName: item.lastName,
+        status: "pending_email_confirmation",
       });
+
+      // Send welcome email
+      try {
+        const { subject, html } = createWelcomeEmail(email, firstName);
+        await ses.send(
+          new SendEmailCommand({
+            FromEmailAddress: SES_SENDER_EMAIL,
+            Destination: { ToAddresses: [email] },
+            Content: {
+              Simple: {
+                Subject: { Data: subject },
+                Body: { Html: { Data: html } },
+              },
+            },
+          })
+        );
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+        // Don't fail the confirmation if email fails
+      }
     } catch (e: any) {
       if (e?.name !== "ConditionalCheckFailedException") throw e;
     }
@@ -3553,40 +3874,26 @@ async function globalSearch(event: APIGatewayProxyEventV2) {
 
 export const customMessage: CustomMessageTriggerHandler = async (event) => {
   try {
-    if (event.triggerSource === "CustomMessage_ForgotPassword") {
-      const { codeParameter, userAttributes } = event.request;
-      const email = userAttributes.email;
-      const frontendUrl =
-        process.env.FRONTEND_URL || "https://dev.uniapply.app";
+    const { codeParameter, userAttributes } = event.request;
+    const email = userAttributes.email;
+    const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
 
-      event.response.emailSubject = "Reset your password - UniApply";
-      event.response.emailMessage = `
-        <html>
-          <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-              <h2 style="color: #007bff;">Reset your password</h2>
-              <p>You requested to reset your password for your UniApply account.</p>
-              <p>Click the button below to reset your password:</p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&code=${codeParameter}" 
-                   style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">
-                   Reset Password
-                 </a>
-              </div>
-              <p>Or copy and paste this link into your browser:</p>
-              <p style="word-break: break-all; background-color: #f8f9fa; padding: 10px; border-radius: 4px;">
-                ${frontendUrl}/reset-password?email=${encodeURIComponent(email)}&code=${codeParameter}
-              </p>
-              <p><strong>This link will expire in 24 hours.</strong></p>
-              <p>If you didn't request this password reset, please ignore this email.</p>
-              <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;">
-              <p style="font-size: 12px; color: #666;">
-                This email was sent from UniApply. If you have any questions, please contact support.
-              </p>
-            </div>
-          </body>
-        </html>
-      `;
+    if (event.triggerSource === "CustomMessage_ForgotPassword") {
+      const { subject, html } = createPasswordResetEmail(
+        email,
+        codeParameter,
+        frontendUrl
+      );
+      event.response.emailSubject = subject;
+      event.response.emailMessage = html;
+    } else if (event.triggerSource === "CustomMessage_SignUp") {
+      const { subject, html } = createRegistrationConfirmationEmail(
+        email,
+        codeParameter,
+        frontendUrl
+      );
+      event.response.emailSubject = subject;
+      event.response.emailMessage = html;
     }
   } catch (e) {
     console.error("customMessage error", e);

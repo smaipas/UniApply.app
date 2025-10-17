@@ -152,11 +152,36 @@ export const useAuthStore = defineStore('auth', () => {
     loading.value = true
     error.value = null
     try {
-      await confirmSignUp(email, code)
+      // Call our backend endpoint instead of directly calling Cognito
+      const response = await api.post('/auth/confirm-registration', {
+        email,
+        code,
+      })
+      return response.data
     } catch (e) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const err: any = e
-      throw new Error(err?.message || 'Confirmation failed')
+      throw new Error(err?.response?.data?.message || err?.message || 'Confirmation failed')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function resendConfirmationCode(email: string) {
+    loading.value = true
+    error.value = null
+    try {
+      // Call our backend endpoint to resend confirmation code
+      const response = await api.post('/auth/resend-confirmation', {
+        email,
+      })
+      return response.data
+    } catch (e) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const err: any = e
+      throw new Error(
+        err?.response?.data?.message || err?.message || 'Failed to resend confirmation code',
+      )
     } finally {
       loading.value = false
     }
@@ -277,6 +302,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     confirmRegistration,
+    resendConfirmationCode,
     requestPasswordReset,
     confirmPasswordReset,
     tryRefresh,

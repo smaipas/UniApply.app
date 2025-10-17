@@ -2,7 +2,10 @@
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Applications</h1>
-      <UiButton @click="showTemplateSelector = true" :icon="mdiPlus">New Application</UiButton>
+      <UiButton @click="showTemplateSelector = true" :icon="mdiPlus">
+        <span class="hidden sm:inline">New Application</span>
+        <span class="sm:hidden">New</span>
+      </UiButton>
     </div>
     <UiTable :columns="columns" :items="rows" @row-click="handleRowClick">
       <template #cell-status="{ value }">

@@ -2,9 +2,10 @@
   <div class="p-6 space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-xl font-semibold">Form Templates</h1>
-      <UiButton v-if="canViewFormTemplates" :icon="mdiPlus" @click="goCreate"
-        >New Template</UiButton
-      >
+      <UiButton v-if="canViewFormTemplates" :icon="mdiPlus" @click="goCreate">
+        <span class="hidden sm:inline">New Template</span>
+        <span class="sm:hidden">New</span>
+      </UiButton>
     </div>
 
     <!-- No Access Message -->
