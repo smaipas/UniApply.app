@@ -59,11 +59,10 @@
           <div class="bg-gray-50 p-4 rounded-lg">
             <div class="grid grid-cols-2 gap-4">
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Role Name</label>
-                <input
+                <UiInput
                   v-model="activeRole.roleName"
+                  label="Role Name"
                   :disabled="true"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                   placeholder="e.g., MODERATOR"
                 />
                 <p class="text-xs text-gray-500 mt-1">
@@ -71,11 +70,10 @@
                 </p>
               </div>
               <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Display Label</label>
-                <input
+                <UiInput
                   v-model="activeRole.roleLabel"
+                  label="Display Label"
                   :disabled="!canModifyRoles"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
                   placeholder="e.g., Moderator"
                 />
               </div>
@@ -144,20 +142,18 @@
       <UiModal v-model="showAddRoleModal" title="Add New User Group" size="md">
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">User Group Name</label>
-            <input
+            <UiInput
               v-model="newRole.roleName"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              label="User Group Name"
               placeholder="e.g., MODERATOR"
               @input="updateRoleName"
             />
             <p class="text-xs text-gray-500 mt-1">Internal name (uppercase, no spaces)</p>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Display Label</label>
-            <input
+            <UiInput
               v-model="newRole.roleLabel"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              label="Display Label"
               placeholder="e.g., Moderator"
             />
             <p class="text-xs text-gray-500 mt-1">Display name shown to users</p>
@@ -188,7 +184,7 @@ import { mdiPlus, mdiFloppy } from '@mdi/js'
 
 import { useToastStore } from '@/common/store/toast'
 import { usePermissions } from '@/common/utils/permissions'
-import { UiButton, UiCheckbox, UiModal } from '@/common/components'
+import { UiButton, UiCheckbox, UiModal, UiInput } from '@/common/components'
 import axios from '@/app/axios'
 
 // Types

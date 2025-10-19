@@ -31,13 +31,7 @@
     >
       <div class="flex">
         <div class="flex-shrink-0">
-          <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-            <path
-              fill-rule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clip-rule="evenodd"
-            />
-          </svg>
+          <UiIcon :path="mdiCloseCircle" class="h-5 w-5 text-red-400" />
         </div>
         <div class="ml-3">
           <h3 class="text-sm font-medium text-red-800">Profile Incomplete</h3>
@@ -350,15 +344,14 @@
             />
 
             <!-- Long Text Input -->
-            <textarea
+            <UiTextarea
               v-else-if="field.inputType === 'LONG_TEXT'"
               :id="field.name"
               v-model="formData[field.name]"
               :placeholder="field.description"
               :disabled="isReadOnly"
               :required="isFieldRequired(field)"
-              rows="4"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
+              :rows="4"
             />
 
             <!-- Number Input -->
@@ -383,23 +376,15 @@
             />
 
             <!-- Select Input -->
-            <select
+            <UiSelect
               v-else-if="field.inputType === 'SELECT' && !field.allowSelectMultipleValues"
               :id="field.name"
               v-model="formData[field.name]"
               :disabled="isReadOnly"
               :required="isFieldRequired(field)"
-              class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent disabled:bg-gray-100 disabled:text-gray-500"
-            >
-              <option value="">Select an option</option>
-              <option
-                v-for="option in field.options"
-                :key="typeof option === 'string' ? option : option.value"
-                :value="typeof option === 'string' ? option : option.value"
-              >
-                {{ typeof option === 'string' ? option : option.label }}
-              </option>
-            </select>
+              :options="getSelectOptions(field.options)"
+              placeholder="Select an option"
+            />
 
             <!-- Multi-Select Input -->
             <div
@@ -407,23 +392,25 @@
               class="space-y-2"
             >
               <div class="flex flex-wrap gap-2">
-                <label
+                <div
                   v-for="option in field.options"
                   :key="typeof option === 'string' ? option : option.value"
                   class="inline-flex items-center"
                 >
-                  <input
-                    type="checkbox"
+                  <UiCheckbox
+                    :id="`${field.name}-${typeof option === 'string' ? option : option.value}`"
                     :value="typeof option === 'string' ? option : option.value"
                     v-model="formData[field.name]"
                     :disabled="isReadOnly"
                     :required="isFieldRequired(field)"
-                    class="rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <span class="ml-2 text-sm text-gray-700">
+                  <label
+                    :for="`${field.name}-${typeof option === 'string' ? option : option.value}`"
+                    class="ml-2 text-sm text-gray-700"
+                  >
                     {{ typeof option === 'string' ? option : option.label }}
-                  </span>
-                </label>
+                  </label>
+                </div>
               </div>
             </div>
 
@@ -615,14 +602,7 @@
     <!-- Error State -->
     <div v-else-if="!loading" class="text-center py-12">
       <div class="text-gray-400 mb-4">
-        <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-          />
-        </svg>
+        <UiIcon :path="mdiFileDocumentOutline" class="mx-auto h-12 w-12" />
       </div>
       <h3 class="text-lg font-medium text-gray-900 mb-2">Template not found</h3>
       <p class="text-gray-600 mb-4">The form template could not be loaded.</p>
@@ -640,12 +620,7 @@
             : 'Add a comment for rejection (optional):'
         }}
       </p>
-      <textarea
-        v-model="commentText"
-        rows="4"
-        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-        placeholder="Enter your comment here..."
-      ></textarea>
+      <UiTextarea v-model="commentText" :rows="4" placeholder="Enter your comment here..." />
     </div>
 
     <template #footer>
@@ -668,13 +643,7 @@
       <div class="bg-yellow-50 border border-yellow-200 rounded-md p-3">
         <div class="flex">
           <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fill-rule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
+            <UiIcon :path="mdiAlert" class="h-5 w-5 text-yellow-400" />
           </div>
           <div class="ml-3">
             <h3 class="text-sm font-medium text-yellow-800">Important</h3>
@@ -708,6 +677,9 @@ import {
   mdiContentSave,
   mdiSend,
   mdiTimerSand,
+  mdiCloseCircle,
+  mdiAlert,
+  mdiFileDocumentOutline,
   mdiCheck,
   mdiCancel,
   mdiFilePdfBox,
@@ -726,6 +698,8 @@ import {
   UiIcon,
   UiModal,
   UiDateInput,
+  UiSelect,
+  UiTextarea,
 } from '@/common/components'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
@@ -1158,6 +1132,14 @@ function getFileName(file: File | string): string {
     return parts[parts.length - 1] || file
   }
   return file.name
+}
+
+function getSelectOptions(options: (string | { label: string; value: string })[] | undefined): Array<{ label: string; value: string }> {
+  if (!options) return []
+  return options.map((option) => ({
+    label: typeof option === 'string' ? option : option.label,
+    value: typeof option === 'string' ? option : option.value,
+  }))
 }
 
 async function uploadPendingFiles(): Promise<void> {

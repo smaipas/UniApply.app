@@ -25,9 +25,7 @@
         <div
           class="w-12 h-12 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center"
         >
-          <svg class="w-6 h-6 text-gray-400" viewBox="0 0 24 24">
-            <path fill="currentColor" :d="emptyIconComponent" />
-          </svg>
+          <UiIcon :path="emptyIconComponent" class="w-6 h-6 text-gray-400" />
         </div>
         <p class="text-gray-500 text-sm">{{ emptyMessage }}</p>
       </div>
@@ -70,7 +68,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { mdiFileDocumentOutline, mdiClockOutline } from '@mdi/js'
-import { StatusChip } from '@/common/components'
+import { StatusChip, UiIcon } from '@/common/components'
 import type { Application } from '@uniapply/shared'
 
 // Create icon components

@@ -274,7 +274,12 @@ npm run preview
 
 # 4. Deploy
 cd ../backend
-aws s3 sync ../frontend/dist s3://uniapply-app-dev-webbucket --delete
+aws s3 sync frontend/dist s3://uniapply-app-dev-webbucket --delete
+
+#get the of cloudfront distribution
+aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[0].DomainName, 'uniapply-app-dev-webbucket')].Id" --output text
+
+# after retrieving the id, replace the below <id> placeholder with the output of the above command
 aws cloudfront create-invalidation --distribution-id <id> --paths "/*"
 
 # 5. Verify deployment

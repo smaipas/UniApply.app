@@ -14,9 +14,7 @@
         </div>
       </div>
       <div class="w-12 h-12 rounded-xs flex items-center justify-center" :class="iconBgClass">
-        <svg class="w-6 h-6" :class="iconTextClass" viewBox="0 0 24 24">
-          <path fill="currentColor" :d="icon" />
-        </svg>
+        <UiIcon :path="icon" class="w-6 h-6" :class="iconTextClass" />
       </div>
     </div>
   </div>
@@ -32,6 +30,7 @@ import {
   mdiAccountGroupOutline,
   mdiTrendingUp,
 } from '@mdi/js'
+import { UiIcon } from '@/common/components'
 
 interface Props {
   label: string

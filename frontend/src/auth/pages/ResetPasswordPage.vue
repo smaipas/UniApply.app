@@ -6,14 +6,7 @@
         <div
           class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4"
         >
-          <svg class="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            ></path>
-          </svg>
+          <UiIcon :path="mdiCheckCircle" class="h-6 w-6 text-green-600" />
         </div>
         <h1 class="text-2xl font-semibold text-gray-900 mb-2">Password Updated!</h1>
         <p class="text-gray-600">Your password has been successfully updated.</p>
@@ -108,9 +101,9 @@ import { useVuelidate } from '@vuelidate/core'
 import { required, email as emailValidator, sameAs, helpers } from '@vuelidate/validators'
 
 import AuthCard from '../components/AuthCard.vue'
-import { UiInput } from '@/common/components'
-import { UiButton } from '@/common/components'
+import { UiInput, UiButton, UiIcon } from '@/common/components'
 import { confirmForgotPassword } from '@/auth/services/cognito'
+import { mdiCheckCircle } from '@mdi/js'
 import {
   errorMessageHandler,
   validatePasswordStrength,

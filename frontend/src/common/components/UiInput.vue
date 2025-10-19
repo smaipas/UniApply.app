@@ -40,14 +40,7 @@
         v-if="type === 'date'"
         class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"
       >
-        <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          ></path>
-        </svg>
+        <UiIcon :path="mdiCalendar" class="w-4 h-4 text-gray-400" />
       </div>
     </div>
     <p v-if="error" class="mt-1 text-xs text-red-600">{{ error }}</p>
@@ -56,7 +49,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { mdiEye, mdiEyeOff } from '@mdi/js'
+import { mdiEye, mdiEyeOff, mdiCalendar } from '@mdi/js'
 import UiIcon from './UiIcon.vue'
 
 const props = withDefaults(

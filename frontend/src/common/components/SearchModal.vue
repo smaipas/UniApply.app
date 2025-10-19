@@ -3,20 +3,16 @@
     <div class="space-y-4">
       <!-- Search Input -->
       <div class="relative">
-        <input
+        <UiInput
           ref="searchInput"
           v-model="searchQuery"
-          type="text"
           placeholder="Search applications, users, forms..."
-          class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-lg"
+          :icon="mdiMagnify"
           @input="handleSearch"
           @keydown.esc="closeSearch"
           @keydown.enter="handleEnter"
-          @keydown.ctrl.period.prevent="closeSearch"
+          @keydown="handleKeydown"
         />
-        <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
-          <UiIcon :path="mdiMagnify" class="w-5 h-5 text-gray-400" />
-        </div>
         <button
           v-if="searchQuery"
           @click="clearSearch"
@@ -120,7 +116,7 @@ import {
   mdiFormSelect,
   mdiHistory,
 } from '@mdi/js'
-import { UiModal, UiIcon } from '@/common/components'
+import { UiModal, UiIcon, UiInput } from '@/common/components'
 import { useSearchStore, type SearchResult } from '@/common/store/search'
 
 const router = useRouter()
@@ -173,6 +169,13 @@ function handleSearch() {
 function handleEnter() {
   if (results.value.length > 0) {
     navigateToResult(results.value[0])
+  }
+}
+
+function handleKeydown(event: KeyboardEvent) {
+  if (event.ctrlKey && event.key === '.') {
+    event.preventDefault()
+    closeSearch()
   }
 }
 

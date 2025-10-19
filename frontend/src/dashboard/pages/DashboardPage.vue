@@ -8,13 +8,7 @@
       <div class="flex items-start">
         <div class="flex-shrink-0">
           <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-            <svg class="h-5 w-5 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
-              <path
-                fill-rule="evenodd"
-                d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                clip-rule="evenodd"
-              />
-            </svg>
+            <UiIcon :path="mdiAlert" class="h-5 w-5 text-yellow-600" />
           </div>
         </div>
         <div class="ml-4">
@@ -50,14 +44,7 @@
         <div
           class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6"
         >
-          <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
+          <UiIcon :path="mdiAlertCircle" class="h-8 w-8 text-red-600" />
         </div>
         <h3 class="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
         <p class="text-gray-600 mb-6">{{ store.error }}</p>
@@ -91,14 +78,7 @@
             </UiButton>
             <div class="hidden lg:block">
               <div class="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
-                <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
+                <UiIcon :path="mdiFileDocumentOutline" class="w-8 h-8" />
               </div>
             </div>
           </div>
@@ -162,19 +142,7 @@
         <div
           class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6"
         >
-          <svg
-            class="w-12 h-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
-          </svg>
+          <UiIcon :path="mdiFileDocumentOutline" class="w-12 h-12 text-gray-400" />
         </div>
         <h3 class="text-xl font-semibold text-gray-900 mb-2">No data available</h3>
         <p class="text-gray-600">
@@ -200,7 +168,7 @@ import { checkProfileCompletion, getProfileCompletionMessage } from '@/common/ut
 import DashboardStatCard from '@/dashboard/components/DashboardStatCard.vue'
 import DashboardApplicationsWidget from '@/dashboard/components/DashboardApplicationsWidget.vue'
 import DashboardAuditLogsWidget from '@/dashboard/components/DashboardAuditLogsWidget.vue'
-import { mdiPlus } from '@mdi/js'
+import { mdiPlus, mdiAlert, mdiFileDocumentOutline, mdiAlertCircle } from '@mdi/js'
 import { useAppStore } from '@/common/store/app'
 
 const router = useRouter()

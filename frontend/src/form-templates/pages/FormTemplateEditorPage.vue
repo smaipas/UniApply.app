@@ -65,13 +65,12 @@
           </div>
 
           <div v-if="isDefaultApplicable(f.inputType)" class="w-full md:col-span-3">
-            <textarea
+            <UiTextarea
               v-if="f.inputType === 'LONG_TEXT'"
-              rows="10"
+              :rows="10"
               v-model="(f as any).defaultValue"
-              class="col-span-3 w-full rounded-xs border bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:ring-2 border-gray-300 focus:border-primary focus:ring-primary/30 disabled:bg-gray-100"
               placeholder="Default prefilled text (optional)"
-            ></textarea>
+            />
             <template v-else>
               <UiInput
                 :type="f.inputType === 'NUMBER' ? 'number' : 'text'"
@@ -107,12 +106,11 @@
 
           <div v-if="f.inputType === 'FIXED_TEXT'" class="w-full md:col-span-3 space-y-2">
             <label class="text-sm font-medium text-gray-700">Fixed Text Content</label>
-            <textarea
+            <UiTextarea
               v-model="f.fixedTextContent"
-              rows="6"
-              class="w-full rounded-xs border bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:ring-2 border-gray-300 focus:border-primary focus:ring-primary/30 disabled:bg-gray-100"
+              :rows="6"
               placeholder="Enter the text content to display..."
-            ></textarea>
+            />
           </div>
 
           <div v-if="f.inputType !== 'FIXED_TEXT'" class="w-full md:col-span-3 mt-2 space-y-3">
@@ -299,7 +297,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { UiButton } from '@/common/components'
-import { UiInput, UiCard, UiLoadingOverlay, UiDateInput } from '@/common/components'
+import { UiInput, UiCard, UiLoadingOverlay, UiDateInput, UiTextarea } from '@/common/components'
 import api from '@/app/axios'
 import { mdiArrowLeft, mdiFloppy, mdiClose, mdiPlus } from '@mdi/js'
 import type { FormTemplate } from '@uniapply/shared'

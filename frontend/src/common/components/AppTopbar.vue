@@ -13,17 +13,14 @@
         </button>
 
         <div class="relative">
-          <input
-            type="text"
+          <UiInput
             placeholder="Search"
-            class="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+            :icon="mdiMagnify"
             @click="openSearch"
             @keydown="handleKeydown"
             readonly
+            class="w-64"
           />
-          <div class="absolute left-3 top-1/2 transform -translate-y-1/2">
-            <UiIcon :path="mdiMagnify" class="w-4 h-4 text-gray-400" />
-          </div>
           <div class="absolute right-3 top-1/2 transform -translate-y-1/2">
             <kbd class="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{{ osKey }}</kbd>
           </div>
@@ -105,7 +102,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { mdiMenu, mdiMagnify, mdiAccount, mdiLogout } from '@mdi/js'
-import { UiIcon, UiModal, UiButton } from '@/common/components'
+import { UiIcon, UiModal, UiButton, UiInput } from '@/common/components'
 import SearchModal from './SearchModal.vue'
 import { useAuthStore } from '@/auth/store'
 import { useSearchStore } from '@/common/store/search'
