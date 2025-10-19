@@ -50,15 +50,29 @@ The frontend for the UniApply application, built with Vue.js 3, TypeScript, Tail
    npm install
    ```
 
-2. **Environment Configuration**
-   ```bash
-   # Create .env file with your configuration
-   # You'll get these values from the backend deployment
-   VITE_API_BASE=https://api-dev.uniapply.app
-   VITE_COGNITO_REGION=eu-central-1
-   VITE_COGNITO_USER_POOL_ID=<from backend deployment>
-   VITE_COGNITO_CLIENT_ID=<from backend deployment>
-   ```
+### Environment-Specific Deployment
+
+#### Development Environment
+
+```bash
+# API Configuration
+VITE_API_BASE=https://api-dev.uniapply.app
+VITE_APP_NAME=UniApply
+
+# Authentication (from backend deployment)
+VITE_COGNITO_REGION=eu-central-1
+VITE_COGNITO_USER_POOL_ID=eu-central-1_xxxxxxxxx
+VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+#### Production Environment
+
+```bash
+# Use production environment variables
+VITE_API_BASE=https://api.uniapply.app
+VITE_COGNITO_USER_POOL_ID=eu-central-1_yyyyyyyyy
+VITE_COGNITO_CLIENT_ID=yyyyyyyyyyyyyyyyyyyyyyyyyy
+```
 
 ### Development
 
@@ -89,174 +103,6 @@ npm run type-check
 ```bash
 # Build for production
 npm run build
-
-# Verify the build
-npm run preview
-```
-
-#### 2. Deploy to AWS S3 and CloudFront
-
-The backend deployment creates an S3 bucket and CloudFront distribution for hosting the frontend. Deploy using:
-
-```bash
-# Navigate to backend directory (where AWS resources are defined)
-cd ../backend
-
-# Sync built files to S3 bucket
-aws s3 sync ../frontend/dist s3://uniapply-app-dev-webbucket --delete
-
-# Invalidate CloudFront cache to serve new files
-aws cloudfront create-invalidation \
-  --distribution-id <distribution-id> \
-  --paths "/*"
-```
-
-#### 3. Get CloudFront Distribution ID
-
-```bash
-# Get the CloudFront distribution ID
-aws cloudformation describe-stacks \
-  --stack-name uniapply-app-dev \
-  --query 'Stacks[0].Outputs[?OutputKey==`WebDistributionId`].OutputValue' \
-  --output text
-```
-
-#### 4. Complete Deployment Script
-
-```bash
-#!/bin/bash
-# deploy-frontend.sh
-
-# Build the frontend
-cd frontend
-npm run build
-
-# Get S3 bucket name and CloudFront distribution ID
-cd ../backend
-S3_BUCKET=$(aws cloudformation describe-stacks \
-  --stack-name uniapply-app-dev \
-  --query 'Stacks[0].Outputs[?OutputKey==`WebBucketName`].OutputValue' \
-  --output text)
-
-DISTRIBUTION_ID=$(aws cloudformation describe-stacks \
-  --stack-name uniapply-app-dev \
-  --query 'Stacks[0].Outputs[?OutputKey==`WebDistributionId`].OutputValue' \
-  --output text)
-
-# Sync to S3
-aws s3 sync ../frontend/dist s3://$S3_BUCKET --delete
-
-# Invalidate CloudFront cache
-aws cloudfront create-invalidation \
-  --distribution-id $DISTRIBUTION_ID \
-  --paths "/*"
-
-echo "Frontend deployed successfully!"
-echo "URL: https://$(aws cloudformation describe-stacks \
-  --stack-name uniapply-app-dev \
-  --query 'Stacks[0].Outputs[?OutputKey==`WebDistributionDomain`].OutputValue' \
-  --output text)"
-```
-
-### Environment-Specific Deployment
-
-#### Development Environment
-
-```bash
-# Use development environment variables
-VITE_API_BASE=https://api-dev.uniapply.app
-VITE_COGNITO_USER_POOL_ID=eu-central-1_xxxxxxxxx
-VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Deploy to development
-./deploy-frontend.sh
-```
-
-#### Production Environment
-
-```bash
-# Use production environment variables
-VITE_API_BASE=https://api.uniapply.app
-VITE_COGNITO_USER_POOL_ID=eu-central-1_yyyyyyyyy
-VITE_COGNITO_CLIENT_ID=yyyyyyyyyyyyyyyyyyyyyyyyyy
-
-# Deploy to production
-./deploy-frontend.sh
-```
-
-### Troubleshooting Deployment Issues
-
-#### Common Issues and Solutions
-
-1. **Build Errors**
-
-   ```bash
-   # Check TypeScript errors
-   npm run type-check
-
-   # Fix linting issues
-   npm run lint --fix
-
-   # Clean and reinstall dependencies
-   rm -rf node_modules package-lock.json
-   npm install
-   ```
-
-2. **S3 Sync Errors**
-
-   ```bash
-   # Check S3 bucket permissions
-   aws s3 ls s3://uniapply-app-dev-webbucket
-
-   # Verify bucket exists
-   aws s3api head-bucket --bucket uniapply-app-dev-webbucket
-   ```
-
-3. **CloudFront Not Updating**
-
-   ```bash
-   # Check invalidation status
-   aws cloudfront get-invalidation \
-     --distribution-id <distribution-id> \
-     --id <invalidation-id>
-
-   # Create new invalidation
-   aws cloudfront create-invalidation \
-     --distribution-id <distribution-id> \
-     --paths "/*"
-   ```
-
-4. **CORS Issues**
-   - Ensure backend CORS configuration includes your frontend domain
-   - Check API Gateway CORS settings
-   - Verify CloudFront CORS headers
-
-5. **Authentication Issues**
-
-   ```bash
-   # Verify Cognito configuration
-   aws cognito-idp describe-user-pool --user-pool-id <pool-id>
-   aws cognito-idp list-user-pool-clients --user-pool-id <pool-id>
-
-   # Check environment variables match backend
-   echo $VITE_COGNITO_USER_POOL_ID
-   echo $VITE_COGNITO_CLIENT_ID
-   ```
-
-#### Debug Commands
-
-```bash
-# Check build output
-ls -la dist/
-
-# Verify environment variables
-grep VITE_ .env
-
-# Test API connectivity
-curl https://api-dev.uniapply.app/health
-
-# Check CloudFront distribution
-aws cloudfront get-distribution --id <distribution-id>
 ```
 
 ### Development Workflow
@@ -274,54 +120,14 @@ npm run preview
 
 # 4. Deploy
 cd ../backend
-aws s3 sync frontend/dist s3://uniapply-app-dev-webbucket --delete
+aws s3 sync dist s3://uniapply-app-dev-webbucket --delete
 
-#get the of cloudfront distribution
+# get the of cloudfront distribution
 aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[0].DomainName, 'uniapply-app-dev-webbucket')].Id" --output text
 
 # after retrieving the id, replace the below <id> placeholder with the output of the above command
 aws cloudfront create-invalidation --distribution-id <id> --paths "/*"
-
-# 5. Verify deployment
-# Visit your CloudFront URL
 ```
-
-### Performance Optimization
-
-#### Build Optimization
-
-```bash
-# Analyze bundle size
-npm run build -- --analyze
-
-# Optimize images
-# Use WebP format and appropriate sizes
-
-# Enable compression
-# CloudFront automatically compresses responses
-```
-
-#### Caching Strategy
-
-- **Static assets**: Long-term caching (1 year)
-- **HTML files**: Short-term caching (1 hour)
-- **API responses**: No caching (Cache-Control: no-cache)
-
-### Security Considerations
-
-1. **Environment Variables**
-   - Never commit `.env` files to version control
-   - Use different values for dev/staging/production
-   - Rotate Cognito credentials regularly
-
-2. **Content Security Policy**
-   - Configure CSP headers in CloudFront
-   - Restrict script sources to trusted domains
-   - Enable HTTPS only
-
-3. **CORS Configuration**
-   - Restrict allowed origins to your domains
-   - Configure proper CORS headers in API Gateway
 
 ## Project Structure
 
@@ -388,23 +194,6 @@ frontend/
 
 ## Configuration
 
-### Environment Variables
-
-```bash
-# API Configuration
-VITE_API_BASE=https://api-dev.uniapply.app
-VITE_APP_NAME=UniApply
-
-# Authentication (from backend deployment)
-VITE_COGNITO_REGION=eu-central-1
-VITE_COGNITO_USER_POOL_ID=eu-central-1_xxxxxxxxx
-VITE_COGNITO_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-
-# Feature Flags
-VITE_ENABLE_ANALYTICS=false
-VITE_ENABLE_DEBUG_MODE=false
-```
-
 ### Vite Configuration
 
 - **Fast HMR** - Hot module replacement
@@ -421,27 +210,13 @@ VITE_ENABLE_DEBUG_MODE=false
 - **TypeScript** - Strict type checking
 - **Vue 3 Composition API** - Modern Vue patterns
 
-### Testing
-
-- **Vitest** - Unit testing framework
-- **Vue Test Utils** - Component testing
-- **Coverage reporting** - Test coverage metrics
-
 ### State Management
 
 - **Pinia** - Modern state management
 - **Stores** - Modular state organization
 - **Persistence** - Local storage integration
-- **DevTools** - Vue DevTools integration
 
 ## Authentication
-
-### AWS Cognito Integration
-
-- **JWT tokens** - Secure authentication
-- **Role-based access** - Permission management
-- **Password policies** - Security requirements
-- **Multi-factor auth** - Enhanced security
 
 ### Route Guards
 
