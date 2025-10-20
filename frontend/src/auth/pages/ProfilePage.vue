@@ -1,27 +1,28 @@
 <template>
-  <div class="p-6 space-y-6">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h1 class="text-2xl font-bold text-gray-900">Profile</h1>
-        <p class="text-gray-600 mt-1">Complete your profile information</p>
+  <div class="min-h-screen bg-gray-50 py-8">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <!-- Header -->
+      <div class="mb-8">
+        <h1 class="text-3xl font-bold text-gray-900">Profile</h1>
+        <p class="mt-2 text-gray-600">Manage your personal information and settings.</p>
       </div>
-    </div>
 
-    <!-- Loading State -->
-    <div v-if="loading" class="flex justify-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-    </div>
+      <!-- Loading State -->
+      <div v-if="loading" class="flex justify-center items-center py-12">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span class="ml-3 text-gray-600">Loading profile...</span>
+      </div>
 
-    <!-- Profile Form -->
-    <div v-else class="bg-white rounded-lg border border-gray-200">
-      <div class="p-6">
-        <UserForm
-          v-model="formData"
-          :loading="saving"
-          @submit="saveProfile"
-          @cancel="handleCancel"
-        />
+      <!-- Profile Form -->
+      <div v-else class="bg-white rounded-lg border border-gray-200">
+        <div class="p-6">
+          <UserForm
+            :initial-data="authStore.profile ? userToFormData(authStore.profile) : {}"
+            :loading="saving"
+            @submit="saveProfile"
+            @cancel="handleCancel"
+          />
+        </div>
       </div>
     </div>
   </div>
@@ -29,95 +30,52 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import UserForm from '@/users/components/UserForm.vue'
 import { useToastStore } from '@/common/store/toast'
 import { useAuthStore } from '@/auth/store'
+import { type UserFormData, useUserForm } from '@/common/composables/useUserForm'
 import api from '@/app/axios'
 
 const router = useRouter()
-const route = useRoute()
 const toastStore = useToastStore()
 const authStore = useAuthStore()
 
 const loading = ref(false)
 const saving = ref(false)
-const formData = ref<any>({})
 
-onMounted(async () => {
-  await loadProfile()
+const { userToFormData } = useUserForm()
+
+onMounted(() => {
+  loadProfile()
 })
 
 async function loadProfile() {
   loading.value = true
-
   try {
     await authStore.loadProfile()
-
-    if (authStore.profile) {
-      formData.value = {
-        firstName: authStore.profile.firstName || '',
-        lastName: authStore.profile.lastName || '',
-        fathersName: authStore.profile.fathersName || '',
-        mothersName: authStore.profile.mothersName || '',
-        email: authStore.profile.email || '',
-        mobilePhoneNumber: authStore.profile.mobilePhoneNumber || '',
-        phoneNumber: authStore.profile.phoneNumber || '',
-        dateOfBirth: authStore.profile.dateOfBirth || '',
-        studentId: authStore.profile.studentId || '',
-        userOfficialId: authStore.profile.userOfficialId || '',
-        userOfficialIdIssuedDate: authStore.profile.userOfficialIdIssuedDate || '',
-        userOfficialIdIssuedAuthority: authStore.profile.userOfficialIdIssuedAuthority || '',
-        userOfficialType: authStore.profile.userOfficialType || '',
-        currentAddress: {
-          street: authStore.profile.currentAddress?.street || '',
-          number: authStore.profile.currentAddress?.number || '',
-          city: authStore.profile.currentAddress?.city || '',
-          province: authStore.profile.currentAddress?.province || '',
-          zipCode: authStore.profile.currentAddress?.zipCode || '',
-          country: authStore.profile.currentAddress?.country || '',
-        },
-        permanentResidenceAddress: {
-          street: authStore.profile.permanentResidenceAddress?.street || '',
-          number: authStore.profile.permanentResidenceAddress?.number || '',
-          city: authStore.profile.permanentResidenceAddress?.city || '',
-          province: authStore.profile.permanentResidenceAddress?.province || '',
-          zipCode: authStore.profile.permanentResidenceAddress?.zipCode || '',
-          country: authStore.profile.permanentResidenceAddress?.country || '',
-        },
-        placeOfBirth: authStore.profile.placeOfBirth || '',
-        nationality: authStore.profile.nationality || '',
-        gender: authStore.profile.gender || '',
-        maleRegistryNumber: authStore.profile.maleRegistryNumber || '',
-        maleRegistryIssuedPlace: authStore.profile.maleRegistryIssuedPlace || '',
-        militaryObligations: authStore.profile.militaryObligations || '',
-        maritalStatus: authStore.profile.maritalStatus || '',
-        numberOfChildren: authStore.profile.numberOfChildren,
-        municipalRegisterNumber: authStore.profile.municipalRegisterNumber,
-        municipalRegisterPrefecture: authStore.profile.municipalRegisterPrefecture || '',
-        ssn: authStore.profile.ssn,
-        academicEnrollmentYear: authStore.profile.academicEnrollmentYear,
-        department: authStore.profile.department || '',
-      }
-    }
-  } catch (error) {
-    console.error('Failed to load profile:', error)
-    toastStore.show({
-      tone: 'error',
-      title: 'Error',
-      message: 'Failed to load profile data',
-    })
+  } catch (error: unknown) {
+    console.error('Error loading profile:', error)
+    toastStore.error('Failed to load profile information')
   } finally {
     loading.value = false
   }
 }
 
-async function saveProfile(data: any) {
+async function saveProfile(data: UserFormData) {
   saving.value = true
-
   try {
+    const userId = authStore.user?.sub
+    if (!userId) {
+      toastStore.error('User not authenticated')
+      return
+    }
+    // Exclude immutable fields (e.g., role) from update payload
+    const payloadBase = { ...data } as Omit<UserFormData, 'role'> &
+      Partial<Pick<UserFormData, 'role'>>
+    delete payloadBase.role
     const payload = {
-      ...data,
+      ...payloadBase,
       // Remove empty current address fields
       currentAddress: Object.fromEntries(
         Object.entries(data.currentAddress).filter(
@@ -125,59 +83,27 @@ async function saveProfile(data: any) {
         ),
       ),
       // Remove empty permanent residence address fields
-      permanentResidenceAddress: data.permanentResidenceAddress
-        ? Object.fromEntries(
-            Object.entries(data.permanentResidenceAddress).filter(
-              ([, value]) => value && typeof value === 'string' && value.trim(),
-            ),
-          )
-        : undefined,
+      permanentResidenceAddress: Object.fromEntries(
+        Object.entries(data.permanentResidenceAddress).filter(
+          ([, value]) => value && typeof value === 'string' && value.trim(),
+        ),
+      ),
     }
 
-    await api.put(`/users/${authStore.user?.sub}`, payload)
+    await api.put(`/users/${userId}`, payload)
+    toastStore.success('Profile updated successfully')
 
-    // Reload profile
+    // Reload the profile data to reflect changes
     await authStore.loadProfile()
-
-    toastStore.show({
-      tone: 'success',
-      title: 'Success',
-      message: 'Profile updated successfully',
-    })
-
-    // Redirect back to previous page or dashboard
-    router.push('/dashboard')
-  } catch (error: any) {
-    console.error('Failed to save profile:', error)
-
-    // Show error toast with details
-    if (error.response?.status === 400 && error.response?.data?.details) {
-      const details = error.response.data.details
-      const errorMessages = details
-        .map((detail: any) => detail.message)
-        .filter(Boolean)
-        .join(', ')
-
-      toastStore.show({
-        tone: 'error',
-        title: 'Validation Error',
-        message: errorMessages || 'Please check your input and try again.',
-      })
-    } else {
-      toastStore.show({
-        tone: 'error',
-        title: 'Error',
-        message: 'Failed to save profile. Please try again.',
-      })
-    }
+  } catch (error: unknown) {
+    console.error('Error saving profile:', error)
+    toastStore.error('Failed to update profile')
   } finally {
     saving.value = false
   }
 }
 
 function handleCancel() {
-  // Navigate to the previous route if available, otherwise go to dashboard
-  const previousRoute = (route.query.redirect as string) || '/dashboard'
-  router.push(previousRoute)
+  router.push('/dashboard')
 }
 </script>

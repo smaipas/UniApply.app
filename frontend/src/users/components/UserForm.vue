@@ -445,7 +445,7 @@
             placeholder="Enter street"
             :error="getFieldError('currentAddress.street')"
             :disabled="disabled"
-            @blur="v$.currentAddress?.street?.$touch"
+            @blur="v$.currentAddress.street?.$touch"
           />
         </div>
 
@@ -459,7 +459,7 @@
             placeholder="Enter number"
             :error="getFieldError('currentAddress.number')"
             :disabled="disabled"
-            @blur="v$.currentAddress?.number?.$touch"
+            @blur="v$.currentAddress.number?.$touch"
           />
         </div>
       </div>
@@ -475,7 +475,7 @@
             placeholder="Enter city"
             :error="getFieldError('currentAddress.city')"
             :disabled="disabled"
-            @blur="v$.currentAddress?.city?.$touch"
+            @blur="v$.currentAddress.city?.$touch"
           />
         </div>
 
@@ -489,7 +489,7 @@
             placeholder="Enter province"
             :error="getFieldError('currentAddress.province')"
             :disabled="disabled"
-            @blur="v$.currentAddress?.province?.$touch"
+            @blur="v$.currentAddress.province?.$touch"
           />
         </div>
       </div>
@@ -505,7 +505,7 @@
             placeholder="Enter ZIP code"
             :error="getFieldError('currentAddress.zipCode')"
             :disabled="disabled"
-            @blur="v$.currentAddress?.zipCode?.$touch"
+            @blur="v$.currentAddress.zipCode?.$touch"
           />
         </div>
 
@@ -519,7 +519,7 @@
             placeholder="Enter country code (e.g., CY)"
             :error="getFieldError('currentAddress.country')"
             :disabled="disabled"
-            @blur="v$.currentAddress?.country?.$touch"
+            @blur="v$.currentAddress.country?.$touch"
           />
         </div>
       </div>
@@ -542,7 +542,7 @@
             placeholder="Enter street"
             :error="getFieldError('permanentResidenceAddress.street')"
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress?.street?.$touch"
+            @blur="v$.permanentResidenceAddress.street?.$touch"
           />
         </div>
 
@@ -556,7 +556,7 @@
             placeholder="Enter number"
             :error="getFieldError('permanentResidenceAddress.number')"
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress?.number?.$touch"
+            @blur="v$.permanentResidenceAddress.number?.$touch"
           />
         </div>
       </div>
@@ -572,7 +572,7 @@
             placeholder="Enter city"
             :error="getFieldError('permanentResidenceAddress.city')"
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress?.city?.$touch"
+            @blur="v$.permanentResidenceAddress.city?.$touch"
           />
         </div>
 
@@ -589,7 +589,7 @@
             placeholder="Enter province"
             :error="getFieldError('permanentResidenceAddress.province')"
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress?.province?.$touch"
+            @blur="v$.permanentResidenceAddress.province?.$touch"
           />
         </div>
       </div>
@@ -605,7 +605,7 @@
             placeholder="Enter ZIP code"
             :error="getFieldError('permanentResidenceAddress.zipCode')"
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress?.zipCode?.$touch"
+            @blur="v$.permanentResidenceAddress.zipCode?.$touch"
           />
         </div>
 
@@ -619,7 +619,7 @@
             placeholder="Enter country code (e.g., CY)"
             :error="getFieldError('permanentResidenceAddress.country')"
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress?.country?.$touch"
+            @blur="v$.permanentResidenceAddress.country?.$touch"
           />
         </div>
       </div>
@@ -651,179 +651,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { useVuelidate } from '@vuelidate/core'
-import { required, minLength, maxLength, email, requiredIf } from '@vuelidate/validators'
 import UiInput from '@/common/components/UiInput.vue'
 import UiSelect from '@/common/components/UiSelect.vue'
 import UiDateInput from '@/common/components/UiDateInput.vue'
-import { errorMessageHandler } from '@/common/utils/validation'
+import { useUserForm, type UserFormData } from '@/common/composables/useUserForm'
 
-interface Address {
-  street: string
-  number: string
-  city: string
-  province: string
-  zipCode: string
-  country: string
-}
-
-interface FormData {
-  firstName: string
-  lastName: string
-  fathersName: string
-  mothersName: string
-  email: string
-  mobilePhoneNumber: string
-  phoneNumber: string
-  dateOfBirth: string
-  studentId: string
-  userOfficialId: string
-  userOfficialIdIssuedDate: string
-  userOfficialIdIssuedAuthority: string
-  userOfficialType: string
-  currentAddress: Address
-  permanentResidenceAddress: Address
-  placeOfBirth: string
-  nationality: string
-  gender: string
-  maleRegistryNumber: string
-  maleRegistryIssuedPlace: string
-  militaryObligations: string
-  maritalStatus: string
-  numberOfChildren: number | undefined
-  municipalRegisterNumber: number | undefined
-  municipalRegisterPrefecture: string
-  ssn: number | undefined
-  academicEnrollmentYear: number | undefined
-  department: string
-}
-
-const modelValue = defineModel<Partial<FormData>>()
-
-withDefaults(
+const props = withDefaults(
   defineProps<{
     loading?: boolean
     disabled?: boolean
+    initialData?: Partial<UserFormData> | null
   }>(),
   {
     loading: false,
     disabled: false,
+    initialData: () => ({}),
   },
 )
 
 const emit = defineEmits<{
-  submit: [data: FormData]
+  submit: [data: UserFormData]
   cancel: []
 }>()
 
-// Create a reactive formData ref
-const formData = ref<FormData>({
-  firstName: '',
-  lastName: '',
-  fathersName: '',
-  mothersName: '',
-  email: '',
-  mobilePhoneNumber: '',
-  phoneNumber: '',
-  dateOfBirth: '',
-  studentId: '',
-  userOfficialId: '',
-  userOfficialIdIssuedDate: '',
-  userOfficialIdIssuedAuthority: '',
-  userOfficialType: '',
-  currentAddress: {
-    street: '',
-    number: '',
-    city: '',
-    province: '',
-    zipCode: '',
-    country: '',
-  },
-  permanentResidenceAddress: {
-    street: '',
-    number: '',
-    city: '',
-    province: '',
-    zipCode: '',
-    country: '',
-  },
-  placeOfBirth: '',
-  nationality: '',
-  gender: '',
-  maleRegistryNumber: '',
-  maleRegistryIssuedPlace: '',
-  militaryObligations: '',
-  maritalStatus: '',
-  numberOfChildren: undefined,
-  municipalRegisterNumber: undefined,
-  municipalRegisterPrefecture: '',
-  ssn: undefined,
-  academicEnrollmentYear: undefined,
-  department: '',
-})
-
-watch(
-  () => modelValue.value,
-  (newValue) => {
-    if (newValue) {
-      formData.value = {
-        firstName: newValue.firstName || '',
-        lastName: newValue.lastName || '',
-        fathersName: newValue.fathersName || '',
-        mothersName: newValue.mothersName || '',
-        email: newValue.email || '',
-        mobilePhoneNumber: newValue.mobilePhoneNumber || '',
-        phoneNumber: newValue.phoneNumber || '',
-        dateOfBirth: newValue.dateOfBirth || '',
-        studentId: newValue.studentId || '',
-        userOfficialId: newValue.userOfficialId || '',
-        userOfficialIdIssuedDate: newValue.userOfficialIdIssuedDate || '',
-        userOfficialIdIssuedAuthority: newValue.userOfficialIdIssuedAuthority || '',
-        userOfficialType: newValue.userOfficialType || '',
-        currentAddress: {
-          street: newValue.currentAddress?.street || '',
-          number: newValue.currentAddress?.number || '',
-          city: newValue.currentAddress?.city || '',
-          province: newValue.currentAddress?.province || '',
-          zipCode: newValue.currentAddress?.zipCode || '',
-          country: newValue.currentAddress?.country || '',
-        },
-        permanentResidenceAddress: {
-          street: newValue.permanentResidenceAddress?.street || '',
-          number: newValue.permanentResidenceAddress?.number || '',
-          city: newValue.permanentResidenceAddress?.city || '',
-          province: newValue.permanentResidenceAddress?.province || '',
-          zipCode: newValue.permanentResidenceAddress?.zipCode || '',
-          country: newValue.permanentResidenceAddress?.country || '',
-        },
-        placeOfBirth: newValue.placeOfBirth || '',
-        nationality: newValue.nationality || '',
-        gender: newValue.gender || '',
-        maleRegistryNumber: newValue.maleRegistryNumber || '',
-        maleRegistryIssuedPlace: newValue.maleRegistryIssuedPlace || '',
-        militaryObligations: newValue.militaryObligations || '',
-        maritalStatus: newValue.maritalStatus || '',
-        numberOfChildren: newValue.numberOfChildren || undefined,
-        municipalRegisterNumber: newValue.municipalRegisterNumber || undefined,
-        municipalRegisterPrefecture: newValue.municipalRegisterPrefecture || '',
-        ssn: newValue.ssn || undefined,
-        academicEnrollmentYear: newValue.academicEnrollmentYear || undefined,
-        department: newValue.department || '',
-      }
-    }
-  },
-  { immediate: true },
-)
-
-// Watch for changes in formData and update modelValue
-watch(
-  formData,
-  (newValue) => {
-    modelValue.value = newValue
-  },
-  { deep: true },
-)
+// Use the composable with initial data
+const { formData, v$, getFieldError, validateForm } = useUserForm(props.initialData)
 
 const officialIdTypeOptions = [
   { value: 'ID', label: 'ID' },
@@ -856,148 +708,9 @@ const maritalStatusOptions = [
   { value: 'WIDOWED', label: 'Widowed' },
 ]
 
-const rules = {
-  firstName: { required, minLength: minLength(2), maxLength: maxLength(64) },
-  lastName: { required, minLength: minLength(2), maxLength: maxLength(64) },
-  fathersName: { required, minLength: minLength(2), maxLength: maxLength(32) },
-  mothersName: { required, minLength: minLength(2), maxLength: maxLength(32) },
-  email: { required, email },
-
-  // Optional fields (have .optional() in schema)
-  mobilePhoneNumber: {
-    required,
-    regex: (value: string) =>
-      !value || value.trim() === '' || /^\+?[1-9]\d{1,14}$/.test(value.replace(/[^\d+]/g, '')),
-  },
-  phoneNumber: {
-    regex: (value: string) =>
-      !value || value.trim() === '' || /^\+?[1-9]\d{1,14}$/.test(value.replace(/[^\d+]/g, '')),
-  },
-  dateOfBirth: {
-    required,
-    regex: (value: string) => !value || value.trim() === '' || /^\d{4}-\d{2}-\d{2}$/.test(value),
-  },
-  studentId: {
-    required,
-    minLength: (value: string) => !value || value.trim() === '' || value.length >= 1,
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 10,
-    regex: (value: string) => !value || value.trim() === '' || /^[a-zA-Z0-9\-_]+$/.test(value),
-  },
-  userOfficialId: {
-    required,
-    minLength: (value: string) => !value || value.trim() === '' || value.length >= 2,
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 32,
-  },
-  userOfficialIdIssuedDate: {
-    required,
-    regex: (value: string) => !value || value.trim() === '' || /^\d{4}-\d{2}-\d{2}$/.test(value),
-  },
-  userOfficialIdIssuedAuthority: {
-    required,
-    minLength: (value: string) => !value || value.trim() === '' || value.length >= 2,
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 32,
-  },
-  userOfficialType: {
-    required,
-  },
-  currentAddress: {
-    street: {
-      required,
-    },
-    number: {},
-    city: {
-      required,
-    },
-    province: {
-      required,
-    },
-    zipCode: {
-      required,
-    },
-    country: {
-      required,
-    },
-  },
-  permanentResidenceAddress: {
-    street: {},
-    number: {},
-    city: {},
-    province: {},
-    zipCode: {},
-    country: {},
-  },
-  placeOfBirth: {
-    required,
-    minLength: minLength(2),
-    maxLength: maxLength(32),
-  },
-  nationality: {
-    required,
-    minLength: minLength(1),
-    maxLength: maxLength(100),
-  },
-  gender: {
-    required,
-  },
-  maleRegistryNumber: {
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 32,
-  },
-  maleRegistryIssuedPlace: {
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 32,
-  },
-  militaryObligations: {
-    required: requiredIf(() => formData.value.gender === 'MALE'),
-  },
-  maritalStatus: {
-    required,
-  },
-  numberOfChildren: {
-    minValue: (value: number) => !value || value >= 0,
-  },
-  municipalRegisterNumber: {
-    minValue: (value: number) => !value || value >= 0,
-  },
-  municipalRegisterPrefecture: {
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 32,
-  },
-  ssn: {
-    required,
-    minValue: (value: number) => !value || value >= 0,
-  },
-  academicEnrollmentYear: {
-    required,
-    minValue: (value: number) => !value || value >= 1900,
-    maxValue: (value: number) => !value || value <= new Date().getFullYear() + 10,
-  },
-  department: {
-    required,
-    maxLength: (value: string) => !value || value.trim() === '' || value.length <= 64,
-  },
-}
-
-const v$ = useVuelidate(rules, formData)
-
-// Function to get field error (frontend validation only)
-function getFieldError(fieldPath: string): string | undefined {
-  // Get the frontend validation field
-  const fieldParts = fieldPath.split('.')
-  let field = v$.value
-
-  for (const part of fieldParts) {
-    if (!field || typeof field !== 'object') {
-      return undefined
-    }
-    field = field[part as keyof typeof field]
-  }
-
-  // Return frontend validation error if any
-  return errorMessageHandler(field)
-}
-
 async function handleSubmit() {
-  const isValid = await v$.value.$validate()
-  if (isValid) {
-    emit('submit', formData.value)
-  }
+  const isValid = await validateForm()
+  if (!isValid) return
+  emit('submit', formData.value)
 }
 </script>
