@@ -109,23 +109,9 @@ aws cloudformation describe-stacks \
   --stack-name uniapply-app-dev \
   --query 'Stacks[0].Outputs[?OutputKey==`CognitoUserPoolId` || OutputKey==`CognitoUserPoolClientId`]' \
   --output table
-
-# Or use the provided script
-node scripts/get-new-cognito-config.js
 ```
 
-#### 3. Frontend Environment Variables
-
-Update your frontend `.env` file with the values from step 2:
-
-```env
-VITE_API_BASE=https://api-dev.uniapply.app
-VITE_COGNITO_REGION=eu-central-1
-VITE_COGNITO_USER_POOL_ID=<User Pool ID from step 2>
-VITE_COGNITO_CLIENT_ID=<Client ID from step 2>
-```
-
-#### 4. Verify Deployment
+#### 3. Verify Deployment
 
 ```bash
 # Check API health
@@ -146,38 +132,6 @@ npx serverless deploy --stage prod
 ```
 
 ### Troubleshooting Deployment Issues
-
-#### Common Issues and Solutions
-
-1. **S3 Bucket Not Empty Error**
-
-   ```bash
-   # If you get "bucket not empty" error during removal
-   node scripts/empty-s3-bucket.js
-   npx serverless remove --stage dev
-   ```
-
-2. **DynamoDB Tables Retained**
-
-   ```bash
-   # If tables are retained due to DeletionPolicy
-   node scripts/cleanup-dynamodb.js
-   ```
-
-3. **Duplicate Cognito User Pools**
-
-   ```bash
-   # List all user pools
-   aws cognito-idp list-user-pools --max-results 60
-
-   # Delete duplicate pools (keep the one used by Lambda)
-   aws cognito-idp delete-user-pool --user-pool-id <pool-id>
-   ```
-
-4. **JWT Token Issues**
-   - Ensure frontend and backend use the same Cognito configuration
-   - Check that the User Pool ID and Client ID match
-   - Verify the JWT token is not expired
 
 #### Debug Commands
 
@@ -312,99 +266,11 @@ backend/
 ### Environment Variables
 
 ```bash
-# AWS Configuration
-REGION=eu-central-1
-STAGE=dev
-
-# Database Tables
-USERS_TABLE=uniapply-app-users-dev
-FORMS_TABLE=uniapply-app-forms-dev
-APPLICATIONS_TABLE=uniapply-app-applications-dev
-ROLES_TABLE=uniapply-app-roles-dev
-AUDIT_TABLE=uniapply-app-audit-dev
-RATE_LIMIT_TABLE=uniapply-app-rate-limits-dev
-TOKEN_BLACKLIST_TABLE=uniapply-app-token-blacklist-dev
-SECURITY_EVENTS_TABLE=uniapply-app-security-events-dev
-
-# Cognito Configuration
-USER_POOL_ID=eu-central-1_xxxxxxxxx
-USER_POOL_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxxxxxxx
-
 # Email Configuration
 SES_SENDER_EMAIL=no-reply@uniapply.app
-FRONTEND_URL=http://localhost:5173
-APP_NAME=UniApply
 
-# Storage
-WEB_BUCKET=uniapply-app-dev-webbucket
-UPLOADS_BUCKET=uniapply-app-dev-uploads
-```
-
-## Security
-
-### Authentication
-
-- JWT tokens via AWS Cognito
-- Role-based access control (RBAC)
-- Token blacklisting for logout
-- Rate limiting on API endpoints
-
-### Authorization
-
-- User permissions based on roles
-- Resource-level access control
-- Audit logging for all operations
-- Input validation and sanitization
-
-### Data Protection
-
-- All data encrypted at rest
-- HTTPS for all API communications
-- CORS configuration for frontend
-- Security headers and CSP
-
-## Monitoring
-
-### CloudWatch Metrics
-
-- API Gateway request count
-- Lambda function duration
-- DynamoDB read/write capacity
-- Error rates and latency
-
-### Logging
-
-- Structured JSON logging
-- Request/response logging
-- Error tracking and alerting
-- Performance monitoring
-
-## Troubleshooting
-
-### Common Issues
-
-1. **CORS Errors** - Check API Gateway CORS configuration
-2. **Permission Denied** - Verify IAM roles and policies
-3. **Database Connection** - Check DynamoDB table permissions
-4. **Email Not Sent** - Verify SES configuration and limits
-5. **JWT Validation Fails** - Check Cognito configuration
-6. **403 Forbidden** - Verify user permissions and role assignments
-
-### Debug Commands
-
-```bash
-# Check deployment status
-npx serverless info --stage dev
-
-# View function configuration
-npx serverless print --stage dev
-
-# Test API endpoints
-curl -X GET https://api-dev.uniapply.app/health
-
-# Check user permissions
-curl -X GET https://api-dev.uniapply.app/debug/fix-user-role \
-  -H "Authorization: Bearer <jwt-token>"
+# Local development url
+LOCAL_DEV_URL=http://localhost:5173
 ```
 
 ## Related Documentation
