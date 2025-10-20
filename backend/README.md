@@ -185,6 +185,7 @@ npx serverless remove --stage prod
 backend/
 ├── src/
 │   ├── handler.ts           # Main Lambda handler
+│   ├── types.deprecated.ts  # Legacy types (deprecated)
 │   ├── routes/              # API route handlers
 │   │   ├── applications.ts  # Application endpoints
 │   │   ├── formTemplates.ts # Form template endpoints
@@ -193,10 +194,17 @@ backend/
 │   ├── utils/               # Utility functions
 │   │   ├── auth.ts          # Authentication helpers
 │   │   ├── db.ts            # Database operations
+│   │   ├── s3.ts            # S3 helpers
 │   │   ├── ses.ts           # Email service
+│   │   ├── emailTemplates.ts# Email templates
 │   │   ├── jwtSecurity.ts   # JWT validation
 │   │   ├── rateLimit.ts     # Rate limiting
-│   │   └── audit.ts         # Audit logging
+│   │   ├── audit.ts         # Audit logging
+│   │   ├── countries.ts     # Country codes utilities
+│   │   ├── errorHandler.ts  # Centralized error handling
+│   │   ├── fileValidation.ts# File validation helpers
+│   │   ├── inputSanitization.ts # Input sanitization
+│   │   └── securityMonitor.ts # Security monitoring utilities
 │   └── validation/          # Request validation
 │       ├── http.ts          # HTTP validation
 │       └── query.ts         # Query parameter validation
@@ -217,24 +225,28 @@ backend/
 - `POST /auth/signup` - User registration
 - `POST /auth/forgot-password` - Password reset
 - `POST /auth/reset-password` - Password reset confirmation
+- `POST /auth/logout` - User logout
+- `POST /auth/confirm-registration` - Confirm user registration
+- `POST /auth/resend-confirmation` - Resend confirmation code
+- `POST /auth/confirm-code` - Confirm a code (if applicable)
 
 ### Applications
 
-- `GET /applications` - List applications (supports status filter)
+- `GET /applications` - List applications (supports `userId` and `status` filters)
 - `POST /applications` - Create application
 - `GET /applications/{id}` - Get application details
-- `PUT /applications/{id}` - Update application
+- `PUT /applications/{id}` - Update application (only when status is DRAFT)
 - `DELETE /applications/{id}` - Delete application
-- `POST /applications/{id}/submit` - Submit application
-- `POST /applications/{id}/status` - Update application status
+- `POST /applications/{id}/submit` - Submit application for approval
+- `POST /applications/{id}/decide` - Approve/Reject an application step
 
 ### Form Templates
 
-- `GET /form-templates` - List form templates
-- `POST /form-templates` - Create form template
-- `GET /form-templates/{id}` - Get template details
-- `PUT /form-templates/{id}` - Update template
-- `DELETE /form-templates/{id}` - Delete template
+- `GET /forms` - List form templates
+- `POST /forms` - Create form template
+- `GET /forms/{id}` - Get template details
+- `PUT /forms/{id}` - Update template
+- `DELETE /forms/{id}` - Delete template
 
 ### Users
 
@@ -244,14 +256,15 @@ backend/
 - `PUT /users/{id}` - Update user
 - `DELETE /users/{id}` - Delete user
 - `GET /users/search` - Search users
+- `GET /users/me` - Get current authenticated user's profile
 
 ### Roles
 
 - `GET /roles` - List roles
 - `POST /roles` - Create role
-- `GET /roles/{id}` - Get role details
-- `PUT /roles/{id}` - Update role
-- `DELETE /roles/{id}` - Delete role
+- `GET /roles/{roleName}` - Get role details
+- `PUT /roles/{roleName}` - Update role
+- `DELETE /roles/{roleName}` - Delete role
 
 ### Audit Logs
 
@@ -260,6 +273,8 @@ backend/
 ### File Upload
 
 - `POST /files/presign` - Get presigned URL for file upload
+- `POST /files/upload` - Upload a file using presigned fields
+- `GET /files/download-url` - Get presigned URL for file download
 
 ## Configuration
 
