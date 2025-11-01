@@ -4,6 +4,7 @@
       'inline-flex items-center gap-2 select-none',
       disabled ? 'cursor-default' : 'cursor-pointer',
     ]"
+    @click="toggle"
   >
     <button
       :type="'button'"
@@ -15,7 +16,6 @@
         'inline-flex items-center justify-center',
         disabled ? 'cursor-default' : 'cursor-pointer',
       ]"
-      @click="toggle"
     >
       <UiIcon :path="iconPath" :class="iconColorClass" :size="20" />
       <span v-if="label" class="ml-2 text-sm">{{ label }}</span>

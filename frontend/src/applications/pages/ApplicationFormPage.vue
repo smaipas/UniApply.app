@@ -399,17 +399,23 @@
                 >
                   <UiCheckbox
                     :id="`${field.name}-${typeof option === 'string' ? option : option.value}`"
-                    :value="typeof option === 'string' ? option : option.value"
-                    v-model="formData[field.name]"
+                    :model-value="
+                      isOptionSelected(
+                        field.name,
+                        typeof option === 'string' ? option : option.value,
+                      )
+                    "
                     :disabled="isReadOnly"
                     :required="isFieldRequired(field)"
+                    :label="typeof option === 'string' ? option : option.label"
+                    @update:model-value="
+                      toggleMultiSelectOption(
+                        field.name,
+                        typeof option === 'string' ? option : option.value,
+                        $event,
+                      )
+                    "
                   />
-                  <label
-                    :for="`${field.name}-${typeof option === 'string' ? option : option.value}`"
-                    class="ml-2 text-sm text-gray-700"
-                  >
-                    {{ typeof option === 'string' ? option : option.label }}
-                  </label>
                 </div>
               </div>
             </div>
@@ -427,11 +433,9 @@
                 :id="field.name"
                 v-model="formData[field.name]"
                 :disabled="isReadOnly"
+                :label="field.description"
                 :required="isFieldRequired(field)"
               />
-              <label :for="field.name" class="ml-2 text-sm text-gray-700">
-                {{ field.description }}
-              </label>
             </div>
 
             <!-- File Input -->
@@ -878,6 +882,17 @@ async function loadData() {
 
         // Load form data from the application
         formData.value = { ...application.value.fields }
+
+        // Ensure multi-select fields are arrays
+        if (template.value?.fields) {
+          template.value.fields.forEach((field) => {
+            if (field.inputType === 'SELECT' && field.allowSelectMultipleValues) {
+              if (!formData.value[field.name] || !Array.isArray(formData.value[field.name])) {
+                formData.value[field.name] = []
+              }
+            }
+          })
+        }
       }
     } else {
       // Creating new application - load template from route
@@ -893,6 +908,12 @@ async function loadData() {
           template.value.fields.forEach((field) => {
             if (field.defaultValue !== undefined) {
               formData.value[field.name] = field.defaultValue
+            }
+            // Initialize multi-select fields as empty arrays
+            if (field.inputType === 'SELECT' && field.allowSelectMultipleValues) {
+              if (!formData.value[field.name] || !Array.isArray(formData.value[field.name])) {
+                formData.value[field.name] = []
+              }
             }
           })
         }
@@ -1134,12 +1155,39 @@ function getFileName(file: File | string): string {
   return file.name
 }
 
-function getSelectOptions(options: (string | { label: string; value: string })[] | undefined): Array<{ label: string; value: string }> {
+function getSelectOptions(
+  options: (string | { label: string; value: string })[] | undefined,
+): Array<{ label: string; value: string }> {
   if (!options) return []
   return options.map((option) => ({
     label: typeof option === 'string' ? option : option.label,
     value: typeof option === 'string' ? option : option.value,
   }))
+}
+
+function isOptionSelected(fieldName: string, optionValue: string): boolean {
+  const fieldValue = formData.value[fieldName]
+  if (!fieldValue) return false
+  if (!Array.isArray(fieldValue)) return false
+  return fieldValue.includes(optionValue)
+}
+
+function toggleMultiSelectOption(fieldName: string, optionValue: string, isChecked: boolean): void {
+  if (!formData.value[fieldName] || !Array.isArray(formData.value[fieldName])) {
+    formData.value[fieldName] = []
+  }
+
+  const currentArray = formData.value[fieldName] as string[]
+
+  if (isChecked) {
+    // Add the option if it's not already in the array
+    if (!currentArray.includes(optionValue)) {
+      formData.value[fieldName] = [...currentArray, optionValue]
+    }
+  } else {
+    // Remove the option from the array
+    formData.value[fieldName] = currentArray.filter((val) => val !== optionValue)
+  }
 }
 
 async function uploadPendingFiles(): Promise<void> {
