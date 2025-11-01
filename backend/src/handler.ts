@@ -59,6 +59,10 @@ import {
   createPasswordResetEmail,
   createRegistrationConfirmationEmail,
   createWelcomeEmail,
+  createApplicantDecisionEmail,
+  createApproverNotificationEmail,
+  createApplicantStatusUpdateEmail,
+  createDynamicUserAssignmentEmail,
 } from "./utils/emailTemplates";
 
 // ------------ AWS clients ------------
@@ -1882,17 +1886,12 @@ async function tryNotifyApplicantDecision(
     if (!user?.email) return;
 
     const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
-    const appName = process.env.APP_NAME || "UniApply";
-    const subject = `Your application was ${status}`;
-    const body = `Hello ${user.firstName ?? ""},
-
-Your application has been ${status.toLowerCase()}
-
-You can view the status of your application by clicking the link below:
-${frontendUrl}/applications/${applicationId}
-
-Regards,
-${appName}`;
+    const { subject, html } = createApplicantDecisionEmail(
+      user.firstName,
+      status,
+      applicationId,
+      frontendUrl
+    );
 
     await ses.send(
       new SendEmailCommand({
@@ -1901,7 +1900,7 @@ ${appName}`;
         Content: {
           Simple: {
             Subject: { Data: subject },
-            Body: { Text: { Data: body } },
+            Body: { Html: { Data: html } },
           },
         },
       })
@@ -2001,17 +2000,11 @@ async function tryNotifyApprovers(
     }
 
     const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
-    const appName = process.env.APP_NAME || "UniApply";
-    const subject = `New application requires approval: ${formTitle}`;
-    const body = `Hello,
-
-A new application for "${formTitle}" requires your approval.
-
-Please click the link below to review and approve/reject this application:
-${frontendUrl}/applications/${applicationId}
-
-Regards,
-${appName}`;
+    const { subject, html } = createApproverNotificationEmail(
+      formTitle,
+      applicationId,
+      frontendUrl
+    );
 
     const result = await ses.send(
       new SendEmailCommand({
@@ -2020,7 +2013,7 @@ ${appName}`;
         Content: {
           Simple: {
             Subject: { Data: subject },
-            Body: { Text: { Data: body } },
+            Body: { Html: { Data: html } },
           },
         },
       })
@@ -2052,17 +2045,13 @@ async function tryNotifyApplicant(
     }
 
     const frontendUrl = process.env.FRONTEND_URL || "https://dev.uniapply.app";
-    const appName = process.env.APP_NAME || "UniApply";
-    const subject = `Your application status update: ${formTitle}`;
-    const body = `Hello ${user.firstName || "there"},
-
-Your application for "${formTitle}" has been ${status.toLowerCase()}.
-
-You can view the status of your application by clicking the link below:
-${frontendUrl}/applications/${applicationId}
-
-Regards,
-${appName}`;
+    const { subject, html } = createApplicantStatusUpdateEmail(
+      user.firstName,
+      formTitle,
+      status,
+      applicationId,
+      frontendUrl
+    );
 
     const result = await ses.send(
       new SendEmailCommand({
@@ -2071,7 +2060,7 @@ ${appName}`;
         Content: {
           Simple: {
             Subject: { Data: subject },
-            Body: { Text: { Data: body } },
+            Body: { Html: { Data: html } },
           },
         },
       })
@@ -2120,17 +2109,12 @@ async function tryNotifyDynamicUsers(newApp: any, oldApp: any) {
 
         const frontendUrl =
           process.env.FRONTEND_URL || "https://dev.uniapply.app";
-        const appName = process.env.APP_NAME || "UniApply";
-        const subject = `You have been assigned to approve an application: ${newApp.formTitle}`;
-        const body = `Hello ${user.firstName || "there"},
-
-You have been assigned to approve an application for "${newApp.formTitle}".
-
-Please click the link below to review and approve/reject this application:
-${frontendUrl}/applications/${newApp.id}
-
-Regards,
-${appName}`;
+        const { subject, html } = createDynamicUserAssignmentEmail(
+          user.firstName,
+          newApp.formTitle,
+          newApp.id,
+          frontendUrl
+        );
 
         const result = await ses.send(
           new SendEmailCommand({
@@ -2139,7 +2123,7 @@ ${appName}`;
             Content: {
               Simple: {
                 Subject: { Data: subject },
-                Body: { Text: { Data: body } },
+                Body: { Html: { Data: html } },
               },
             },
           })

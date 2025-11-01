@@ -197,3 +197,124 @@ export function createPasswordChangeConfirmationEmail(): {
     }),
   };
 }
+
+export function createApplicantDecisionEmail(
+  firstName: string | undefined,
+  status: "APPROVED" | "REJECTED",
+  applicationId: string,
+  frontendUrl: string
+): { subject: string; html: string } {
+  const greeting = firstName ? `Hello ${firstName}` : "Hello";
+  const statusText = status.toLowerCase();
+  const statusColor = status === "APPROVED" ? "#28a745" : "#dc3545";
+  const applicationUrl = `${frontendUrl}/applications/${applicationId}`;
+
+  return {
+    subject: `Your application was ${status}`,
+    html: createBaseEmailTemplate({
+      title: `Application ${status}`,
+      message: `
+        <p>${greeting},</p>
+        <p>Your application has been <strong style="color: ${statusColor};">${statusText}</strong>.</p>
+        <p>You can view the status and details of your application by clicking the button below:</p>
+      `,
+      buttonText: "View Application",
+      buttonUrl: applicationUrl,
+      additionalInfo: `
+        <p><strong>Alternative:</strong> Copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; background-color: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; font-family: monospace; font-size: 12px;">
+          ${applicationUrl}
+        </p>
+      `,
+    }),
+  };
+}
+
+export function createApproverNotificationEmail(
+  formTitle: string,
+  applicationId: string,
+  frontendUrl: string
+): { subject: string; html: string } {
+  const applicationUrl = `${frontendUrl}/applications/${applicationId}`;
+
+  return {
+    subject: `New application requires approval: ${formTitle}`,
+    html: createBaseEmailTemplate({
+      title: "Action Required: Application Approval",
+      message: `
+        <p>Hello,</p>
+        <p>A new application for <strong>"${formTitle}"</strong> requires your approval.</p>
+        <p>Please click the button below to review and approve or reject this application:</p>
+      `,
+      buttonText: "Review Application",
+      buttonUrl: applicationUrl,
+      additionalInfo: `
+        <p><strong>Alternative:</strong> Copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; background-color: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; font-family: monospace; font-size: 12px;">
+          ${applicationUrl}
+        </p>
+      `,
+    }),
+  };
+}
+
+export function createApplicantStatusUpdateEmail(
+  firstName: string | undefined,
+  formTitle: string,
+  status: string,
+  applicationId: string,
+  frontendUrl: string
+): { subject: string; html: string } {
+  const greeting = firstName ? `Hello ${firstName}` : "Hello there";
+  const applicationUrl = `${frontendUrl}/applications/${applicationId}`;
+
+  return {
+    subject: `Your application status update: ${formTitle}`,
+    html: createBaseEmailTemplate({
+      title: "Application Status Update",
+      message: `
+        <p>${greeting},</p>
+        <p>Your application for <strong>"${formTitle}"</strong> has been updated to: <strong>${status}</strong>.</p>
+        <p>You can view the current status and details of your application by clicking the button below:</p>
+      `,
+      buttonText: "View Application",
+      buttonUrl: applicationUrl,
+      additionalInfo: `
+        <p><strong>Alternative:</strong> Copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; background-color: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; font-family: monospace; font-size: 12px;">
+          ${applicationUrl}
+        </p>
+      `,
+    }),
+  };
+}
+
+export function createDynamicUserAssignmentEmail(
+  firstName: string | undefined,
+  formTitle: string,
+  applicationId: string,
+  frontendUrl: string
+): { subject: string; html: string } {
+  const greeting = firstName ? `Hello ${firstName}` : "Hello there";
+  const applicationUrl = `${frontendUrl}/applications/${applicationId}`;
+
+  return {
+    subject: `You have been assigned to approve an application: ${formTitle}`,
+    html: createBaseEmailTemplate({
+      title: "You've Been Assigned as an Approver",
+      message: `
+        <p>${greeting},</p>
+        <p>You have been assigned to approve an application for <strong>"${formTitle}"</strong>.</p>
+        <p>Please click the button below to review and approve or reject this application:</p>
+      `,
+      buttonText: "Review Application",
+      buttonUrl: applicationUrl,
+      additionalInfo: `
+        <p><strong>Alternative:</strong> Copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; background-color: white; padding: 10px; border-radius: 4px; border: 1px solid #dee2e6; font-family: monospace; font-size: 12px;">
+          ${applicationUrl}
+        </p>
+      `,
+    }),
+  };
+}
