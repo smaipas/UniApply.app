@@ -6,9 +6,6 @@
         <h1 class="text-2xl font-bold text-gray-900">
           {{ isEditing ? 'Edit Application' : 'New Application' }}
         </h1>
-        <p v-if="template" class="text-gray-600 mt-1">
-          {{ template.title }}
-        </p>
       </div>
 
       <div class="flex space-x-3">
