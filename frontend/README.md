@@ -118,8 +118,7 @@ npm run dev
 npm run build
 npm run preview
 
-# 4. Deploy
-cd ../backend
+# 4. Deploy (while on frontend folder)
 aws s3 sync dist s3://uniapply-app-dev-webbucket --delete
 
 # get the of cloudfront distribution

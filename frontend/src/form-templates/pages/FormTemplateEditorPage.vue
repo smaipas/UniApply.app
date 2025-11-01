@@ -44,7 +44,8 @@
 
           <div class="w-full md:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-2 items-start">
             <UiInput
-              label="Name"
+              label="Name (only latin characters are allowed)"
+              placeholder="For internal use - e.g. myFieldName"
               :model-value="f.name"
               @update:modelValue="(v) => onFieldNameInput(i, v)"
               :error="fieldNameErrors[i]"
