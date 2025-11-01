@@ -228,8 +228,8 @@ export const UserBase = z
             .replace(/\s+/g, " ");
     })
         .refine((val) => {
-        // Only allow letters, spaces, hyphens, apostrophes
-        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        // Only allow letters, spaces, hyphens, apostrophes (including Greek characters)
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\u0370-\u03FF\s'\-\.]+$/;
         return validNamePattern.test(val);
     }, "First name contains invalid characters"),
     lastName: z
@@ -244,8 +244,8 @@ export const UserBase = z
             .replace(/\s+/g, " ");
     })
         .refine((val) => {
-        // Only allow letters, spaces, hyphens, apostrophes
-        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        // Only allow letters, spaces, hyphens, apostrophes (including Greek characters)
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\u0370-\u03FF\s'\-\.]+$/;
         return validNamePattern.test(val);
     }, "Last name contains invalid characters"),
     fathersName: z
@@ -260,8 +260,8 @@ export const UserBase = z
             .replace(/\s+/g, " ");
     })
         .refine((val) => {
-        // Only allow letters, spaces, hyphens, apostrophes
-        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        // Only allow letters, spaces, hyphens, apostrophes (including Greek characters)
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\u0370-\u03FF\s'\-\.]+$/;
         return validNamePattern.test(val);
     }, "Father's name contains invalid characters"),
     mothersName: z
@@ -276,8 +276,8 @@ export const UserBase = z
             .replace(/\s+/g, " ");
     })
         .refine((val) => {
-        // Only allow letters, spaces, hyphens, apostrophes
-        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\s'\-\.]+$/;
+        // Only allow letters, spaces, hyphens, apostrophes (including Greek characters)
+        const validNamePattern = /^[a-zA-ZÀ-ÿĀ-žА-я\u0370-\u03FF\s'\-\.]+$/;
         return validNamePattern.test(val);
     }, "Mother's name contains invalid characters"),
     studentId: sanitizedId.max(10).optional(), // string to preserve leading zeros

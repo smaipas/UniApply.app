@@ -513,13 +513,11 @@
           <label for="currentAddressCountry" class="block text-sm font-medium text-gray-700 mb-1">
             Country
           </label>
-          <UiInput
+          <UiCountrySelect
             id="currentAddressCountry"
             v-model="formData.currentAddress.country"
-            placeholder="Enter country code (e.g., CY)"
-            :error="getFieldError('currentAddress.country')"
+            placeholder="Search for a country..."
             :disabled="disabled"
-            @blur="v$.currentAddress.country?.$touch"
           />
         </div>
       </div>
@@ -613,13 +611,11 @@
           <label for="permanentAddressCountry" class="block text-sm font-medium text-gray-700 mb-1">
             Country
           </label>
-          <UiInput
+          <UiCountrySelect
             id="permanentAddressCountry"
             v-model="formData.permanentResidenceAddress.country"
-            placeholder="Enter country code (e.g., CY)"
-            :error="getFieldError('permanentResidenceAddress.country')"
+            placeholder="Search for a country..."
             :disabled="disabled"
-            @blur="v$.permanentResidenceAddress.country?.$touch"
           />
         </div>
       </div>
@@ -654,6 +650,7 @@
 import UiInput from '@/common/components/UiInput.vue'
 import UiSelect from '@/common/components/UiSelect.vue'
 import UiDateInput from '@/common/components/UiDateInput.vue'
+import UiCountrySelect from '@/common/components/UiCountrySelect.vue'
 import { useUserForm, type UserFormData } from '@/common/composables/useUserForm'
 
 const props = withDefaults(
